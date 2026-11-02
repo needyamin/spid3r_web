@@ -21,12 +21,29 @@ public class MigrationRunner {
     }
 
     fn ensure_migrations_table(self) {
-        DB.statement("CREATE TABLE IF NOT EXISTS migrations (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            migration TEXT NOT NULL UNIQUE,
-            batch INTEGER NOT NULL,
-            applied_at TEXT NOT NULL
-        );");
+        let dialect = DB.driver_name();
+        if dialect == "postgres" {
+            DB.statement("CREATE TABLE IF NOT EXISTS migrations (
+                id SERIAL PRIMARY KEY,
+                migration TEXT NOT NULL UNIQUE,
+                batch INTEGER NOT NULL,
+                applied_at TEXT NOT NULL
+            );");
+        } elif dialect == "mysql" or dialect == "mariadb" {
+            DB.statement("CREATE TABLE IF NOT EXISTS migrations (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                migration VARCHAR(255) NOT NULL UNIQUE,
+                batch INT NOT NULL,
+                applied_at VARCHAR(32) NOT NULL
+            );");
+        } else {
+            DB.statement("CREATE TABLE IF NOT EXISTS migrations (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                migration TEXT NOT NULL UNIQUE,
+                batch INTEGER NOT NULL,
+                applied_at TEXT NOT NULL
+            );");
+        }
     }
 
     public fn get_applied(self) {

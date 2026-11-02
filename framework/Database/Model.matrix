@@ -56,11 +56,14 @@ public class Model {
         let now = string(unix_time());
 
         if self.exists {
-            // Update
+            // Update — respect fillable (timestamps always allowed so the
+            // engine can keep created_at/updated_at fresh)
             let data_to_update = {};
             for k in self.attributes.keys() {
                 if k != self.primary_key {
-                    data_to_update[k] = self.attributes[k];
+                    if self.fillable.len() == 0 or self.fillable.contains(k) or k == "created_at" or k == "updated_at" {
+                        data_to_update[k] = self.attributes[k];
+                    }
                 }
             }
             if self.uses_timestamps {

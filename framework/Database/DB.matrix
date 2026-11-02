@@ -1,6 +1,8 @@
 // framework/Database/DB.matrix
 // Spid3rWeb Database Connection & Query Facade
 
+import "Connection";
+
 public class QueryBuilder {
     public let table_name;
     public let db_manager;
@@ -13,7 +15,7 @@ public class QueryBuilder {
     public let offset_count;
 
     fn new(table: string, manager = null) {
-        self.table_name = table;
+        self.table_name = sql_check_identifier(table);
         self.db_manager = manager;
         self.select_cols = ["*"];
         self.wheres = [];
@@ -26,14 +28,19 @@ public class QueryBuilder {
 
     public fn select(self, cols) {
         if type_of(cols) == "list" {
-            self.select_cols = cols;
+            let safe = [];
+            for c in cols {
+                safe.push(sql_check_identifier(c));
+            }
+            self.select_cols = safe;
         } else {
-            self.select_cols = [string(cols)];
+            self.select_cols = [sql_check_identifier(cols)];
         }
         return self;
     }
 
     public fn where(self, column: string, op: string, val = null) {
+        sql_check_identifier(column);
         if val == null {
             // where("id", 5) shorthand for where("id", "=", 5)
             val = op;
@@ -49,6 +56,7 @@ public class QueryBuilder {
     }
 
     public fn orWhere(self, column: string, op: string, val = null) {
+        sql_check_identifier(column);
         if val == null {
             val = op;
             op = "=";
@@ -63,8 +71,13 @@ public class QueryBuilder {
     }
 
     public fn orderBy(self, column: string, dir: string = "ASC") {
+        sql_check_identifier(column);
+        let d = string(dir).upper();
+        if d != "ASC" and d != "DESC" {
+            d = "ASC";
+        }
         self.order_col = column;
-        self.order_dir = string(dir).upper();
+        self.order_dir = d;
         return self;
     }
 
@@ -83,6 +96,11 @@ public class QueryBuilder {
     // ------------------------------------------------------------------------
 
     public fn join(self, table: string, first_col: string, op: string, second_col = null) {
+        sql_check_identifier(table);
+        sql_check_identifier(first_col);
+        if second_col != null {
+            sql_check_identifier(second_col);
+        }
         if second_col == null {
             second_col = op;
             op = "=";
@@ -102,6 +120,11 @@ public class QueryBuilder {
     }
 
     public fn leftJoin(self, table: string, first_col: string, op: string, second_col = null) {
+        sql_check_identifier(table);
+        sql_check_identifier(first_col);
+        if second_col != null {
+            sql_check_identifier(second_col);
+        }
         if second_col == null {
             second_col = op;
             op = "=";
@@ -117,6 +140,11 @@ public class QueryBuilder {
     }
 
     public fn rightJoin(self, table: string, first_col: string, op: string, second_col = null) {
+        sql_check_identifier(table);
+        sql_check_identifier(first_col);
+        if second_col != null {
+            sql_check_identifier(second_col);
+        }
         if second_col == null {
             second_col = op;
             op = "=";
@@ -132,6 +160,7 @@ public class QueryBuilder {
     }
 
     public fn crossJoin(self, table: string) {
+        sql_check_identifier(table);
         self.joins.push({
             "type": "CROSS",
             "table": table,
@@ -269,7 +298,7 @@ public class QueryBuilder {
         let params = [];
 
         for k in data.keys() {
-            keys.push(k);
+            keys.push(sql_check_identifier(k));
             placeholders.push("?");
             params.push(data[k]);
         }
@@ -288,7 +317,7 @@ public class QueryBuilder {
         let params = [];
 
         for k in data.keys() {
-            set_clauses.push(k + " = ?");
+            set_clauses.push(sql_check_identifier(k) + " = ?");
             params.push(data[k]);
         }
 
@@ -344,10 +373,71 @@ public class QueryBuilder {
 public class DatabaseManager {
     public let db_handle;
     public let db_path;
+    public let driver;
+    public let conn_config;
 
     fn new() {
-        self.db_path = self.resolve_database_path();
+        self.driver = self.resolve_driver();
+        self.db_path = "";
+        self.conn_config = map();
+        if self.driver == "sqlite" {
+            self.db_path = self.resolve_database_path();
+        } else {
+            self.conn_config = self.resolve_server_config();
+        }
         self.db_handle = null;
+    }
+
+    // Driver selection: SPID3R_DB_DRIVER env var (sqlite|postgres|mysql|mariadb).
+    // "postgresql" normalizes to "postgres"; "mariadb" keeps its own name but
+    // rides the MySQL wire protocol.
+    fn resolve_driver(self) -> string {
+        let raw = "";
+        let env_driver = env("SPID3R_DB_DRIVER");
+        if env_driver.is_some() {
+            raw = string(env_driver.unwrap()).trim().lower();
+        }
+        if raw == "postgres" or raw == "postgresql" or raw == "pg" {
+            return "postgres";
+        }
+        if raw == "mysql" {
+            return "mysql";
+        }
+        if raw == "mariadb" {
+            return "mariadb";
+        }
+        return "sqlite";
+    }
+
+    fn env_var_or(self, key: string, fallback: string) -> string {
+        let v = env(key);
+        if v.is_some() {
+            let val = string(v.unwrap());
+            if val != "" {
+                return val;
+            }
+        }
+        return fallback;
+    }
+
+    // Server connection settings from SPID3R_PG_* / SPID3R_MYSQL_* env vars.
+    fn resolve_server_config(self) {
+        let prefix = "SPID3R_PG";
+        let default_port = "5432";
+        if self.driver == "mysql" or self.driver == "mariadb" {
+            prefix = "SPID3R_MYSQL";
+            default_port = "3306";
+        }
+        let host = self.env_var_or(prefix + "_HOST", "127.0.0.1");
+        let port = self.env_var_or(prefix + "_PORT", default_port);
+        return map(
+            "host", host,
+            "port", port,
+            "addr", host + ":" + port,
+            "user", self.env_var_or(prefix + "_USER", "spid3r"),
+            "password", self.env_var_or(prefix + "_PASSWORD", ""),
+            "database", self.env_var_or(prefix + "_DATABASE", "spid3r")
+        );
     }
 
     fn resolve_database_path(self) -> string {
@@ -378,11 +468,31 @@ public class DatabaseManager {
         return "database/database.sqlite";
     }
 
+    public fn driver_name(self) -> string {
+        return self.driver;
+    }
+
+    // Lazily open the connection for the active driver. Every driver wrapper
+    // exposes the same contract, so QueryBuilder/Auth code is driver-agnostic.
     public fn connection(self) {
         if self.db_handle == null {
-            // Ensure directory exists if needed
-            self.db_handle = db_open(self.db_path);
-            self.db_handle.exec("PRAGMA foreign_keys = ON; PRAGMA journal_mode = WAL; PRAGMA busy_timeout = 5000;");
+            if self.driver == "postgres" {
+                self.db_handle = new PgConnection(
+                    self.conn_config["addr"],
+                    self.conn_config["user"],
+                    self.conn_config["password"],
+                    self.conn_config["database"]
+                );
+            } elif self.driver == "mysql" or self.driver == "mariadb" {
+                self.db_handle = new MySqlConnection(
+                    self.conn_config["addr"],
+                    self.conn_config["user"],
+                    self.conn_config["password"],
+                    self.conn_config["database"]
+                );
+            } else {
+                self.db_handle = new SqliteConnection(self.db_path);
+            }
         }
         return self.db_handle;
     }
@@ -400,10 +510,7 @@ public class DatabaseManager {
             params = [];
         }
         let conn = self.connection();
-        if params.len() == 0 {
-            return conn.exec(sql);
-        }
-        return conn.run(sql, params);
+        return conn.statement(sql, params);
     }
 
     public fn table(self, table_name: string) {
@@ -411,12 +518,15 @@ public class DatabaseManager {
     }
 
     public fn checkpoint(self) {
-        if self.db_handle != null {
+        if self.db_handle != null and self.driver == "sqlite" {
             self.db_handle.exec("PRAGMA wal_checkpoint(TRUNCATE);");
         }
     }
 
     public fn cleanup_artifacts(self) {
+        if self.driver != "sqlite" {
+            return;
+        }
         let candidates = [
             self.db_path,
             "database/database.sqlite",
@@ -436,8 +546,12 @@ public class DatabaseManager {
 
     public fn close(self) {
         if self.db_handle != null {
-            self.db_handle.exec("PRAGMA wal_checkpoint(TRUNCATE);");
-            self.db_handle.close();
+            if self.driver == "sqlite" {
+                self.db_handle.exec("PRAGMA wal_checkpoint(TRUNCATE);");
+                self.db_handle.handle.close();
+            } else {
+                self.db_handle.close();
+            }
             self.db_handle = null;
         }
         self.cleanup_artifacts();

@@ -1,19 +1,21 @@
 // framework/Database/Schema.matrix
-// Spid3rWeb DDL Schema Builder & Blueprint
+// Spid3rWeb DDL Schema Builder & Blueprint (multi-dialect: sqlite, postgres, mysql/mariadb)
 
 import "DB";
 
 public class ColumnDefinition {
     public let name;
-    public let type;
+    public let kind;        // id | string | text | integer | float | boolean
+    public let len;         // varchar length for string columns
     public let is_primary;
     public let is_unique;
     public let is_nullable;
     public let default_value;
 
-    fn new(name: string, type: string) {
+    fn new(name: string, kind: string, len: int = 255) {
         self.name = name;
-        self.type = type;
+        self.kind = kind;
+        self.len = len;
         self.is_primary = false;
         self.is_unique = false;
         self.is_nullable = false;
@@ -35,11 +37,58 @@ public class ColumnDefinition {
         return self;
     }
 
-    public fn to_sql(self) -> string {
-        let parts = [self.name, self.type];
-        if self.is_primary {
-            parts.push("PRIMARY KEY");
+    // Per-dialect base type mapping
+    fn base_sql(self, dialect: string) -> string {
+        if self.kind == "id" {
+            if dialect == "postgres" {
+                return "SERIAL PRIMARY KEY";
+            }
+            if dialect == "mysql" {
+                return "INT AUTO_INCREMENT PRIMARY KEY";
+            }
+            return "INTEGER PRIMARY KEY AUTOINCREMENT";
         }
+        if self.kind == "string" {
+            if dialect == "postgres" {
+                return "VARCHAR(" + string(self.len) + ")";
+            }
+            if dialect == "mysql" {
+                return "VARCHAR(" + string(self.len) + ")";
+            }
+            return "TEXT";
+        }
+        if self.kind == "text" {
+            return "TEXT";
+        }
+        if self.kind == "integer" {
+            if dialect == "mysql" {
+                return "INT";
+            }
+            return "INTEGER";
+        }
+        if self.kind == "float" {
+            if dialect == "postgres" {
+                return "DOUBLE PRECISION";
+            }
+            if dialect == "mysql" {
+                return "DOUBLE";
+            }
+            return "REAL";
+        }
+        if self.kind == "boolean" {
+            if dialect == "postgres" {
+                return "BOOLEAN";
+            }
+            if dialect == "mysql" {
+                return "TINYINT(1)";
+            }
+            return "INTEGER";
+        }
+        return "TEXT";
+    }
+
+    public fn to_sql(self, dialect: string = "sqlite") -> string {
+        let parts = [self.name, self.base_sql(dialect)];
         if self.is_unique {
             parts.push("UNIQUE");
         }
@@ -49,6 +98,12 @@ public class ColumnDefinition {
         if self.default_value != null {
             if type_of(self.default_value) == "string" {
                 parts.push("DEFAULT '" + string(self.default_value) + "'");
+            } elif type_of(self.default_value) == "bool" {
+                if dialect == "postgres" {
+                    if self.default_value { parts.push("DEFAULT TRUE"); } else { parts.push("DEFAULT FALSE"); }
+                } else {
+                    if self.default_value { parts.push("DEFAULT 1"); } else { parts.push("DEFAULT 0"); }
+                }
             } else {
                 parts.push("DEFAULT " + string(self.default_value));
             }
@@ -65,55 +120,57 @@ public class Blueprint {
     }
 
     public fn id(self, name: string = "id") {
-        let col = new ColumnDefinition(name, "INTEGER PRIMARY KEY AUTOINCREMENT");
+        let col = new ColumnDefinition(name, "id");
         self.columns.push(col);
         return col;
     }
 
-    public fn string(self, name: string, _len: int = 255) {
-        let col = new ColumnDefinition(name, "TEXT");
+    public fn string(self, name: string, len: int = 255) {
+        let col = new ColumnDefinition(name, "string", len);
         self.columns.push(col);
         return col;
     }
 
     public fn text(self, name: string) {
-        let col = new ColumnDefinition(name, "TEXT");
+        let col = new ColumnDefinition(name, "text");
         self.columns.push(col);
         return col;
     }
 
     public fn integer(self, name: string) {
-        let col = new ColumnDefinition(name, "INTEGER");
+        let col = new ColumnDefinition(name, "integer");
         self.columns.push(col);
         return col;
     }
 
     public fn float(self, name: string) {
-        let col = new ColumnDefinition(name, "REAL");
+        let col = new ColumnDefinition(name, "float");
         self.columns.push(col);
         return col;
     }
 
     public fn boolean(self, name: string) {
-        let col = new ColumnDefinition(name, "INTEGER");
+        let col = new ColumnDefinition(name, "boolean");
         self.columns.push(col);
         return col;
     }
 
+    // Timestamps stay TEXT/VARCHAR across dialects because the Active Record
+    // layer stores unix_time() string values in created_at / updated_at.
     public fn timestamps(self) {
-        let c1 = new ColumnDefinition("created_at", "TEXT");
+        let c1 = new ColumnDefinition("created_at", "text");
         c1.nullable();
         self.columns.push(c1);
 
-        let c2 = new ColumnDefinition("updated_at", "TEXT");
+        let c2 = new ColumnDefinition("updated_at", "text");
         c2.nullable();
         self.columns.push(c2);
     }
 
-    public fn to_sql(self, table_name: string) -> string {
+    public fn to_sql(self, table_name: string, dialect: string = "sqlite") -> string {
         let col_defs = [];
         for col in self.columns {
-            col_defs.push(col.to_sql());
+            col_defs.push(col.to_sql(dialect));
         }
         return "CREATE TABLE IF NOT EXISTS " + table_name + " (\n  " + col_defs.join(",\n  ") + "\n);";
     }
@@ -122,10 +179,19 @@ public class Blueprint {
 public class SchemaBuilder {
     fn new() {}
 
+    fn dialect(self) -> string {
+        let d = DB.driver_name();
+        // MariaDB uses MySQL DDL
+        if d == "mariadb" {
+            return "mysql";
+        }
+        return d;
+    }
+
     public fn create(self, table_name: string, callback) {
         let blueprint = new Blueprint();
         callback(blueprint);
-        let sql = blueprint.to_sql(table_name);
+        let sql = blueprint.to_sql(table_name, self.dialect());
         DB.statement(sql);
         return true;
     }
@@ -138,4 +204,3 @@ public class SchemaBuilder {
 }
 
 public let Schema = new SchemaBuilder();
-

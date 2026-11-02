@@ -165,6 +165,11 @@ fn test_query_builder_joins_execution() {
 }
 
 fn test_database_busy_timeout() {
+    // PRAGMA is a SQLite concept — skip on server drivers
+    if DB.driver_name() != "sqlite" {
+        println("  [SKIP] test_database_busy_timeout (driver: " + DB.driver_name() + ")");
+        return;
+    }
     let conn = DB.connection();
     let rows = conn.query("PRAGMA busy_timeout;");
     assert(rows.len() > 0, "PRAGMA busy_timeout should return at least one row");

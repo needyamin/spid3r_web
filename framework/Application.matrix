@@ -191,8 +191,11 @@ public class Application {
     }
 
     fn render_500(self, req, exception) {
+        // Full detail stays server-side; clients get a generic message so
+        // driver errors can never leak SQL fragments or schema details.
+        println("[Spid3rWeb] 500 error on " + req.method + " " + req.path + ": " + string(exception));
         if req.path.starts_with("/api/") {
-            return json(map("error", "Internal Server Error", "exception", string(exception)), 500).to_http();
+            return json(map("error", "Internal Server Error", "message", "An unexpected error occurred."), 500).to_http();
         }
         let html_content = "<!DOCTYPE html>
 <html lang='en'>
@@ -201,14 +204,15 @@ public class Application {
   body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0b0f17; color: #f1f5f9; padding: 3rem; }
   .box { background: #1e293b; border-left: 6px solid #ef4444; border-radius: 8px; padding: 2rem; }
   h1 { color: #ef4444; font-size: 1.8rem; margin: 0 0 1rem; }
-  pre { background: #0f172a; padding: 1.5rem; border-radius: 6px; overflow-x: auto; color: #fca5a5; font-family: monospace; }
+  p { color: #94a3b8; }
 </style>
 </head>
 <body>
   <div class='box'>
-    <h1>âš ï¸ Spid3rWeb Unhandled Exception</h1>
+    <h1>Spid3rWeb Internal Server Error</h1>
     <p><strong>Route:</strong> <code>" + req.method + " " + req.path + "</code></p>
-    <pre>" + string(exception) + "</pre>
+    <p>Something went wrong while processing your request. Check the server logs for details.</p>
+    <a href='/' style='color:#38bdf8;'>Return to Home</a>
   </div>
 </body>
 </html>";

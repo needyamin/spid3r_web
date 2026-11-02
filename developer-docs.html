@@ -266,7 +266,7 @@
     <div class="card"><div class="c-icon">🛣️</div><h4>Expressive Router</h4><p>Static &amp; parameterized routes (<code>:id</code>), route groups with prefix inheritance, 405 detection, route listing.</p></div>
     <div class="card"><div class="c-icon">🧅</div><h4>Middleware Pipeline</h4><p>Onion-architecture pipeline, global CORS &amp; logging, session auth guards, custom 404/500 error pages.</p></div>
     <div class="card"><div class="c-icon">🔐</div><h4>Built-in Auth</h4><p>Native bcrypt hashing, CSPRNG session tokens (<code>sess_…</code>), cookie or Bearer-token sessions.</p></div>
-    <div class="card"><div class="c-icon">⚡</div><h4>Native SQLite</h4><p>Embedded persistence via Spid3r's SQLite C driver — WAL mode, foreign keys, busy timeout.</p></div>
+    <div class="card"><div class="c-icon">⚡</div><h4>Multi-Engine Database</h4><p><strong>SQLite</strong>, <strong>PostgreSQL</strong>, <strong>MySQL</strong>, and <strong>MariaDB</strong> behind one API — selected via <code>SPID3R_DB_DRIVER</code> with dialect-aware DDL and last-id handling.</p></div>
     <div class="card"><div class="c-icon">🪄</div><h4>Magic CLI</h4><p><code>spid3r magic serve / migrate / make:*</code> — scaffolding, migrations, route inspection, test runner.</p></div>
   </div>
 </section>
@@ -293,7 +293,8 @@
     <tr><td><code>framework/Request.matrix</code></td><td>Request wrapper (query/form/JSON parsing, session extraction) + <code>Validator</code> engine</td></tr>
     <tr><td><code>framework/Response.matrix</code></td><td>Response builder + global helpers (<code>response</code>, <code>json</code>, <code>html</code>, <code>redirect</code>)</td></tr>
     <tr><td><code>framework/Middleware.matrix</code></td><td><code>Pipeline</code> class + built-in <code>CorsMiddleware</code>, <code>LoggerMiddleware</code>, <code>AuthMiddleware</code></td></tr>
-    <tr><td><code>framework/Database/DB.matrix</code></td><td><code>QueryBuilder</code>, <code>DatabaseManager</code>, global <code>DB</code> facade</td></tr>
+    <tr><td><code>framework/Database/DB.matrix</code></td><td><code>QueryBuilder</code>, <code>DatabaseManager</code> (driver resolution), global <code>DB</code> facade</td></tr>
+    <tr><td><code>framework/Database/Connection.matrix</code></td><td>Driver connections: <code>SqliteConnection</code>, <code>PgConnection</code>, <code>MySqlConnection</code> + value escaping / interpolation</td></tr>
     <tr><td><code>framework/Database/Model.matrix</code></td><td>Active Record base class: persistence, timestamps, fillable</td></tr>
     <tr><td><code>framework/Database/Schema.matrix</code></td><td><code>Blueprint</code> + <code>SchemaBuilder</code> DDL compiler, global <code>Schema</code> facade</td></tr>
     <tr><td><code>framework/Database/Migration.matrix</code></td><td><code>Migration</code> base + <code>MigrationRunner</code> (batch tracking, rollback, status)</td></tr>
@@ -456,14 +457,30 @@ entry = "server.matrix"
   <h3>Environment variables</h3>
   <table>
     <tr><th>Variable</th><th>Purpose</th><th>Default</th></tr>
-    <tr><td><code>SPID3R_DB_PATH</code></td><td>Overrides the resolved SQLite database path (checked first by <code>DatabaseManager</code>)</td><td><code>database/database.sqlite</code></td></tr>
+    <tr><td><code>SPID3R_DB_DRIVER</code></td><td>Active engine: <code>sqlite</code> | <code>postgres</code> (<code>postgresql</code>/<code>pg</code>) | <code>mysql</code> | <code>mariadb</code></td><td><code>sqlite</code></td></tr>
+    <tr><td><code>SPID3R_DB_PATH</code></td><td>Overrides the SQLite database path</td><td><code>database/database.sqlite</code></td></tr>
+    <tr><td><code>SPID3R_PG_HOST / _PORT / _USER / _PASSWORD / _DATABASE</code></td><td>PostgreSQL connection settings</td><td><code>127.0.0.1:5432</code>, user <code>spid3r</code>, db <code>spid3r</code></td></tr>
+    <tr><td><code>SPID3R_MYSQL_HOST / _PORT / _USER / _PASSWORD / _DATABASE</code></td><td>MySQL / MariaDB connection settings (MariaDB reuses the <code>SPID3R_MYSQL_*</code> vars)</td><td><code>127.0.0.1:3306</code>, user <code>spid3r</code>, db <code>spid3r</code></td></tr>
   </table>
 
-  <h3>Connection behavior</h3>
-  <p>The SQLite connection is lazy-opened on first use and always initialized with:</p>
+  <h3>Connection behavior per engine</h3>
+  <table>
+    <tr><th>Engine</th><th>Connect</th><th>Parameter binding</th><th>Last insert ID</th><th>Notes</th></tr>
+    <tr><td>SQLite</td><td><code>db_open(path)</code></td><td>Native <code>?</code> binding ✅</td><td><code>run()</code> → <code>last_id</code></td><td>WAL, foreign keys, busy_timeout 5000ms</td></tr>
+    <tr><td>PostgreSQL</td><td><code>pg_connect(addr,user,pass,db)</code></td><td>Interpolated (escaped)</td><td><code>INSERT … RETURNING id</code></td><td>md5/trust auth only (no SCRAM); <code>SET password_encryption='md5'</code></td></tr>
+    <tr><td>MySQL</td><td><code>mysql_connect(addr,user,pass,db)</code></td><td>Interpolated (escaped)</td><td><code>SELECT LAST_INSERT_ID()</code></td><td>Users must use <code>mysql_native_password</code></td></tr>
+    <tr><td>MariaDB</td><td>MySQL wire protocol</td><td>Interpolated (escaped)</td><td><code>SELECT LAST_INSERT_ID()</code></td><td>Works out of the box (native password default)</td></tr>
+  </table>
+
+  <p>The connection is lazy-opened on first use. SQLite additionally initializes:</p>
   <pre><code>PRAGMA foreign_keys = ON;
 PRAGMA journal_mode = WAL;
 PRAGMA busy_timeout = 5000;   <span class="cmt">// ms — tolerates concurrent writers</span></code></pre>
+
+  <div class="callout tip">
+    <div class="co-title">💡 One codebase, any engine</div>
+    <p>Application code (<code>DB.table(...)</code>, models, migrations, seeders) is 100% driver-agnostic. The dialect layer compiles <code>id()</code> to <code>SERIAL</code> (pg), <code>INT AUTO_INCREMENT</code> (mysql/mariadb), or <code>INTEGER PRIMARY KEY AUTOINCREMENT</code> (sqlite) automatically, and every value is escaped per engine before interpolation.</p>
+  </div>
 </section>
 
 <!-- ============ MAGIC CLI ============ -->
@@ -875,8 +892,8 @@ Schema.<span class="fn">dropIfExists</span>("posts");</code></pre>
   </table>
 
   <div class="callout info">
-    <div class="co-title">ℹ️ SQLite type mapping</div>
-    <p><code>string</code>/<code>text</code> → <code>TEXT</code> · <code>integer</code>/<code>boolean</code> → <code>INTEGER</code> · <code>float</code> → <code>REAL</code>. Columns are <code>NOT NULL</code> unless marked <code>nullable()</code> or <code>id()</code>.</p>
+    <div class="co-title">ℹ️ Dialect type mapping</div>
+    <p><code>id()</code> → <code>INTEGER PRIMARY KEY AUTOINCREMENT</code> (sqlite) / <code>SERIAL</code> (postgres) / <code>INT AUTO_INCREMENT</code> (mysql) · <code>string</code> → <code>TEXT</code> (sqlite) / <code>VARCHAR(n)</code> (pg/mysql) · <code>float</code> → <code>REAL</code>/<code>DOUBLE PRECISION</code>/<code>DOUBLE</code> · <code>boolean</code> → <code>INTEGER</code>/<code>BOOLEAN</code>/<code>TINYINT(1)</code>. Columns are <code>NOT NULL</code> unless marked <code>nullable()</code> or <code>id()</code>.</p>
   </div>
 </section>
 
@@ -1013,7 +1030,7 @@ let hash = Hash.<span class="fn">make</span>("plain-password");      <span class
   <h2>Security Hardening</h2>
   <table>
     <tr><th>Area</th><th>Protection</th></tr>
-    <tr><td>SQL injection</td><td>All user data bound via <code>?</code> placeholders in the QueryBuilder; never concatenate user input into SQL</td></tr>
+    <tr><td>SQL injection</td><td>SQLite uses native <code>?</code> binding; PostgreSQL/MySQL/MariaDB values are escaped per engine and interpolated quote-aware — session-hardened at connect (<code>standard_conforming_strings=on</code>, <code>NO_BACKSLASH_ESCAPES</code> stripped, statement timeouts). Identifiers are validated (<code>sql_check_identifier</code>) and order direction whitelisted; never concatenate user input into SQL</td></tr>
     <tr><td>XSS</td><td><code>{{ }}</code> escapes <code>&amp; &lt; &gt; " '</code>; reserve <code>{!! !!}</code> for trusted content only</td></tr>
     <tr><td>Path traversal</td><td>Static handler rejects <code>..</code>, <code>\</code>, NUL, and encoded <code>%2e/%2f/%5c/%00</code>; resolution is confined to <code>public/</code></td></tr>
     <tr><td>Password storage</td><td>Native bcrypt (salted, adaptive cost) via <code>Hash.make</code></td></tr>
@@ -1031,7 +1048,11 @@ let hash = Hash.<span class="fn">make</span>("plain-password");      <span class
   <p>Run everything with:</p>
   <pre><code>spid3r magic test                      <span class="cmt"># Magic CLI runner (exit 0/1)</span>
 spid3r run tests/run_all.matrix        <span class="cmt"># direct runner</span>
-spid3r run tests/e2e/run_e2e.matrix    <span class="cmt"># E2E opaque-box track</span></code></pre>
+spid3r run tests/e2e/run_e2e.matrix    <span class="cmt"># E2E opaque-box track</span>
+
+<span class="cmt"># Run the whole suite against a live server engine:</span>
+SPID3R_DB_DRIVER=postgres SPID3R_PG_* … spid3r magic test
+SPID3R_DB_DRIVER=mysql    SPID3R_MYSQL_* … spid3r magic test</code></pre>
 
   <h3>Unit suites</h3>
   <table>
@@ -1042,6 +1063,8 @@ spid3r run tests/e2e/run_e2e.matrix    <span class="cmt"># E2E opaque-box track<
     <tr><td><code>tests/test_model.matrix</code></td><td>Active Record, timestamps, relations</td></tr>
     <tr><td><code>tests/test_bd.matrix</code></td><td>Layouts, sections, yields, foreach</td></tr>
     <tr><td><code>tests/test_http_lifecycle.matrix</code></td><td>Full 200 / 404 / 401 dispatch</td></tr>
+    <tr><td><code>tests/test_drivers.matrix</code></td><td>Multi-DB: escaping, interpolation, injection resistance, dialect DDL, driver resolution</td></tr>
+    <tr><td><code>tests/test_multi_db_live.matrix</code></td><td>Live integration per engine (lifecycle, QueryBuilder, migrations) — <code>[SKIP]</code> when a server is unreachable</td></tr>
     <tr><td><code>tests/test_bd_adversarial.matrix</code></td><td>Template engine edge cases</td></tr>
   </table>
 
