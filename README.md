@@ -30,11 +30,19 @@ Open **http://localhost:8000** — demo login: `ada@example.com` / `secret123`.
 
 ### Using PostgreSQL / MySQL / MariaDB
 
+**Option A — `.env` file (recommended):** copy `.env.example` to `.env`, set `SPID3R_DB_DRIVER=postgres` and the `SPID3R_PG_*` values, then just run the commands. Real OS environment variables always take precedence over `.env`.
+
+**Option B — export variables:**
+
 ```bash
 export SPID3R_DB_DRIVER=postgres          # or: mysql | mariadb
 export SPID3R_PG_HOST=127.0.0.1 SPID3R_PG_PORT=5432
 export SPID3R_PG_USER=app SPID3R_PG_PASSWORD=secret SPID3R_PG_DATABASE=myapp
+```
 
+Then:
+
+```bash
 spid3r magic migrate && spid3r magic serve   # app code needs no changes
 ```
 

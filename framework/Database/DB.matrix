@@ -2,6 +2,12 @@
 // Spid3rWeb Database Connection & Query Facade
 
 import "Connection";
+import "framework/Env";
+
+// Load .env (project root) BEFORE the DB singleton below is constructed, so
+// SPID3R_DB_DRIVER and connection settings can come from the file. Real OS
+// environment variables always take precedence.
+let _env_file_loaded = load_env_file(".env");
 
 public class QueryBuilder {
     public let table_name;
@@ -377,6 +383,10 @@ public class DatabaseManager {
     public let conn_config;
 
     fn new() {
+        // Re-load .env here (idempotent: OS env wins) so every manager
+        // instance — including the global singleton at import time — sees
+        // the file's values for driver/connection resolution.
+        let _env_reload = load_env_file(".env");
         self.driver = self.resolve_driver();
         self.db_path = "";
         self.conn_config = map();

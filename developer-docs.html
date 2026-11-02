@@ -454,7 +454,7 @@ entry = "server.matrix"
     )
 );</code></pre>
 
-  <h3>Environment variables</h3>
+  <h3>Environment variables &amp; <code>.env</code> files</h3>
   <table>
     <tr><th>Variable</th><th>Purpose</th><th>Default</th></tr>
     <tr><td><code>SPID3R_DB_DRIVER</code></td><td>Active engine: <code>sqlite</code> | <code>postgres</code> (<code>postgresql</code>/<code>pg</code>) | <code>mysql</code> | <code>mariadb</code></td><td><code>sqlite</code></td></tr>
@@ -462,6 +462,11 @@ entry = "server.matrix"
     <tr><td><code>SPID3R_PG_HOST / _PORT / _USER / _PASSWORD / _DATABASE</code></td><td>PostgreSQL connection settings</td><td><code>127.0.0.1:5432</code>, user <code>spid3r</code>, db <code>spid3r</code></td></tr>
     <tr><td><code>SPID3R_MYSQL_HOST / _PORT / _USER / _PASSWORD / _DATABASE</code></td><td>MySQL / MariaDB connection settings (MariaDB reuses the <code>SPID3R_MYSQL_*</code> vars)</td><td><code>127.0.0.1:3306</code>, user <code>spid3r</code>, db <code>spid3r</code></td></tr>
   </table>
+
+  <div class="callout tip">
+    <div class="co-title">💡 <code>.env</code> file support</div>
+    <p>Instead of exporting variables, copy <code>.env.example</code> to <code>.env</code> in the project root — it is loaded automatically at boot (<code>KEY=value</code>, <code>#</code> comments, quoted values, and <code>export KEY=value</code> are supported). <strong>Real OS environment variables always win</strong> over <code>.env</code>, so CI/production overrides keep working. <code>.env</code> is git-ignored — never commit real credentials.</p>
+  </div>
 
   <h3>Connection behavior per engine</h3>
   <table>
