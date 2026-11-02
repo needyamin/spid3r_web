@@ -1,0 +1,1184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Spid3rWeb — Full-Stack Developer Documentation</title>
+<style>
+  :root {
+    --bg: #ffffff;
+    --bg-soft: #f8fafc;
+    --bg-code: #0f172a;
+    --bg-code-inline: #f1f5f9;
+    --border: #e2e8f0;
+    --text: #1e293b;
+    --text-soft: #64748b;
+    --accent: #2563eb;
+    --accent-soft: #dbeafe;
+    --green: #16a34a;
+    --amber: #d97706;
+    --red: #dc2626;
+    --purple: #7c3aed;
+    --sidebar-w: 280px;
+    --radius: 10px;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { scroll-behavior: smooth; scroll-padding-top: 80px; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+    background: var(--bg-soft);
+    color: var(--text);
+    line-height: 1.65;
+    font-size: 15px;
+  }
+
+  /* ---------- Top bar ---------- */
+  .topbar {
+    position: fixed; top: 0; left: 0; right: 0; height: 60px; z-index: 50;
+    background: #ffffffee; backdrop-filter: blur(8px);
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: 14px; padding: 0 24px;
+  }
+  .logo { display: flex; align-items: center; gap: 10px; font-weight: 800; font-size: 17px; letter-spacing: -0.3px; }
+  .logo .spider { font-size: 22px; }
+  .logo .web { color: var(--accent); }
+  .version-badge {
+    font-size: 11px; font-weight: 700; color: var(--accent);
+    background: var(--accent-soft); padding: 3px 9px; border-radius: 999px;
+  }
+  .topbar .links { margin-left: auto; display: flex; gap: 18px; font-size: 13px; }
+  .topbar .links a { color: var(--text-soft); text-decoration: none; font-weight: 600; }
+  .topbar .links a:hover { color: var(--accent); }
+
+  /* ---------- Layout ---------- */
+  .layout { display: flex; padding-top: 60px; max-width: 1400px; margin: 0 auto; }
+  aside.sidebar {
+    width: var(--sidebar-w); flex-shrink: 0;
+    position: sticky; top: 60px; height: calc(100vh - 60px); overflow-y: auto;
+    padding: 24px 16px 40px 24px; border-right: 1px solid var(--border);
+    background: var(--bg); font-size: 13.5px;
+  }
+  .sidebar .group { margin-bottom: 22px; }
+  .sidebar .group-title {
+    font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.8px;
+    color: var(--text-soft); margin-bottom: 8px; padding-left: 10px;
+  }
+  .sidebar a {
+    display: block; padding: 5px 10px; border-radius: 6px;
+    color: var(--text); text-decoration: none; font-weight: 500;
+    border-left: 2px solid transparent;
+  }
+  .sidebar a:hover { background: var(--bg-soft); color: var(--accent); }
+  .sidebar a.active { background: var(--accent-soft); color: var(--accent); font-weight: 700; }
+  main { flex: 1; min-width: 0; padding: 36px 48px 100px; background: var(--bg); }
+
+  /* ---------- Typography ---------- */
+  h1 { font-size: 30px; letter-spacing: -0.5px; margin-bottom: 8px; }
+  h2 {
+    font-size: 22px; letter-spacing: -0.3px; margin: 0 0 18px;
+    padding-bottom: 10px; border-bottom: 2px solid var(--border);
+  }
+  h3 { font-size: 17px; margin: 30px 0 10px; }
+  h4 { font-size: 14.5px; margin: 20px 0 8px; }
+  p { margin-bottom: 12px; color: #334155; }
+  ul, ol { margin: 0 0 14px 22px; color: #334155; }
+  li { margin-bottom: 5px; }
+  strong { color: var(--text); }
+  section { margin-bottom: 64px; }
+  .lead { font-size: 16px; color: var(--text-soft); margin-bottom: 24px; }
+  a.inline { color: var(--accent); text-decoration: none; font-weight: 600; }
+  a.inline:hover { text-decoration: underline; }
+
+  code {
+    font-family: "Cascadia Code", "Fira Code", Consolas, monospace;
+    font-size: 13px; background: var(--bg-code-inline);
+    padding: 2px 6px; border-radius: 5px; color: #be185d;
+  }
+  pre {
+    background: var(--bg-code); color: #e2e8f0; border-radius: var(--radius);
+    padding: 16px 18px; overflow-x: auto; margin: 14px 0 20px;
+    font-size: 13px; line-height: 1.6;
+    border: 1px solid #1e293b;
+  }
+  pre code { background: transparent; color: inherit; padding: 0; font-size: 13px; }
+  .cmt { color: #64748b; font-style: italic; }
+  .kw { color: #7dd3fc; }
+  .str { color: #86efac; }
+  .fn { color: #fcd34d; }
+  .tag { color: #f0abfc; }
+
+  /* ---------- Components ---------- */
+  table { width: 100%; border-collapse: collapse; margin: 14px 0 22px; font-size: 13.5px; background: var(--bg); }
+  th { text-align: left; background: var(--bg-soft); font-weight: 700; }
+  th, td { border: 1px solid var(--border); padding: 9px 12px; vertical-align: top; }
+  td code { white-space: nowrap; }
+  tr:nth-child(even) td { background: #fbfdff; }
+
+  .callout {
+    border-radius: var(--radius); padding: 14px 16px; margin: 16px 0;
+    border: 1px solid; font-size: 14px;
+  }
+  .callout .co-title { font-weight: 800; margin-bottom: 4px; display: flex; align-items: center; gap: 8px; }
+  .callout.info { background: #eff6ff; border-color: #bfdbfe; color: #1e40af; }
+  .callout.warn { background: #fffbeb; border-color: #fde68a; color: #92400e; }
+  .callout.danger { background: #fef2f2; border-color: #fecaca; color: #991b1b; }
+  .callout.tip { background: #f0fdf4; border-color: #bbf7d0; color: #166534; }
+  .callout p { color: inherit; margin-bottom: 0; }
+
+  .badge {
+    display: inline-block; font-size: 11px; font-weight: 700;
+    padding: 2px 9px; border-radius: 999px; vertical-align: middle;
+  }
+  .b-blue { background: var(--accent-soft); color: var(--accent); }
+  .b-green { background: #dcfce7; color: var(--green); }
+  .b-amber { background: #fef3c7; color: var(--amber); }
+  .b-purple { background: #ede9fe; color: var(--purple); }
+  .b-red { background: #fee2e2; color: var(--red); }
+
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; margin: 18px 0; }
+  .card {
+    background: var(--bg-soft); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 16px 18px;
+  }
+  .card .c-icon { font-size: 20px; }
+  .card h4 { margin: 8px 0 6px; }
+  .card p { font-size: 13px; color: var(--text-soft); margin: 0; }
+
+  .layers { display: flex; flex-direction: column; gap: 0; margin: 20px 0; max-width: 720px; }
+  .layer {
+    display: flex; align-items: center; gap: 14px;
+    border: 1px solid var(--border); background: var(--bg);
+    padding: 13px 18px; border-radius: 10px; margin-bottom: -1px;
+  }
+  .layer:nth-child(odd) { background: #fbfdff; }
+  .layer .num {
+    width: 30px; height: 30px; border-radius: 8px; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 800; font-size: 13px; color: #fff;
+  }
+  .layer b { font-size: 14px; }
+  .layer .desc { font-size: 12.5px; color: var(--text-soft); }
+  .layer .file { margin-left: auto; font-size: 12px; color: var(--text-soft); font-family: monospace; }
+
+  .tree {
+    background: var(--bg-code); color: #cbd5e1; border-radius: var(--radius);
+    padding: 18px 20px; font-family: Consolas, monospace; font-size: 12.5px;
+    line-height: 1.7; overflow-x: auto; white-space: pre; margin: 14px 0 22px;
+  }
+  .tree .d { color: #7dd3fc; font-weight: 700; }
+  .tree .f { color: #e2e8f0; }
+  .tree .n { color: #64748b; }
+
+  .flow { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 16px 0 22px; }
+  .flow .step {
+    background: var(--bg); border: 1.5px solid var(--accent); color: var(--accent);
+    font-weight: 700; font-size: 12.5px; padding: 7px 13px; border-radius: 8px;
+  }
+  .flow .arrow { color: var(--text-soft); font-weight: 700; }
+
+  .sig {
+    background: var(--bg-soft); border: 1px solid var(--border); border-left: 4px solid var(--accent);
+    border-radius: 8px; padding: 10px 14px; margin: 12px 0;
+    font-family: Consolas, monospace; font-size: 13px; overflow-x: auto; white-space: pre;
+  }
+
+  hr.sep { border: none; border-top: 1px dashed var(--border); margin: 26px 0; }
+
+  @media (max-width: 900px) {
+    aside.sidebar { display: none; }
+    main { padding: 24px 20px 80px; }
+  }
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="logo"><span class="spider">🕷️</span> Spid3r<span class="web">Web</span></div>
+  <span class="version-badge">v1.0.0</span>
+  <nav class="links">
+    <a href="#getting-started">Getting Started</a>
+    <a href="#api-reference">API Reference</a>
+    <a href="#testing">Testing</a>
+  </nav>
+</header>
+
+<div class="layout">
+
+<!-- ============================ SIDEBAR ============================ -->
+<aside class="sidebar" id="toc">
+  <div class="group">
+    <div class="group-title">Introduction</div>
+    <a href="#overview">Overview &amp; Features</a>
+    <a href="#architecture">Architecture</a>
+    <a href="#structure">Project Structure</a>
+  </div>
+  <div class="group">
+    <div class="group-title">Getting Started</div>
+    <a href="#getting-started">Installation &amp; Setup</a>
+    <a href="#lifecycle">Request Lifecycle</a>
+    <a href="#config">Configuration</a>
+  </div>
+  <div class="group">
+    <div class="group-title">Core Concepts</div>
+    <a href="#cli">Magic CLI</a>
+    <a href="#routing">Routing</a>
+    <a href="#controllers">Controllers</a>
+    <a href="#requests">Requests &amp; Validation</a>
+    <a href="#responses">Responses</a>
+    <a href="#middleware">Middleware</a>
+  </div>
+  <div class="group">
+    <div class="group-title">Database</div>
+    <a href="#database">Query Builder (DB)</a>
+    <a href="#models">Active Record Models</a>
+    <a href="#schema">Schema Builder</a>
+    <a href="#migrations">Migrations &amp; Seeders</a>
+  </div>
+  <div class="group">
+    <div class="group-title">Frontend</div>
+    <a href="#views">SpiderBD Templates</a>
+  </div>
+  <div class="group">
+    <div class="group-title">Security</div>
+    <a href="#auth">Authentication &amp; Hashing</a>
+    <a href="#security">Security Hardening</a>
+  </div>
+  <div class="group">
+    <div class="group-title">Quality</div>
+    <a href="#testing">Testing</a>
+    <a href="#recipes">Common Recipes</a>
+    <a href="#api-reference">API Cheat Sheet</a>
+  </div>
+</aside>
+
+<!-- ============================ MAIN ============================ -->
+<main>
+
+<!-- ============ OVERVIEW ============ -->
+<section id="overview">
+  <h1>🕷️ Spid3rWeb Developer Documentation</h1>
+  <p class="lead">Spid3rWeb is an expressive, full-stack web framework engineered for the <strong>Spid3r programming language</strong>. Elegant syntax, Active Record ORM, a layout template engine, and a powerful CLI — with <strong>zero external dependencies</strong>, running natively on Spid3r's VM and AOT compiler.</p>
+
+  <div class="grid">
+    <div class="card"><div class="c-icon">🗂️</div><h4>Active Record ORM</h4><p>Fluent query builder, automatic timestamps, mass-assignment protection via <code>fillable</code>, relationship accessors.</p></div>
+    <div class="card"><div class="c-icon">🗄️</div><h4>Transactional Migrations</h4><p>Declarative <code>Schema.create(...)</code>, migration tracking table, batch rollback, and database seeders.</p></div>
+    <div class="card"><div class="c-icon">🧩</div><h4>SpiderBD Templates</h4><p><code>.bd.html</code> templates with layouts, sections, includes, conditionals, loops, and escaped/raw interpolation.</p></div>
+    <div class="card"><div class="c-icon">🛣️</div><h4>Expressive Router</h4><p>Static &amp; parameterized routes (<code>:id</code>), route groups with prefix inheritance, 405 detection, route listing.</p></div>
+    <div class="card"><div class="c-icon">🧅</div><h4>Middleware Pipeline</h4><p>Onion-architecture pipeline, global CORS &amp; logging, session auth guards, custom 404/500 error pages.</p></div>
+    <div class="card"><div class="c-icon">🔐</div><h4>Built-in Auth</h4><p>Native bcrypt hashing, CSPRNG session tokens (<code>sess_…</code>), cookie or Bearer-token sessions.</p></div>
+    <div class="card"><div class="c-icon">⚡</div><h4>Native SQLite</h4><p>Embedded persistence via Spid3r's SQLite C driver — WAL mode, foreign keys, busy timeout.</p></div>
+    <div class="card"><div class="c-icon">🪄</div><h4>Magic CLI</h4><p><code>spid3r magic serve / migrate / make:*</code> — scaffolding, migrations, route inspection, test runner.</p></div>
+  </div>
+</section>
+
+<!-- ============ ARCHITECTURE ============ -->
+<section id="architecture">
+  <h2>Architecture</h2>
+  <p>Spid3rWeb is organized into six strictly-layered subsystems. Each layer only depends on the layers beneath it, keeping the framework predictable and testable.</p>
+
+  <div class="layers">
+    <div class="layer"><span class="num" style="background:#2563eb">6</span><span><b>Presentation / View Engine</b><br><span class="desc">SpiderBD compiler: layouts, sections, yields, partials, dot-notation evaluation</span></span><span class="file">framework/View/BD.matrix</span></div>
+    <div class="layer"><span class="num" style="background:#7c3aed">5</span><span><b>Security &amp; Authentication</b><br><span class="desc">CSPRNG session tokens, session persistence, login/logout, bcrypt hashing</span></span><span class="file">framework/Auth/*</span></div>
+    <div class="layer"><span class="num" style="background:#0ea5e9">4</span><span><b>Middleware Pipeline</b><br><span class="desc">Pipeline runner (onion wrap), CORS / Logger / Auth middlewares, HTTP server lifecycle</span></span><span class="file">framework/Middleware.matrix</span></div>
+    <div class="layer"><span class="num" style="background:#16a34a">3</span><span><b>HTTP Foundation &amp; Routing</b><br><span class="desc">Request parsing &amp; validation, Response builder, pattern matching &amp; dispatch</span></span><span class="file">framework/Request · Response · Router</span></div>
+    <div class="layer"><span class="num" style="background:#d97706">2</span><span><b>Database &amp; ORM</b><br><span class="desc">QueryBuilder, Active Record base Model, Schema builder, migration runner</span></span><span class="file">framework/Database/*</span></div>
+    <div class="layer"><span class="num" style="background:#dc2626">1</span><span><b>Runtime &amp; CLI</b><br><span class="desc">Magic entrypoint, ConsoleKernel command dispatch, package manifest</span></span><span class="file">magic · ConsoleKernel · spider.toml</span></div>
+  </div>
+
+  <h3>Source Files</h3>
+  <table>
+    <tr><th>File</th><th>Responsibility</th></tr>
+    <tr><td><code>framework/Application.matrix</code></td><td>Application kernel: HTTP server bridge, static file serving, 404/500 rendering, middleware orchestration</td></tr>
+    <tr><td><code>framework/Router.matrix</code></td><td><code>Route</code> singleton, <code>RouteEntry</code>, groups, parameter matching, 405 detection, controller dispatch</td></tr>
+    <tr><td><code>framework/Request.matrix</code></td><td>Request wrapper (query/form/JSON parsing, session extraction) + <code>Validator</code> engine</td></tr>
+    <tr><td><code>framework/Response.matrix</code></td><td>Response builder + global helpers (<code>response</code>, <code>json</code>, <code>html</code>, <code>redirect</code>)</td></tr>
+    <tr><td><code>framework/Middleware.matrix</code></td><td><code>Pipeline</code> class + built-in <code>CorsMiddleware</code>, <code>LoggerMiddleware</code>, <code>AuthMiddleware</code></td></tr>
+    <tr><td><code>framework/Database/DB.matrix</code></td><td><code>QueryBuilder</code>, <code>DatabaseManager</code>, global <code>DB</code> facade</td></tr>
+    <tr><td><code>framework/Database/Model.matrix</code></td><td>Active Record base class: persistence, timestamps, fillable</td></tr>
+    <tr><td><code>framework/Database/Schema.matrix</code></td><td><code>Blueprint</code> + <code>SchemaBuilder</code> DDL compiler, global <code>Schema</code> facade</td></tr>
+    <tr><td><code>framework/Database/Migration.matrix</code></td><td><code>Migration</code> base + <code>MigrationRunner</code> (batch tracking, rollback, status)</td></tr>
+    <tr><td><code>framework/View/BD.matrix</code></td><td>SpiderBD template compiler + global <code>view()</code> helper</td></tr>
+    <tr><td><code>framework/Auth/Auth.matrix</code></td><td><code>AuthManager</code> singleton: attempt, login, sessions, guards</td></tr>
+    <tr><td><code>framework/Auth/Hash.matrix</code></td><td>Bcrypt hashing facade</td></tr>
+    <tr><td><code>framework/Console/ConsoleKernel.matrix</code></td><td>Magic CLI command engine</td></tr>
+  </table>
+</section>
+
+<!-- ============ STRUCTURE ============ -->
+<section id="structure">
+  <h2>Project Structure</h2>
+  <div class="tree"><span class="d">spid3r_web/</span>
+├── <span class="d">app/</span>                          <span class="n"># Application layer (your code)</span>
+│   ├── <span class="d">Controllers/</span>              <span class="n"># MVC controllers (.matrix)</span>
+│   │   ├── AuthController.matrix
+│   │   ├── HomeController.matrix
+│   │   └── PostController.matrix
+│   ├── <span class="d">Middleware/</span>               <span class="n"># App-specific middleware</span>
+│   └── <span class="d">Models/</span>                   <span class="n"># Active Record models</span>
+│       ├── User.matrix
+│       └── Post.matrix
+├── <span class="d">config/</span>
+│   ├── app.matrix                <span class="n"># App name, env, debug, URL, locale</span>
+│   └── database.matrix           <span class="n"># SQLite connection &amp; pragmas</span>
+├── <span class="d">database/</span>
+│   ├── database.sqlite           <span class="n"># SQLite storage file</span>
+│   ├── <span class="d">migrations/</span>              <span class="n"># 001_…, 002_…, 003_…</span>
+│   └── <span class="d">seeders/</span>                 <span class="n"># DatabaseSeeder.matrix</span>
+├── <span class="d">framework/</span>                    <span class="n"># Spid3rWeb core (do not edit casually)</span>
+│   ├── Application.matrix · Router.matrix · Request.matrix
+│   ├── Response.matrix · Middleware.matrix · Controller.matrix
+│   ├── <span class="d">Auth/</span>  <span class="n">Auth.matrix, Hash.matrix</span>
+│   ├── <span class="d">Console/</span>  <span class="n">ConsoleKernel.matrix</span>
+│   ├── <span class="d">Database/</span>  <span class="n">DB, Model, Schema, Migration</span>
+│   └── <span class="d">View/</span>  <span class="n">BD.matrix</span>
+├── <span class="d">public/</span>                       <span class="n"># Static assets (path-traversal protected)</span>
+│   ├── <span class="d">css/</span> app.css
+│   └── <span class="d">js/</span> app.js
+├── <span class="d">resources/views/</span>              <span class="n"># SpiderBD templates (.bd.html)</span>
+│   ├── <span class="d">layouts/</span>  <span class="n">app.bd.html</span>
+│   ├── <span class="d">auth/</span>    <span class="n">login, register</span>
+│   └── <span class="d">posts/</span>   <span class="n">index, show, create, edit</span>
+├── <span class="d">routes/</span>
+│   ├── web.matrix                <span class="n"># Frontend routes</span>
+│   └── api.matrix                <span class="n"># JSON REST routes (/api/v1)</span>
+├── <span class="d">tests/</span>                        <span class="n"># Unit + E2E suites (see Testing)</span>
+├── magic                         <span class="n"># Magic CLI entrypoint (no extension)</span>
+├── server.matrix                 <span class="n"># HTTP server entrypoint</span>
+└── spider.toml                   <span class="n"># Package manifest</span></div>
+
+  <div class="callout info">
+    <div class="co-title">ℹ️ Dual-root resolution</div>
+    <p>The framework resolves views, static files, and the database under <em>both</em> <code>&lt;root&gt;/…</code> and <code>examples/spid3r_web/…</code> so it works whether it is run standalone or as an example inside the Spid3r repository.</p>
+  </div>
+</section>
+
+<!-- ============ GETTING STARTED ============ -->
+<section id="getting-started">
+  <h2>Getting Started</h2>
+
+  <h3>1. Requirements</h3>
+  <ul>
+    <li>Spid3r compiler &amp; runtime toolchain (<code>spid3r</code> on <code>PATH</code>, or <code>target/release/spid3r</code> in the language repo)</li>
+    <li>Windows, Linux, or macOS — no other runtime or package manager needed</li>
+  </ul>
+
+  <h3>2. Initialize the database</h3>
+  <pre><code><span class="cmt"># Run outstanding migrations (creates users, posts, sessions tables)</span>
+spid3r magic migrate
+
+<span class="cmt"># Seed demo data (user ada@example.com + sample articles)</span>
+spid3r magic db:seed
+
+<span class="cmt"># Verify migration status</span>
+spid3r magic migrate:status</code></pre>
+
+  <h3>3. Start the development server</h3>
+  <pre><code>spid3r magic serve            <span class="cmt"># http://localhost:8000</span>
+spid3r magic serve --port 8080  <span class="cmt"># custom port</span>
+spid3r magic serve --dry-run  <span class="cmt"># validate boot without binding</span></code></pre>
+  <p>Alternatively run the server entrypoint directly with a port argument:</p>
+  <pre><code>spid3r run server.matrix 9000</code></pre>
+
+  <div class="callout tip">
+    <div class="co-title">💡 Verify everything works</div>
+    <p>Run <code>spid3r magic test</code> — it executes all 6 unit suites plus the E2E track and exits <code>0</code> only if everything passes. <code>spid3r magic route:list</code> prints the full route table including <code>/api/v1/posts</code>.</p>
+  </div>
+
+  <h3>4. Manifest (<code>spider.toml</code>)</h3>
+  <pre><code>[package]
+name = "spid3r_web"
+version = "1.0.0"
+entry = "server.matrix"
+
+[dependencies]
+<span class="cmt"># Zero external packages — the Spid3r stdlib provides HTTP/1.1,</span>
+<span class="cmt"># SQLite bindings, bcrypt, JSON, and thread synchronization.</span></code></pre>
+</section>
+
+<!-- ============ LIFECYCLE ============ -->
+<section id="lifecycle">
+  <h2>Request Lifecycle</h2>
+  <p>Every HTTP request flows through <code>Application.handle_request()</code> in a fixed, deterministic order:</p>
+
+  <div class="flow">
+    <span class="step">Raw HTTP req</span><span class="arrow">→</span>
+    <span class="step">Request wrap + session restore</span><span class="arrow">→</span>
+    <span class="step">Static file check</span><span class="arrow">→</span>
+    <span class="step">Global pipeline (CORS)</span><span class="arrow">→</span>
+    <span class="step">Router match / 405 / 404</span><span class="arrow">→</span>
+    <span class="step">Route middleware (auth…)</span><span class="arrow">→</span>
+    <span class="step">Dispatch handler</span><span class="arrow">→</span>
+    <span class="step">Response</span>
+  </div>
+
+  <ol>
+    <li><strong>Session restore</strong> — <code>Auth.clear()</code> resets per-request state; if the request carries a session token (cookie <code>spid3r_session</code> or <code>Authorization: Bearer</code>), <code>Auth.authenticate_token()</code> rehydrates the user from the <code>sessions</code> table.</li>
+    <li><strong>Static files</strong> — for <code>GET</code> requests under <code>/css/</code>, <code>/js/</code>, <code>/assets/</code>, the kernel serves from <code>public/</code> with correct <code>content-type</code> headers. Paths containing <code>..</code>, backslashes, NUL bytes, or their percent-encoded forms are rejected (path-traversal defense).</li>
+    <li><strong>Global middleware</strong> — the <code>Pipeline</code> runs <code>global_middleware</code> (CORS by default). A middleware may short-circuit by returning a <code>Response</code>; returning <code>null</code> passes through.</li>
+    <li><strong>Routing</strong> — <code>Router.match_route()</code> resolves method + path. If the path matches another verb, a <strong>405 Method Not Allowed</strong> is returned with an <code>Allow</code> header. Otherwise a themed <strong>404</strong> page (or JSON for <code>/api/*</code>). <code>/favicon.ico</code> returns <code>204</code>.</li>
+    <li><strong>Route middleware</strong> — middleware names declared on the route/group (<code>auth</code>, <code>cors</code>, <code>logger</code>) are resolved to instances and run before dispatch.</li>
+    <li><strong>Dispatch</strong> — closures are invoked directly; <code>"Controller@action"</code> strings resolve via <code>call_action()</code>. Unhandled exceptions are caught and rendered as a themed <strong>500</strong> page (JSON for <code>/api/*</code>).</li>
+  </ol>
+
+  <div class="callout info">
+    <div class="co-title">ℹ️ Server binding</div>
+    <p><code>app.listen(port)</code> binds <code>127.0.0.1</code> via the stdlib <code>tcp_listen</code> + <code>serve_listener</code> with access logging disabled by default. Use a reverse proxy (nginx, caddy) for TLS/production exposure.</p>
+  </div>
+</section>
+
+<!-- ============ CONFIG ============ -->
+<section id="config">
+  <h2>Configuration</h2>
+
+  <h3><code>config/app.matrix</code></h3>
+  <pre><code>public let config_app = map(
+    "name", "Spid3rWeb Developer Platform",
+    "env", "development",       <span class="cmt">// development | production</span>
+    "debug", true,              <span class="cmt">// verbose error pages</span>
+    "url", "http://localhost:8000",
+    "timezone", "UTC",
+    "locale", "en"
+);</code></pre>
+
+  <h3><code>config/database.matrix</code></h3>
+  <pre><code>public let config_database = map(
+    "default", "sqlite",
+    "connections", map(
+        "sqlite", map(
+            "driver", "sqlite",
+            "database", "database/database.sqlite",
+            "foreign_key_constraints", true,
+            "journal_mode", "WAL"
+        )
+    )
+);</code></pre>
+
+  <h3>Environment variables</h3>
+  <table>
+    <tr><th>Variable</th><th>Purpose</th><th>Default</th></tr>
+    <tr><td><code>SPID3R_DB_PATH</code></td><td>Overrides the resolved SQLite database path (checked first by <code>DatabaseManager</code>)</td><td><code>database/database.sqlite</code></td></tr>
+  </table>
+
+  <h3>Connection behavior</h3>
+  <p>The SQLite connection is lazy-opened on first use and always initialized with:</p>
+  <pre><code>PRAGMA foreign_keys = ON;
+PRAGMA journal_mode = WAL;
+PRAGMA busy_timeout = 5000;   <span class="cmt">// ms — tolerates concurrent writers</span></code></pre>
+</section>
+
+<!-- ============ MAGIC CLI ============ -->
+<section id="cli">
+  <h2>Magic CLI</h2>
+  <p>All developer tooling is exposed through the extensionless root file <code>magic</code>, executed as <code>spid3r magic &lt;command&gt;</code>. The <code>ConsoleKernel</code> dispatches commands, and the entrypoint registers all migrations/seeders and both route files so <code>route:list</code> can inspect them.</p>
+
+  <table>
+    <tr><th>Command</th><th>Description</th></tr>
+    <tr><td><code>spid3r magic serve [--port N]</code></td><td>Start the HTTP development server (accepts <code>--port=N</code>, <code>--port N</code>, or a bare port; <code>--dry-run</code> validates boot)</td></tr>
+    <tr><td><code>spid3r magic test</code></td><td>Run the automated test suite — exit code <code>0</code> on success, non-zero on any failure</td></tr>
+    <tr><td><code>spid3r magic route:list</code></td><td>Print a formatted table of all registered routes</td></tr>
+    <tr><td><code>spid3r magic migrate</code></td><td>Run outstanding migrations (tracked in the <code>migrations</code> table with batch numbers)</td></tr>
+    <tr><td><code>spid3r magic migrate:rollback</code></td><td>Roll back the most recent migration batch (calls each <code>down()</code>)</td></tr>
+    <tr><td><code>spid3r magic migrate:status</code><span class="badge b-green" style="margin-left:6px">safe</span></td><td>Show which migrations ran and in which batch</td></tr>
+    <tr><td><code>spid3r magic db:seed</code></td><td>Execute registered seeders</td></tr>
+    <tr><td><code>spid3r magic make:controller &lt;Name&gt;</code></td><td>Scaffold a controller class in <code>app/Controllers/</code></td></tr>
+    <tr><td><code>spid3r magic make:model &lt;Name&gt; [-m]</code></td><td>Scaffold an Active Record model (optionally with a migration)</td></tr>
+    <tr><td><code>spid3r magic make:migration &lt;name&gt;</code></td><td>Scaffold a new timestamped migration file</td></tr>
+    <tr><td><code>spid3r magic help</code></td><td>Show the command list (header: <code>Spid3rWeb Magic CLI</code>)</td></tr>
+  </table>
+
+  <div class="callout warn">
+    <div class="co-title">⚠️ Registering new migrations</div>
+    <p>New migration classes must be <strong>imported and registered</strong> in the <code>magic</code> entrypoint (<code>kernel.register_migration(new …)</code>) before they will run. The same applies to new seeders via <code>kernel.register_seeder(fn() { … })</code>.</p>
+  </div>
+</section>
+
+<!-- ============ ROUTING ============ -->
+<section id="routing">
+  <h2>Routing</h2>
+  <p>Routes are defined in <code>routes/web.matrix</code> (frontend) and <code>routes/api.matrix</code> (JSON API) against the global <code>Route</code> singleton. Route files expose a <code>register_web_routes()</code> / <code>register_api_routes()</code> function that <code>server.matrix</code> (and the <code>magic</code> CLI) call at boot.</p>
+
+  <h3>Basic routes</h3>
+  <pre><code><span class="kw">import</span> "framework/Router";
+
+Route.<span class="fn">get</span>("/", <span class="kw">fn</span>(req) { <span class="kw">return</span> <span class="fn">view</span>("home", <span class="fn">map</span>("title", "Welcome")); });
+Route.<span class="fn">post</span>("/posts", <span class="kw">fn</span>(req) { <span class="cmt">/* store */</span> });
+Route.<span class="fn">put</span>("/posts/:id", handler);
+Route.<span class="fn">patch</span>("/posts/:id", handler);
+Route.<span class="fn">delete</span>("/posts/:id", handler);</code></pre>
+
+  <h3>Route parameters</h3>
+  <p>Two syntaxes are supported — both populate <code>req.params</code>:</p>
+  <pre><code>Route.<span class="fn">get</span>("/posts/:id", <span class="kw">fn</span>(req) {
+    let id = <span class="fn">int</span>(req.<span class="fn">param</span>("id"));   <span class="cmt">// /posts/42 → id = 42</span>
+});
+
+<span class="cmt">// Brace syntax is equivalent:</span>
+Route.<span class="fn">get</span>("/posts/{id}/comments/{commentId}", handler);</code></pre>
+
+  <h3>Route groups</h3>
+  <p>Groups apply a <strong>prefix</strong> and <strong>middleware inheritance</strong> to nested registrations, then restore prior state:</p>
+  <pre><code>Route.<span class="fn">group</span>(<span class="fn">map</span>("prefix", "/api/v1", "middleware", "auth"), <span class="kw">fn</span>() {
+    Route.<span class="fn">get</span>("/dashboard", dashboard_handler);   <span class="cmt">// → /api/v1/dashboard</span>
+});</code></pre>
+  <p>Groups nest — prefixes concatenate and middleware accumulates.</p>
+
+  <h3>Fluent route options</h3>
+  <p><code>add()</code> returns a <code>RouteEntry</code>, so you can chain:</p>
+  <pre><code>Route.<span class="fn">get</span>("/posts/create", handler)
+     .<span class="fn">middleware</span>("auth")      <span class="cmt">// single name or list</span>
+     .<span class="fn">name</span>("posts.create");   <span class="cmt">// named route</span></code></pre>
+
+  <h3>Controller string dispatch</h3>
+  <pre><code>Route.<span class="fn">get</span>("/home", "HomeController@index");
+<span class="cmt">// Requires: Route.register_controller("HomeController", new HomeController());</span></code></pre>
+
+  <h3>Matching rules</h3>
+  <ul>
+    <li>Trailing slashes are normalized on both pattern and request path.</li>
+    <li>Segments must match in count; <code>:param</code> / <code>{param}</code> segments capture any value.</li>
+    <li>If the path exists under other verbs → <code>405</code> with <code>Allow: GET, POST, …</code>; else <code>404</code> (themed HTML or JSON under <code>/api/</code>).</li>
+  </ul>
+</section>
+
+<!-- ============ CONTROLLERS ============ -->
+<section id="controllers">
+  <h2>Controllers</h2>
+  <p>Controllers live in <code>app/Controllers/</code> and group request handling logic. Instantiate them at the top of your route file and wrap them in closures:</p>
+
+  <pre><code><span class="cmt">// app/Controllers/PostController.matrix</span>
+<span class="kw">import</span> "framework/Response";
+<span class="kw">import</span> "framework/View/BD";
+<span class="kw">import</span> "framework/Auth/Auth";
+<span class="kw">import</span> "framework/Database/DB";
+<span class="kw">import</span> "app/Models/Post";
+
+<span class="kw">public class</span> PostController {
+    <span class="kw">fn</span> <span class="fn">new</span>() {}
+
+    <span class="kw">public fn</span> <span class="fn">index</span>(self, _req) {
+        let posts = DB.<span class="fn">table</span>("posts")
+            .<span class="fn">where</span>("status", "=", "published")
+            .<span class="fn">orderBy</span>("id", "DESC")
+            .<span class="fn">get</span>();
+
+        <span class="kw">return</span> <span class="fn">view</span>("posts.index", <span class="fn">map</span>(
+            "title", "All Articles - Spid3rWeb",
+            "posts", posts,
+            "is_auth", Auth.<span class="fn">check</span>()
+        ));
+    }
+}</code></pre>
+
+  <div class="callout info">
+    <div class="co-title">ℹ️ Method signature convention</div>
+    <p>Instance methods take <code>(self, req)</code>. When binding routes, wrap with a closure: <code>Route.get("/posts", fn(req) { return post_ctrl.index(req); })</code>.</p>
+  </div>
+
+  <h3>Resource-style action map</h3>
+  <table>
+    <tr><th>Action</th><th>Verb + Path</th><th>Purpose</th></tr>
+    <tr><td><code>index</code></td><td><code>GET /posts</code></td><td>List records</td></tr>
+    <tr><td><code>create</code></td><td><code>GET /posts/create</code></td><td>Show creation form</td></tr>
+    <tr><td><code>store</code></td><td><code>POST /posts</code></td><td>Persist new record</td></tr>
+    <tr><td><code>show</code></td><td><code>GET /posts/:id</code></td><td>Display one record</td></tr>
+    <tr><td><code>edit</code></td><td><code>GET /posts/:id/edit</code></td><td>Show edit form</td></tr>
+    <tr><td><code>update</code></td><td><code>POST /posts/:id/update</code></td><td>Apply update</td></tr>
+    <tr><td><code>destroy</code></td><td><code>POST /posts/:id/delete</code></td><td>Delete record</td></tr>
+  </table>
+</section>
+
+<!-- ============ REQUESTS ============ -->
+<section id="requests">
+  <h2>Requests &amp; Validation</h2>
+  <p><code>framework/Request.matrix</code> wraps the raw server map into a rich <code>Request</code> object. Each handler receives it as <code>req</code>.</p>
+
+  <h3>Parsing behavior</h3>
+  <ul>
+    <li><strong>Query strings</strong> — parsed from the path (<code>/posts?page=2</code>) and/or the server's <code>raw_query</code>, with <code>url_decode</code> applied to keys and values.</li>
+    <li><strong>JSON bodies</strong> — via stdlib <code>http_body_json</code>; map keys merged into input data.</li>
+    <li><strong>Form bodies</strong> — <code>application/x-www-form-urlencoded</code> (or bare bodies containing <code>=</code>) are parsed as key/value pairs.</li>
+    <li><strong>Headers</strong> — normalized to lowercase; access with <code>req.header("content-type")</code>.</li>
+    <li><strong>Session token</strong> — extracted from <code>Authorization: Bearer &lt;token&gt;</code> first, then the <code>spid3r_session</code> cookie.</li>
+  </ul>
+
+  <h3>Input accessors</h3>
+  <table>
+    <tr><th>Method</th><th>Returns</th><th>Lookup order</th></tr>
+    <tr><td><code>req.input(key, default)</code></td><td>any</td><td>body data → query → route params</td></tr>
+    <tr><td><code>req.string(key, default="")</code></td><td>string</td><td>coerced via <code>string()</code></td></tr>
+    <tr><td><code>req.int(key, default=0)</code></td><td>int</td><td>coerced, falls back on parse failure</td></tr>
+    <tr><td><code>req.param(key)</code></td><td>any</td><td>route parameters only (<code>:id</code>)</td></tr>
+    <tr><td><code>req.query(key)</code></td><td>any</td><td>query string only</td></tr>
+    <tr><td><code>req.header(key)</code></td><td>string</td><td>lowercased header map</td></tr>
+    <tr><td><code>req.has(key)</code> / <code>req.all()</code></td><td>bool / map</td><td>presence check / full input map</td></tr>
+  </table>
+
+  <h3>Declarative validation</h3>
+  <pre><code><span class="kw">public fn</span> <span class="fn">store</span>(self, req) {
+    let validator = req.<span class="fn">validate</span>(<span class="fn">map</span>(
+        "title",   "required|min:5",
+        "email",   "required|email",
+        "content", "required|min:20",
+        "status",  "in:draft,published",
+        "password","required|confirmed"
+    ));
+
+    <span class="kw">if</span> validator.<span class="fn">fails</span>() {
+        <span class="kw">return</span> <span class="fn">view</span>("posts.create", <span class="fn">map</span>("error", validator.<span class="fn">error_summary</span>()));
+    }
+    <span class="cmt">// …proceed</span>
+}</code></pre>
+
+  <h4>Available rules</h4>
+  <table>
+    <tr><th>Rule</th><th>Meaning</th></tr>
+    <tr><td><code>required</code></td><td>Must be present and non-empty (string, list, or null check)</td></tr>
+    <tr><td><code>min:N</code> / <code>max:N</code></td><td>String length bounds</td></tr>
+    <tr><td><code>email</code></td><td>Rigorous RFC-style check: single <code>@</code>, length limits, valid user/domain chars, no leading/trailing dots, real TLD (non-numeric, ≥2 chars)</td></tr>
+    <tr><td><code>numeric</code> / <code>integer</code> (<code>int</code>)</td><td>Must parse as float / int</td></tr>
+    <tr><td><code>confirmed</code></td><td>Must equal <code>&lt;field&gt;_confirmation</code> input</td></tr>
+    <tr><td><code>same:other</code></td><td>Must equal the value of another field</td></tr>
+    <tr><td><code>in:a,b,c</code></td><td>Value must be one of the comma-separated options</td></tr>
+    <tr><td><code>boolean</code> (<code>bool</code>)</td><td><code>true/false/1/0/yes/no</code></td></tr>
+    <tr><td><code>alpha</code> / <code>alphanumeric</code> (<code>alpha_num</code>)</td><td>Letters only / letters+numbers only</td></tr>
+  </table>
+
+  <h4>Validator API</h4>
+  <div class="sig">validator.fails() -> bool        validator.passes() -> bool
+validator.first_error(field)     <span class="cmt"># first message for a field</span>
+validator.first() -> string      <span class="cmt"># first message of any field</span>
+validator.all_errors() -> list   <span class="cmt"># flat message list</span>
+validator.error_summary(sep=" ") <span class="cmt"># joined messages</span>
+validator.error_messages()       <span class="cmt"># map: field → [messages]</span></div>
+</section>
+
+<!-- ============ RESPONSES ============ -->
+<section id="responses">
+  <h2>Responses</h2>
+  <p>Return a <code>Response</code> (or anything convertible) from handlers. Global helpers in <code>framework/Response.matrix</code>:</p>
+
+  <table>
+    <tr><th>Helper</th><th>Description</th></tr>
+    <tr><td><code>response(content, status=200)</code></td><td>Generic HTML/plain response builder</td></tr>
+    <tr><td><code>json(data, status=200)</code></td><td>Serializes maps/lists to JSON with <code>application/json</code> content type</td></tr>
+    <tr><td><code>html(content, status=200)</code></td><td>HTML response with UTF-8 content type</td></tr>
+    <tr><td><code>redirect(url, status=302)</code></td><td>Sets the <code>location</code> header</td></tr>
+    <tr><td><code>view(name, data)</code></td><td>Renders a SpiderBD template (returns Response)</td></tr>
+    <tr><td><code>text_405(allow)</code></td><td>405 response with <code>Allow</code> header (used by the kernel)</td></tr>
+  </table>
+
+  <h3>Response methods</h3>
+  <div class="sig">res.header(key, value)      <span class="cmt"># set (lowercased) — chainable</span>
+res.withHeaders(map)        <span class="cmt"># merge many — chainable</span>
+res.status(code)            <span class="cmt"># override status — chainable</span>
+res.cookie(name, value, path="/", max_age=86400)
+res.to_http()               <span class="cmt"># convert to raw HTTP server response</span></div>
+
+  <div class="callout tip">
+    <div class="co-title">💡 Cookie security</div>
+    <p><code>cookie()</code> automatically sets <strong>HttpOnly</strong> and <strong>SameSite=Lax</strong>, guarding against JS access and most CSRF vectors. Add <code>res.header("set-cookie", …)</code> chains for multiple cookies.</p>
+  </div>
+
+  <h3>Default headers</h3>
+  <p>Every response ships with permissive CORS headers: <code>access-control-allow-origin: *</code>, allowed methods, and allowed headers — override per response when locking down.</p>
+</section>
+
+<!-- ============ MIDDLEWARE ============ -->
+<section id="middleware">
+  <h2>Middleware</h2>
+  <p>Middleware intercepts requests before route dispatch. The <code>Pipeline</code> runs each pipe's <code>handle(req)</code> in order:</p>
+  <ul>
+    <li>Return a <code>Response</code> → <strong>short-circuit</strong> (pipeline stops, response is sent).</li>
+    <li>Return <code>null</code> → <strong>pass through</strong> to the next pipe / destination.</li>
+  </ul>
+
+  <h3>Built-in middlewares</h3>
+  <table>
+    <tr><th>Class</th><th>Behavior</th></tr>
+    <tr><td><code>CorsMiddleware</code></td><td>Answers <code>OPTIONS</code> preflight with <code>204</code> + full CORS headers; passes everything else</td></tr>
+    <tr><td><code>LoggerMiddleware</code></td><td>Prints <code>[Spid3rWeb] GET /path</code> to stdout, then passes through</td></tr>
+    <tr><td><code>AuthMiddleware</code></td><td>Restores session from token if needed; unauthenticated requests get <code>401</code> JSON for API paths (or JSON <code>Accept</code>), otherwise a redirect to <code>/login</code></td></tr>
+  </table>
+
+  <h3>Attaching middleware</h3>
+  <pre><code><span class="cmt">// Per-route</span>
+Route.<span class="fn">get</span>("/admin", handler).<span class="fn">middleware</span>("auth");
+
+<span class="cmt">// Per-group (inherited by all nested routes)</span>
+Route.<span class="fn">group</span>(<span class="fn">map</span>("prefix", "/admin", "middleware", "auth"), <span class="kw">fn</span>() { … });
+
+<span class="cmt">// Global — in Application.matrix constructor</span>
+self.global_middleware = <span class="fn">list</span>(<span class="kw">new</span> CorsMiddleware());
+app.<span class="fn">use</span>(<span class="kw">new</span> LoggerMiddleware());   <span class="cmt">// app.use() is chainable</span></code></pre>
+
+  <h3>Named resolution</h3>
+  <p>Route middleware names are resolved by <code>Application.resolve_middleware()</code>: <code>"auth"</code> → <code>AuthMiddleware</code>, <code>"cors"</code> → <code>CorsMiddleware</code>, <code>"logger"</code> → <code>LoggerMiddleware</code>. To register custom middleware, add your own mapping there or push instances directly.</p>
+
+  <h3>Writing custom middleware</h3>
+  <pre><code><span class="cmt">// app/Middleware/RateLimitMiddleware.matrix</span>
+<span class="kw">public class</span> RateLimitMiddleware {
+    <span class="kw">fn</span> <span class="fn">new</span>() {}
+    <span class="kw">public fn</span> <span class="fn">handle</span>(self, req) {
+        <span class="cmt">// return a Response to block, or null to pass</span>
+        <span class="kw">return</span> <span class="kw">null</span>;
+    }
+}</code></pre>
+</section>
+
+<!-- ============ DATABASE / QUERY BUILDER ============ -->
+<section id="database">
+  <h2>Query Builder (DB)</h2>
+  <p>The global <code>DB</code> facade (<code>framework/Database/DB.matrix</code>) is a <code>DatabaseManager</code> singleton. <code>DB.table(name)</code> returns a fluent <code>QueryBuilder</code>; all values are bound as <code>?</code> parameters (SQL-injection safe for data).</p>
+
+  <h3>Reading</h3>
+  <pre><code>let articles = DB.<span class="fn">table</span>("posts")
+    .<span class="fn">select</span>(["id", "title", "status"])   <span class="cmt">// default: ["*"]</span>
+    .<span class="fn">where</span>("status", "=", "published")
+    .<span class="fn">orWhere</span>("views_count", ">", 100)
+    .<span class="fn">orderBy</span>("id", "DESC")
+    .<span class="fn">limit</span>(10)
+    .<span class="fn">offset</span>(20)
+    .<span class="fn">get</span>();                               <span class="cmt">// → list of row maps</span>
+
+let one   = DB.<span class="fn">table</span>("posts").<span class="fn">where</span>("id", "=", 7).<span class="fn">first</span>();  <span class="cmt">// map or null</span>
+let row   = DB.<span class="fn">table</span>("posts").<span class="fn">find</span>(7);                        <span class="cmt">// where(id).first()</span>
+let total = DB.<span class="fn">table</span>("posts").<span class="fn">where</span>("status", "=", "draft").<span class="fn">count</span>();
+
+<span class="cmt">// Debug: inspect compiled SQL and bindings without executing</span>
+let sql = DB.<span class="fn">table</span>("posts").<span class="fn">where</span>("id", "=", 1).<span class="fn">toSql</span>();
+let bnd = DB.<span class="fn">table</span>("posts").<span class="fn">where</span>("id", "=", 1).<span class="fn">getBindings</span>();</code></pre>
+
+  <div class="callout tip">
+    <div class="co-title">💡 2-argument where shorthand</div>
+    <p><code>.where("id", 5)</code> is sugar for <code>.where("id", "=", 5)</code>. Same for <code>orWhere</code> and the join helpers.</p>
+  </div>
+
+  <h3>Writing</h3>
+  <pre><code><span class="cmt">// INSERT — returns last insert id</span>
+let id = DB.<span class="fn">table</span>("posts").<span class="fn">insert</span>(<span class="fn">map</span>(
+    "title", "Hello World",
+    "content", "Full stack framework in Spid3r",
+    "user_id", 1
+));
+
+<span class="cmt">// UPDATE — returns number of changed rows</span>
+DB.<span class="fn">table</span>("posts").<span class="fn">where</span>("id", "=", id).<span class="fn">update</span>(<span class="fn">map</span>("title", "Updated"));
+
+<span class="cmt">// DELETE — returns number of deleted rows</span>
+DB.<span class="fn">table</span>("posts").<span class="fn">where</span>("id", "=", id).<span class="fn">delete</span>();</code></pre>
+
+  <h3>Joins</h3>
+  <pre><code>DB.<span class="fn">table</span>("posts")
+  .<span class="fn">join</span>("users", "posts.user_id", "=", "users.id")      <span class="cmt">// INNER</span>
+  .<span class="fn">leftJoin</span>("comments", "posts.id", "=", "comments.post_id")
+  .<span class="fn">select</span>(["posts.title", "users.name"])
+  .<span class="fn">get</span>();
+<span class="cmt">// also: innerJoin, rightJoin, crossJoin(table)</span></code></pre>
+
+  <h3>Raw access (<code>DatabaseManager</code>)</h3>
+  <div class="sig">DB.connection()                  <span class="cmt"># raw handle: .query(sql, params) / .exec(sql) / .run(sql, params)</span>
+DB.select(sql, params=[])        <span class="cmt"># rows list</span>
+DB.statement(sql, params=[])     <span class="cmt"># DDL / DML</span>
+DB.table(name)                   <span class="cmt"># new QueryBuilder</span>
+DB.checkpoint()                  <span class="cmt"># PRAGMA wal_checkpoint(TRUNCATE)</span>
+DB.close()                       <span class="cmt"># checkpoint, close, remove -shm/-wal artifacts</span></div>
+</section>
+
+<!-- ============ MODELS ============ -->
+<section id="models">
+  <h2>Active Record Models</h2>
+  <p>Extend <code>Model</code> (from <code>framework/Database/Model</code>). The constructor takes <code>super(table, fillable_list, attrs)</code>:</p>
+
+  <pre><code><span class="cmt">// app/Models/Post.matrix</span>
+<span class="kw">import</span> "framework/Database/Model";
+<span class="kw">import</span> "framework/Database/DB";
+
+<span class="kw">public class</span> Post <span class="kw">extends</span> Model {
+    <span class="kw">fn</span> <span class="fn">new</span>(attrs = <span class="kw">null</span>) {
+        <span class="fn">super</span>("posts", ["title", "slug", "content", "category",
+                         "status", "user_id", "views_count"], attrs);
+    }
+
+    <span class="cmt">// Relationship: post → author</span>
+    <span class="kw">public fn</span> <span class="fn">author</span>(self) {
+        <span class="kw">return</span> DB.<span class="fn">table</span>("users").<span class="fn">where</span>("id", "=", self.<span class="fn">get</span>("user_id")).<span class="fn">first</span>();
+    }
+
+    <span class="cmt">// Static finders</span>
+    <span class="kw">public static fn</span> <span class="fn">find</span>(id) { … }
+    <span class="kw">public static fn</span> <span class="fn">findBySlug</span>(slug) { … }
+    <span class="kw">public static fn</span> <span class="fn">published</span>() { … }
+    <span class="kw">public static fn</span> <span class="fn">all</span>() { … }
+    <span class="kw">public static fn</span> <span class="fn">create</span>(attrs) { … }
+}
+
+<span class="cmt">// Backwards-compatible alias</span>
+<span class="kw">public let</span> PostModel = Post;</code></pre>
+
+  <h3>Instance API (inherited from <code>Model</code>)</h3>
+  <table>
+    <tr><th>Method</th><th>Description</th></tr>
+    <tr><td><code>get(key, default=null)</code></td><td>Attribute accessor</td></tr>
+    <tr><td><code>set(key, value)</code></td><td>Attribute setter (chainable)</td></tr>
+    <tr><td><code>save()</code></td><td>Insert or update based on <code>exists</code>; auto-manages <code>created_at</code>/<code>updated_at</code> (unix timestamps)</td></tr>
+    <tr><td><code>update(attrs)</code></td><td>Mass-update through <code>fillable</code>, then <code>save()</code></td></tr>
+    <tr><td><code>delete()</code></td><td>Deletes by primary key; returns bool</td></tr>
+    <tr><td><code>to_map()</code></td><td>Attributes as a plain map (for templates/JSON)</td></tr>
+    <tr><td><code>query()</code></td><td>Fresh <code>QueryBuilder</code> bound to the model's table</td></tr>
+  </table>
+
+  <div class="callout warn">
+    <div class="co-title">⚠️ Mass-assignment protection</div>
+    <p>Only keys listed in <code>fillable</code> are written by <code>save()</code> / <code>update()</code>. An empty <code>fillable</code> list allows all keys — always declare it explicitly. The <code>id</code> primary key is never overwritten on update.</p>
+  </div>
+
+  <h3>Usage</h3>
+  <pre><code><span class="cmt">// Create</span>
+let post = Post.<span class="fn">create</span>(<span class="fn">map</span>("title", "New", "content", "…", "user_id", 1));
+
+<span class="cmt">// Find & mutate</span>
+let p = Post.<span class="fn">find</span>(42);
+p.<span class="fn">update</span>(<span class="fn">map</span>("status", "published"));
+
+<span class="cmt">// Relations</span>
+let posts = user.<span class="fn">posts</span>();    <span class="cmt">// User model accessor</span>
+let author = post.<span class="fn">author</span>();
+
+<span class="cmt">// Backwards-compatible style (pre-2.0 code)</span>
+let m = <span class="kw">new</span> PostModel(<span class="fn">map</span>("title", "…")); m.<span class="fn">save</span>();</code></pre>
+</section>
+
+<!-- ============ SCHEMA ============ -->
+<section id="schema">
+  <h2>Schema Builder</h2>
+  <p><code>Schema</code> (global singleton in <code>framework/Database/Schema.matrix</code>) compiles blueprints into <code>CREATE TABLE IF NOT EXISTS</code> DDL.</p>
+
+  <pre><code>Schema.<span class="fn">create</span>("posts", table => {
+    table.<span class="fn">id</span>();                 <span class="cmt">// INTEGER PRIMARY KEY AUTOINCREMENT</span>
+    table.<span class="fn">string</span>("title");      <span class="cmt">// TEXT</span>
+    table.<span class="fn">string</span>("slug").<span class="fn">unique</span>();
+    table.<span class="fn">text</span>("content");
+    table.<span class="fn">integer</span>("user_id");   <span class="cmt">// INTEGER</span>
+    table.<span class="fn">float</span>("rating");      <span class="cmt">// REAL</span>
+    table.<span class="fn">boolean</span>("is_active"); <span class="cmt">// INTEGER (0/1)</span>
+    table.<span class="fn">timestamps</span>();         <span class="cmt">// created_at TEXT, updated_at TEXT (nullable)</span>
+});
+
+Schema.<span class="fn">dropIfExists</span>("posts");</code></pre>
+
+  <h4>Column modifiers (chainable)</h4>
+  <table>
+    <tr><th>Modifier</th><th>SQL effect</th></tr>
+    <tr><td><code>.unique()</code></td><td>Adds <code>UNIQUE</code></td></tr>
+    <tr><td><code>.nullable()</code></td><td>Skips the default <code>NOT NULL</code></td></tr>
+    <tr><td><code>.default(value)</code></td><td>Adds <code>DEFAULT 'v'</code> (quoted for strings)</td></tr>
+  </table>
+
+  <div class="callout info">
+    <div class="co-title">ℹ️ SQLite type mapping</div>
+    <p><code>string</code>/<code>text</code> → <code>TEXT</code> · <code>integer</code>/<code>boolean</code> → <code>INTEGER</code> · <code>float</code> → <code>REAL</code>. Columns are <code>NOT NULL</code> unless marked <code>nullable()</code> or <code>id()</code>.</p>
+  </div>
+</section>
+
+<!-- ============ MIGRATIONS ============ -->
+<section id="migrations">
+  <h2>Migrations &amp; Seeders</h2>
+  <p>Migrations live in <code>database/migrations/</code>, numbered <code>NNN_name.matrix</code>. Each extends <code>Migration</code> and implements <code>up()</code> / <code>down()</code>:</p>
+
+  <pre><code><span class="cmt">// database/migrations/002_create_posts_table.matrix</span>
+<span class="kw">import</span> "framework/Database/Schema";
+<span class="kw">import</span> "framework/Database/Migration";
+
+<span class="kw">public class</span> CreatePostsTable <span class="kw">extends</span> Migration {
+    <span class="kw">fn</span> <span class="fn">new</span>(name: string = "002_create_posts_table") {
+        <span class="fn">super</span>(name);
+    }
+
+    <span class="kw">public fn</span> <span class="fn">up</span>(self) {
+        Schema.<span class="fn">create</span>("posts", table => { … });
+    }
+    <span class="kw">public fn</span> <span class="fn">down</span>(self) {
+        Schema.<span class="fn">dropIfExists</span>("posts");
+    }
+}</code></pre>
+
+  <h3>How tracking works</h3>
+  <ul>
+    <li>The runner ensures a <code>migrations</code> table: <code>id · migration (UNIQUE) · batch · applied_at</code>.</li>
+    <li><code>migrate</code> runs any un-applied class (by <code>name</code>) and records it under the next batch number.</li>
+    <li><code>migrate:rollback</code> reverts the <strong>entire last batch</strong> (calls <code>down()</code> in reverse order) and deletes the tracking rows.</li>
+    <li><code>migrate:status</code> prints an ASCII table: migration name → <code>Yes (batch)</code> / <code>No</code>.</li>
+  </ul>
+
+  <h3>Seeders</h3>
+  <p>Seeders live in <code>database/seeders/</code>. Define <code>run_database_seeder()</code> and register a closure in the <code>magic</code> entrypoint:</p>
+  <pre><code>kernel.<span class="fn">register_seeder</span>(<span class="kw">fn</span>() { <span class="fn">run_database_seeder</span>(); });</code></pre>
+  <p>The bundled <code>DatabaseSeeder</code> creates the demo user <code>ada@example.com</code> (bcrypt-hashed password) and initial blog articles.</p>
+</section>
+
+<!-- ============ VIEWS ============ -->
+<section id="views">
+  <h2>SpiderBD Templates</h2>
+  <p>Templates are <code>.bd.html</code> files under <code>resources/views/</code>, compiled by <code>framework/View/BD.matrix</code>. Render with the global <code>view()</code> helper — dot notation maps to directories:</p>
+  <pre><code><span class="fn">view</span>("posts.index", <span class="fn">map</span>("posts", posts));
+<span class="cmt">// → resources/views/posts/index.bd.html</span></code></pre>
+
+  <h3>Compilation pipeline</h3>
+  <div class="flow">
+    <span class="step">@extends</span><span class="arrow">→</span>
+    <span class="step">@section parse</span><span class="arrow">→</span>
+    <span class="step">@yield fill</span><span class="arrow">→</span>
+    <span class="step">@include expand</span><span class="arrow">→</span>
+    <span class="step">@if / @else</span><span class="arrow">→</span>
+    <span class="step">@foreach</span><span class="arrow">→</span>
+    <span class="step">{{ var }} interpolate</span>
+  </div>
+
+  <h3>Directives</h3>
+  <table>
+    <tr><th>Directive</th><th>Description</th></tr>
+    <tr><td><code>@extends('layouts/app')</code></td><td>Inherit a layout (must appear near the top of the file)</td></tr>
+    <tr><td><code>@section('title', 'value')</code></td><td>Inline section (string or expression like <code>post.title</code>)</td></tr>
+    <tr><td><code>@section('content') … @endsection</code></td><td>Block section</td></tr>
+    <tr><td><code>@yield('content')</code> / <code>@yield('title', 'default')</code></td><td>Layout placeholder filled by child sections</td></tr>
+    <tr><td><code>@include('partials.nav')</code></td><td>Inline a partial template</td></tr>
+    <tr><td><code>@if cond</code> / <code>@else</code> / <code>@endif</code></td><td>Conditional blocks evaluated against template data</td></tr>
+    <tr><td><code>@foreach(item in items)</code> … <code>@endforeach</code></td><td>Loop over lists</td></tr>
+    <tr><td><code>{{ $var }}</code> / <code>{{ $post.title }}</code></td><td>Escaped output (<code>html_escape</code>: <code>&amp; &lt; &gt; " '</code>)</td></tr>
+    <tr><td><code>{!! $raw !!}</code></td><td><strong>Unescaped</strong> raw output — only for trusted HTML</td></tr>
+  </table>
+
+  <div class="callout tip">
+    <div class="co-title">💡 Syntax tolerance</div>
+    <p>Whitespace is flexible: <code>{{$var}}</code>, <code>{{ $var }}</code>, and <code>{{ var }}</code> all work. Nested dot-notation (<code>{{ post.author.name }}</code>) resolves on maps and Model instances, inside and outside loops.</p>
+  </div>
+
+  <h3>Full layout example</h3>
+  <pre><code><span class="tag">&lt;!-- resources/views/layouts/app.bd.html --&gt;</span>
+&lt;html&gt;&lt;head&gt;&lt;title&gt;@<span class="fn">yield</span>('title', 'Spid3rWeb')&lt;/title&gt;&lt;/head&gt;
+&lt;body&gt;
+  @<span class="fn">include</span>('partials.nav')
+  &lt;main&gt;@<span class="fn">yield</span>('content')&lt;/main&gt;
+&lt;/body&gt;&lt;/html&gt;
+
+<span class="tag">&lt;!-- resources/views/posts/index.bd.html --&gt;</span>
+@<span class="fn">extends</span>('layouts/app')
+@<span class="fn">section</span>('title', 'All Articles')
+@<span class="fn">section</span>('content')
+  @<span class="fn">foreach</span>(post in posts)
+    &lt;h3&gt;{{ $post.title }}&lt;/h3&gt;
+    &lt;p&gt;{{ $post.content }}&lt;/p&gt;
+    &lt;a href="/posts/{{ $post.id }}"&gt;Read →&lt;/a&gt;
+  @<span class="fn">endforeach</span>
+@<span class="fn">endsection</span></code></pre>
+</section>
+
+<!-- ============ AUTH ============ -->
+<section id="auth">
+  <h2>Authentication &amp; Hashing</h2>
+  <p><code>Auth</code> is a per-request <code>AuthManager</code> singleton (<code>framework/Auth/Auth.matrix</code>); <code>Hash</code> wraps the native bcrypt stdlib.</p>
+
+  <h3>Credentials</h3>
+  <pre><code><span class="cmt">// Verify email+password; on success, logs the user in</span>
+<span class="kw">if</span> Auth.<span class="fn">attempt</span>(email, password) { <span class="cmt">/* logged in */</span> }
+
+<span class="cmt">// Hash a password for storage</span>
+let hash = Hash.<span class="fn">make</span>("plain-password");      <span class="cmt">// bcrypt_hash</span>
+<span class="cmt">// Verify</span>
+<span class="kw">if</span> Hash.<span class="fn">check</span>("plain-password", hash) { … }  <span class="cmt">// bcrypt_verify, error-safe</span></code></pre>
+
+  <h3>Session management</h3>
+  <table>
+    <tr><th>Method</th><th>Description</th></tr>
+    <tr><td><code>Auth.login(user)</code></td><td>Sets current user, generates a CSPRNG token (<code>"sess_" + hex(random_bytes(24))</code> — 192 bits), inserts a <code>sessions</code> row (token, user_id, last_activity)</td></tr>
+    <tr><td><code>Auth.authenticate_token(token)</code></td><td>Resolves a session token to a user via <code>users ⨝ sessions</code></td></tr>
+    <tr><td><code>Auth.logout()</code></td><td>Deletes the session row and clears state</td></tr>
+    <tr><td><code>Auth.check()</code> / <code>Auth.guest()</code></td><td>Authenticated? / unauthenticated?</td></tr>
+    <tr><td><code>Auth.user()</code> / <code>Auth.id()</code></td><td>Current user map / user id (or null)</td></tr>
+    <tr><td><code>Auth.token()</code></td><td>Current session token string</td></tr>
+  </table>
+
+  <h3>Token transport</h3>
+  <p>Tokens arrive two ways (checked in order): the <code>Authorization: Bearer &lt;token&gt;</code> header (ideal for API clients) or the <code>spid3r_session</code> cookie (browser sessions). Set the cookie on login:</p>
+  <pre><code><span class="kw">return</span> <span class="fn">redirect</span>("/").<span class="fn">cookie</span>("spid3r_session", Auth.<span class="fn">token</span>());</code></pre>
+
+  <div class="callout info">
+    <div class="co-title">ℹ️ Sessions schema</div>
+    <p>The <code>sessions</code> table (migration 003) stores <code>token TEXT UNIQUE</code>, <code>user_id INTEGER</code>, and <code>last_activity INTEGER</code> (unix). <code>Auth.clear()</code> is invoked at the start of every request so state never leaks between connections.</p>
+  </div>
+</section>
+
+<!-- ============ SECURITY ============ -->
+<section id="security">
+  <h2>Security Hardening</h2>
+  <table>
+    <tr><th>Area</th><th>Protection</th></tr>
+    <tr><td>SQL injection</td><td>All user data bound via <code>?</code> placeholders in the QueryBuilder; never concatenate user input into SQL</td></tr>
+    <tr><td>XSS</td><td><code>{{ }}</code> escapes <code>&amp; &lt; &gt; " '</code>; reserve <code>{!! !!}</code> for trusted content only</td></tr>
+    <tr><td>Path traversal</td><td>Static handler rejects <code>..</code>, <code>\</code>, NUL, and encoded <code>%2e/%2f/%5c/%00</code>; resolution is confined to <code>public/</code></td></tr>
+    <tr><td>Password storage</td><td>Native bcrypt (salted, adaptive cost) via <code>Hash.make</code></td></tr>
+    <tr><td>Session tokens</td><td>CSPRNG 24-byte hex tokens (<code>sess_…</code>) — not predictable timestamps</td></tr>
+    <tr><td>Cookie hardening</td><td><code>HttpOnly</code> + <code>SameSite=Lax</code> on all framework cookies</td></tr>
+    <tr><td>Mass assignment</td><td><code>fillable</code> whitelist on every model</td></tr>
+    <tr><td>Method safety</td><td>405 with <code>Allow</code> header when a path exists under another verb</td></tr>
+    <tr><td>Error leakage</td><td>500 pages show the exception only; JSON API errors under <code>/api/</code> are structured; set <code>debug=false</code> in production config</td></tr>
+  </table>
+</section>
+
+<!-- ============ TESTING ============ -->
+<section id="testing">
+  <h2>Testing</h2>
+  <p>Run everything with:</p>
+  <pre><code>spid3r magic test                      <span class="cmt"># Magic CLI runner (exit 0/1)</span>
+spid3r run tests/run_all.matrix        <span class="cmt"># direct runner</span>
+spid3r run tests/e2e/run_e2e.matrix    <span class="cmt"># E2E opaque-box track</span></code></pre>
+
+  <h3>Unit suites</h3>
+  <table>
+    <tr><th>Suite</th><th>Covers</th></tr>
+    <tr><td><code>tests/test_router.matrix</code></td><td>Route matching, params, groups</td></tr>
+    <tr><td><code>tests/test_validator.matrix</code></td><td>required, email, min, max, numeric…</td></tr>
+    <tr><td><code>tests/test_query_builder.matrix</code></td><td>Fluent SQL, CRUD, transactions</td></tr>
+    <tr><td><code>tests/test_model.matrix</code></td><td>Active Record, timestamps, relations</td></tr>
+    <tr><td><code>tests/test_bd.matrix</code></td><td>Layouts, sections, yields, foreach</td></tr>
+    <tr><td><code>tests/test_http_lifecycle.matrix</code></td><td>Full 200 / 404 / 401 dispatch</td></tr>
+    <tr><td><code>tests/test_bd_adversarial.matrix</code></td><td>Template engine edge cases</td></tr>
+  </table>
+
+  <h3>E2E track (<code>tests/e2e/</code>)</h3>
+  <p>Independent opaque-box tests authored to verify behavior without reading framework internals (see <code>TEST_READY.md</code> — 192 tests):</p>
+  <ul>
+    <li><strong>Tier 1</strong> — features: CLI, HTTP, ORM, advanced</li>
+    <li><strong>Tier 2</strong> — boundary conditions (parts 1 &amp; 2)</li>
+    <li><strong>Tier 3</strong> — cross-feature interactions</li>
+    <li><strong>Tier 4</strong> — real-world scenarios</li>
+  </ul>
+
+  <div class="callout info">
+    <div class="co-title">ℹ️ Test isolation</div>
+    <p>Tests favor in-memory or isolated databases; <code>DatabaseManager.close()</code> checkpoints the WAL and removes <code>-shm</code>/<code>-wal</code> artifacts so runs leave a clean tree.</p>
+  </div>
+</section>
+
+<!-- ============ RECIPES ============ -->
+<section id="recipes">
+  <h2>Common Recipes</h2>
+
+  <h3>1. Add a full CRUD resource</h3>
+  <pre><code>spid3r magic make:migration create_products_table
+spid3r magic make:model Product -m
+spid3r magic make:controller ProductController
+<span class="cmt"># → register the migration in `magic`, write up()/down(),</span>
+<span class="cmt">#   declare $fillable in the model, add routes, run:</span>
+spid3r magic migrate</code></pre>
+
+  <h3>2. Protect a page with login</h3>
+  <pre><code>Route.<span class="fn">get</span>("/dashboard", <span class="kw">fn</span>(req) {
+    <span class="kw">return</span> <span class="fn">view</span>("dashboard", <span class="fn">map</span>("user", Auth.<span class="fn">user</span>()));
+}).<span class="fn">middleware</span>("auth");</code></pre>
+
+  <h3>3. JSON API endpoint with validation</h3>
+  <pre><code>Route.<span class="fn">post</span>("/api/v1/feedback", <span class="kw">fn</span>(req) {
+    let v = req.<span class="fn">validate</span>(<span class="fn">map</span>("email", "required|email", "message", "required|min:10"));
+    <span class="kw">if</span> v.<span class="fn">fails</span>() {
+        <span class="kw">return</span> <span class="fn">json</span>(<span class="fn">map</span>("error", "Validation failed",
+                         "details", v.<span class="fn">all_errors</span>()), 422);
+    }
+    DB.<span class="fn">table</span>("feedback").<span class="fn">insert</span>(<span class="fn">map</span>(
+        "email", req.<span class="fn">string</span>("email"),
+        "message", req.<span class="fn">string</span>("message")
+    ));
+    <span class="kw">return</span> <span class="fn">json</span>(<span class="fn">map</span>("ok", <span class="kw">true</span>), 201);
+});</code></pre>
+
+  <h3>4. Pagination</h3>
+  <pre><code><span class="kw">public fn</span> <span class="fn">index</span>(self, req) {
+    let page    = req.<span class="fn">int</span>("page", 1);
+    let per     = 10;
+    let total   = DB.<span class="fn">table</span>("posts").<span class="fn">count</span>();
+    let posts   = DB.<span class="fn">table</span>("posts")
+        .<span class="fn">orderBy</span>("id", "DESC")
+        .<span class="fn">limit</span>(per).<span class="fn">offset</span>((page - 1) * per)
+        .<span class="fn">get</span>();
+    <span class="kw">return</span> <span class="fn">view</span>("posts.index", <span class="fn">map</span>("posts", posts, "page", page));
+}</code></pre>
+
+  <h3>5. Login/logout flow (as implemented in AuthController)</h3>
+  <pre><code><span class="cmt">// POST /login</span>
+<span class="kw">public fn</span> <span class="fn">login</span>(self, req) {
+    <span class="kw">if</span> Auth.<span class="fn">attempt</span>(req.<span class="fn">string</span>("email"), req.<span class="fn">string</span>("password")) {
+        <span class="kw">return</span> <span class="fn">redirect</span>("/").<span class="fn">cookie</span>("spid3r_session", Auth.<span class="fn">token</span>());
+    }
+    <span class="kw">return</span> <span class="fn">view</span>("auth.login", <span class="fn">map</span>("error", "Invalid credentials"));
+}
+
+<span class="cmt">// POST /logout</span>
+<span class="kw">public fn</span> <span class="fn">logout</span>(self, req) {
+    Auth.<span class="fn">logout</span>();
+    <span class="kw">return</span> <span class="fn">redirect</span>("/login").<span class="fn">cookie</span>("spid3r_session", "", "/", 0);
+}</code></pre>
+</section>
+
+<!-- ============ API REFERENCE ============ -->
+<section id="api-reference">
+  <h2>API Cheat Sheet</h2>
+
+  <h3>Global facades &amp; helpers</h3>
+  <table>
+    <tr><th>Symbol</th><th>Kind</th><th>Key methods</th></tr>
+    <tr><td><code>Route</code></td><td>Router singleton</td><td><code>get · post · put · patch · delete · group · add · match_route · allowed_methods · dispatch · routes · register_controller</code></td></tr>
+    <tr><td><code>DB</code></td><td>DatabaseManager</td><td><code>table · select · statement · connection · checkpoint · close</code></td></tr>
+    <tr><td><code>Schema</code></td><td>SchemaBuilder</td><td><code>create · dropIfExists</code></td></tr>
+    <tr><td><code>Auth</code></td><td>AuthManager</td><td><code>attempt · login · logout · check · guest · user · id · token · authenticate_token · clear</code></td></tr>
+    <tr><td><code>Hash</code></td><td>HashManager</td><td><code>make · check</code></td></tr>
+    <tr><td><code>view(name, data)</code></td><td>fn</td><td>Render SpiderBD template → Response</td></tr>
+    <tr><td><code>response / json / html / redirect / text_405</code></td><td>fn</td><td>Response factories</td></tr>
+  </table>
+
+  <h3>QueryBuilder chain</h3>
+  <div class="sig">DB.table(t)
+  .select(cols)      .where(c,op,v)   .orWhere(c,op,v)
+  .join(t,a,op,b)    .leftJoin(...)   .rightJoin(...)   .crossJoin(t)
+  .orderBy(c,dir)    .limit(n)        .offset(n)
+  → get() first() find(id) count() insert(map) update(map) delete()
+  → toSql() getBindings()          <span class="cmt"># debug compile</span></div>
+
+  <h3>Model chain</h3>
+  <div class="sig">Model:  get(k) set(k,v) save() update(attrs) delete() to_map() query()
+Static: find(id) all() create(attrs)      <span class="cmt"># + your custom finders</span></div>
+
+  <h3>Template directives</h3>
+  <div class="sig">@extends('layout')      @section('name','val')  @section('n')…@endsection
+@yield('n','default')   @include('partial')     @if / @else / @endif
+@foreach(x in xs)…@endforeach   {{ $x.prop }} (escaped)   {!! $raw !!} (raw)</div>
+
+  <h3>Magic commands</h3>
+  <div class="sig">serve [--port N] [--dry-run]    test            route:list
+migrate                         migrate:rollback  migrate:status
+db:seed                         make:controller &lt;N&gt;  make:model &lt;N&gt; [-m]
+make:migration &lt;name&gt;          help</div>
+</section>
+
+<footer style="border-top:1px solid var(--border); margin-top:40px; padding-top:20px; font-size:12.5px; color:var(--text-soft);">
+  Spid3rWeb v1.0.0 · GPL-3.0-or-later · Built with ❤️ for the Spid3r programming language ecosystem.
+</footer>
+
+</main>
+</div>
+
+<script>
+  // Scroll-spy for sidebar
+  const links = Array.from(document.querySelectorAll('#toc a'));
+  const sections = links.map(a => document.querySelector(a.getAttribute('href'))).filter(Boolean);
+  function spy() {
+    const y = window.scrollY + 120;
+    let current = sections[0];
+    for (const s of sections) { if (s.offsetTop <= y) current = s; }
+    links.forEach(a => a.classList.toggle('active', current && a.getAttribute('href') === '#' + current.id));
+  }
+  window.addEventListener('scroll', spy, { passive: true });
+  spy();
+</script>
+
+</body>
+</html>
