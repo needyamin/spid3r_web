@@ -264,8 +264,9 @@
   <p class="lead">Spid3rWeb is an expressive, full-stack web framework engineered for the <strong>Spid3r programming language</strong>. Elegant syntax, Active Record ORM, a layout template engine, and a powerful CLI — with <strong>zero external dependencies</strong>, running natively on Spid3r's VM and AOT compiler.</p>
 
   <div class="grid">
+    <div class="card"><div class="c-icon">🏗️</div><h4>MVC Architecture</h4><p>Controllers extend a base <code>Controller</code> with view/json/redirect/validate helpers and <code>shared()</code> auth-state injection for layouts.</p></div>
     <div class="card"><div class="c-icon">🗂️</div><h4>Active Record ORM</h4><p>Fluent query builder, automatic timestamps, mass-assignment protection via <code>fillable</code>, relationship accessors.</p></div>
-    <div class="card"><div class="c-icon">🗄️</div><h4>Transactional Migrations</h4><p>Declarative <code>Schema.create(...)</code>, migration tracking table, batch rollback, and database seeders.</p></div>
+    <div class="card"><div class="c-icon">🗄️</div><h4>Transactional Migrations</h4><p>Declarative <code>Schema.create(...)</code> and <code>Schema.table(...)</code> (ALTER TABLE), auto-discovered migration files, tracking table, batch rollback, and database seeders.</p></div>
     <div class="card"><div class="c-icon">🧩</div><h4>SpiderBD Templates</h4><p><code>.bd.html</code> templates with layouts, sections, includes, conditionals, loops, and escaped/raw interpolation.</p></div>
     <div class="card"><div class="c-icon">🛣️</div><h4>Expressive Router</h4><p>Static &amp; parameterized routes (<code>:id</code>), route groups with prefix inheritance, 405 detection, route listing.</p></div>
     <div class="card"><div class="c-icon">🧅</div><h4>Middleware Pipeline</h4><p>Onion-architecture pipeline, global CORS &amp; logging, session auth guards, custom 404/500 error pages.</p></div>
@@ -314,10 +315,12 @@
   <h2>Project Structure</h2>
   <div class="tree"><span class="d">spid3r_web/</span>
 ├── <span class="d">app/</span>                          <span class="n"># Application layer (your code)</span>
-│   ├── <span class="d">Controllers/</span>              <span class="n"># MVC controllers (.matrix)</span>
+│   ├── <span class="d">Controllers/</span>              <span class="n"># MVC controllers (.matrix, extend Controller)</span>
 │   │   ├── AuthController.matrix
 │   │   ├── CartController.matrix
+│   │   ├── OrderController.matrix    <span class="n"># "My Orders" history</span>
 │   │   └── StoreController.matrix
+│   ├── <span class="d">Support/</span>                  <span class="n"># App services — CartService.matrix</span>
 │   ├── <span class="d">Middleware/</span>               <span class="n"># App-specific middleware</span>
 │   └── <span class="d">Models/</span>                   <span class="n"># Active Record models</span>
 │       ├── User.matrix
@@ -328,7 +331,8 @@
 │   └── database.matrix           <span class="n"># SQLite connection &amp; pragmas</span>
 ├── <span class="d">database/</span>
 │   ├── database.sqlite           <span class="n"># SQLite storage file</span>
-│   ├── <span class="d">migrations/</span>              <span class="n"># 001_…, 003_…, 004_…, 005_…</span>
+│   ├── <span class="d">migrations/</span>              <span class="n"># 001_…, 003_…, 004_…, 005_…, 006_…</span>
+│   │   └── registry.matrix         <span class="n"># AUTO-GENERATED auto-discovery manifest</span>
 │   └── <span class="d">seeders/</span>                 <span class="n"># DatabaseSeeder.matrix</span>
 ├── <span class="d">framework/</span>                    <span class="n"># Spid3rWeb core (do not edit casually)</span>
 │   ├── Application.matrix · Router.matrix · Request.matrix
@@ -343,13 +347,14 @@
 ├── <span class="d">resources/views/</span>              <span class="n"># SpiderBD templates (.bd.html)</span>
 │   ├── <span class="d">layouts/</span>  <span class="n">store.bd.html</span>
 │   ├── <span class="d">auth/</span>    <span class="n">login, register</span>
-│   └── <span class="d">store/</span>   <span class="n">index, show, cart, success</span>
+│   └── <span class="d">store/</span>   <span class="n">index, show, cart, orders, success</span>
 ├── <span class="d">routes/</span>
 │   ├── web.matrix                <span class="n"># Frontend routes</span>
 │   └── api.matrix                <span class="n"># JSON REST routes (/api/v1)</span>
 ├── <span class="d">tests/</span>                        <span class="n"># Unit + E2E suites (see Testing)</span>
 ├── magic                         <span class="n"># Magic CLI entrypoint (no extension)</span>
 ├── server.matrix                 <span class="n"># HTTP server entrypoint</span>
+├── resync.matrix                 <span class="n"># Standalone migration-registry recovery</span>
 └── spider.toml                   <span class="n"># Package manifest</span></div>
 
   <div class="callout info">
@@ -582,17 +587,16 @@ Route.<span class="fn">get</span>("/products/{id}/reviews/{reviewId}", handler);
 <!-- ============ CONTROLLERS ============ -->
 <section id="controllers">
   <h2>Controllers</h2>
-  <p>Controllers live in <code>app/Controllers/</code> and group request handling logic. Instantiate them at the top of your route file and wrap them in closures:</p>
+  <p>Controllers live in <code>app/Controllers/</code> and group request handling logic. Every controller <strong>extends the base <code>Controller</code></strong> (from <code>framework/Controller.matrix</code>), which provides <code>self.view()</code>, <code>self.json()</code>, <code>self.redirect()</code>, <code>self.validate()</code>, and <code>self.shared()</code> — the last one merges <code>is_auth</code> and <code>user_name</code> (from the <code>Auth</code> facade) into your view data so the global layout renders the correct navbar state on every page. Instantiate controllers at the top of your route file and wrap them in closures:</p>
 
   <pre><code><span class="cmt">// app/Controllers/ProductController.matrix</span>
-<span class="kw">import</span> "framework/Response";
-<span class="kw">import</span> "framework/View/BD";
-<span class="kw">import</span> "framework/Auth/Auth";
-<span class="kw">import</span> "framework/Database/DB";
+<span class="kw">import</span> "framework/Controller";
 <span class="kw">import</span> "app/Models/Product";
 
-<span class="kw">public class</span> ProductController {
-    <span class="kw">fn</span> <span class="fn">new</span>() {}
+<span class="kw">public class</span> ProductController <span class="kw">extends</span> Controller {
+    <span class="kw">fn</span> <span class="fn">new</span>() {
+        <span class="fn">super</span>();
+    }
 
     <span class="kw">public fn</span> <span class="fn">index</span>(self, _req) {
         let products = DB.<span class="fn">table</span>("products")
@@ -600,13 +604,23 @@ Route.<span class="fn">get</span>("/products/{id}/reviews/{reviewId}", handler);
             .<span class="fn">orderBy</span>("id", "DESC")
             .<span class="fn">get</span>();
 
-        <span class="kw">return</span> <span class="fn">view</span>("products.index", <span class="fn">map</span>(
+        <span class="cmt">// shared() injects is_auth + user_name into every view (navbar state)</span>
+        <span class="kw">return</span> self.<span class="fn">view</span>("products.index", self.<span class="fn">shared</span>(<span class="fn">map</span>(
             "title", "All Products - Spid3rWeb",
-            "products", products,
-            "is_auth", Auth.<span class="fn">check</span>()
-        ));
+            "products", products
+        )));
     }
 }</code></pre>
+
+  <div class="callout info">
+    <div class="co-title">ℹ️ Base Controller contract</div>
+    <p>Extending <code>Controller</code> is the framework's MVC convention. It gives every controller:</p>
+    <ul>
+      <li><code>self.view(name, data)</code> / <code>self.json(data, status)</code> / <code>self.redirect(url)</code> — response helpers</li>
+      <li><code>self.validate(req, rules)</code> — request validation</li>
+      <li><code>self.shared(data)</code> — merges auth state (<code>is_auth</code>, <code>user_name</code>) into view data; use it for any page rendered with the global layout</li>
+    </ul>
+  </div>
 
   <div class="callout info">
     <div class="co-title">ℹ️ Method signature convention</div>
@@ -903,6 +917,13 @@ let m = <span class="kw">new</span> ProductModel(<span class="fn">map</span>("na
 });
 
 Schema.<span class="fn">dropIfExists</span>("products");</code></pre>
+
+  <h4>Altering existing tables</h4>
+  <pre><code><span class="cmt">// Adds columns to an existing table (one ALTER TABLE ... ADD COLUMN per column).</span>
+<span class="cmt">// Duplicate-column errors are tolerated, so the call is idempotent.</span>
+Schema.<span class="fn">table</span>("orders", table => {
+    table.<span class="fn">integer</span>("user_id").<span class="fn">nullable</span>();
+});</code></pre>
 
   <h4>Column modifiers (chainable)</h4>
   <table>
