@@ -196,6 +196,24 @@ public class SchemaBuilder {
         return true;
     }
 
+    // ALTER TABLE helper: add new columns to an existing table.
+    // Emits one ALTER TABLE ... ADD COLUMN per column in the blueprint.
+    // Duplicate-column errors are tolerated so the call is idempotent.
+    public fn table(self, table_name: string, callback) {
+        let blueprint = new Blueprint();
+        callback(blueprint);
+        for col in blueprint.columns {
+            let sql = "ALTER TABLE " + table_name + " ADD COLUMN "
+                + col.to_sql(self.dialect()) + ";";
+            try {
+                DB.statement(sql);
+            } catch (_e) {
+                // Column already exists — treat as applied.
+            }
+        }
+        return true;
+    }
+
     public fn dropIfExists(self, table_name: string) {
         let sql = "DROP TABLE IF EXISTS {table_name};";
         DB.statement(sql);

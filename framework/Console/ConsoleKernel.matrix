@@ -57,6 +57,8 @@ public class ConsoleKernel {
             return self.command_route_list();
         } elif command == "migrate" {
             return self.command_migrate();
+        } elif command == "migrate:sync" {
+            return self.command_migrate_sync();
         } elif command == "migrate:rollback" {
             return self.command_rollback();
         } elif command == "migrate:status" {
@@ -102,6 +104,7 @@ public class ConsoleKernel {
         println("  test [options]            Run the Spid3rWeb automated test suite");
         println("  route:list                List all registered application routes");
         println("  migrate                   Run outstanding database migrations");
+        println("  migrate:sync              Re-scan database/migrations and rebuild the registry");
         println("  migrate:rollback          Rollback the last database migration batch");
         println("  migrate:status            Show the status of each migration");
         println("  db:seed                   Seed the database with records");
@@ -331,9 +334,167 @@ public class ConsoleKernel {
     }
 
     fn command_migrate(self) -> int {
+        // Auto-discovery: pick up any hand-written migration files first.
+        // Spid3r imports are compile-time constants, so brand-new files are
+        // registered for the NEXT process; re-run to apply them.
+        let new_count = self.sync_migration_registry(false);
+        if new_count > 0 {
+            println("[Migrate] Detected " + string(new_count) + " new migration file(s). Registry updated.");
+            println("[Migrate] Re-run `spid3r magic migrate` to apply them.");
+            return 0;
+        }
         let runner = new MigrationRunner();
         runner.migrate(self.migrations_list);
         DB.close();
+        return 0;
+    }
+
+    // ------------------------------------------------------------------
+    // Migration Auto-Discovery (artisan-style)
+    // Spid3r's `import` is a compile-time, string-literal-only construct —
+    // modules cannot be loaded dynamically at runtime. So instead of
+    // runtime require() like PHP's autoloader, the kernel scans
+    // database/migrations/ and generates `registry.matrix`, which the
+    // `magic` entrypoint imports once. `make:migration` and `migrate`
+    // keep the registry in sync automatically.
+    // ------------------------------------------------------------------
+
+    fn migrations_dir(self) -> string {
+        return self.resolve_root() + "database/migrations";
+    }
+
+    // Sorted list of migration filenames (*.matrix, excluding registry)
+    fn scan_migration_files(self) {
+        let out = [];
+        let res = list_dir(self.migrations_dir());
+        if res.is_err() {
+            return out;
+        }
+        for name in res.unwrap() {
+            let n = string(name);
+            if n.ends_with(".matrix") and n != "registry.matrix" {
+                out.push(n);
+            }
+        }
+        // Insertion sort → deterministic execution order
+        let i = 1;
+        while i < out.len() {
+            let cur = out[i];
+            let j = i - 1;
+            while j >= 0 and out[j] > cur {
+                out[j + 1] = out[j];
+                j = j - 1;
+            }
+            out[j + 1] = cur;
+            i = i + 1;
+        }
+        return out;
+    }
+
+    // Pull the migration class name out of a file's source text
+    fn extract_class_name(self, content: string) -> string {
+        // Only register classes that extend the Migration base
+        if not content.contains("extends Migration") {
+            return "";
+        }
+        let parts = content.split("public class ");
+        if parts.len() < 2 {
+            return "";
+        }
+        let seg = parts[1].trim();
+        let words = seg.split(" ");
+        if words.len() == 0 {
+            return "";
+        }
+        return words[0].trim();
+    }
+
+    // Regenerate registry.matrix from all migration files.
+    // Returns the number of newly discovered files (0 = up to date),
+    // or -1 on write failure. Set force=true to rebuild even when the
+    // scan looks up to date (used when migration files were deleted —
+    // see tools/resync.matrix).
+    public fn sync_migration_registry(self, verbose: bool, force: bool = false) -> int {
+        let files = self.scan_migration_files();
+        let reg_path = self.migrations_dir() + "/registry.matrix";
+
+        // How many of the scanned files does the current registry cover?
+        let known = 0;
+        let stale = 0;
+        if file_exists(reg_path) {
+            let res = read_file(reg_path);
+            if res.is_ok() {
+                let content = string(res.unwrap());
+                for f in files {
+                    let mod_name = f.slice(0, f.len() - 7); // strip ".matrix"
+                    if content.contains("\"database/migrations/" + mod_name + "\"") {
+                        known = known + 1;
+                    }
+                }
+                // Registry entries whose files no longer exist
+                for line in content.split("\n") {
+                    let t = line.trim();
+                    if t.starts_with("import \"database/migrations/") {
+                        let ref_name = t.replace("import \"database/migrations/", "").replace("\";", "");
+                        if not file_exists(self.migrations_dir() + "/" + ref_name + ".matrix") {
+                            stale = stale + 1;
+                        }
+                    }
+                }
+            }
+        }
+        let new_count = files.len() - known;
+        if not force and new_count <= 0 and stale == 0 and file_exists(reg_path) {
+            return 0;
+        }
+
+        let imports = [];
+        let calls = [];
+        for f in files {
+            let res = read_file(self.migrations_dir() + "/" + f);
+            if res.is_err() {
+                continue;
+            }
+            let cls = self.extract_class_name(string(res.unwrap()));
+            if cls == "" {
+                continue;
+            }
+            let mod_name = f.slice(0, f.len() - 7); // strip ".matrix"
+            imports.push("import \"database/migrations/" + mod_name + "\";");
+            calls.push("    kernel.register_migration(new " + cls + "());");
+        }
+
+        let content = "// database/migrations/registry.matrix
+// AUTO-GENERATED by `spid3r magic migrate:sync` — do not edit by hand.
+// Regenerated automatically by `make:migration` and `migrate` whenever
+// migration files change. Spid3r imports are compile-time constants,
+// so newly created files are picked up on the next CLI invocation.
+
+" + imports.join("\n") + "
+
+public fn register_all_migrations(kernel) {
+" + calls.join("\n") + "
+}
+";
+        let res = write_file(reg_path, content);
+        if res.is_err() {
+            println("[Magic Error] " + res.unwrap_err());
+            return -1;
+        }
+        if verbose {
+            println("[Magic] Migration registry synced — " + string(files.len()) + " migration(s) registered.");
+        }
+        return new_count;
+    }
+
+    fn command_migrate_sync(self) -> int {
+        let n = self.sync_migration_registry(true, false);
+        if n < 0 {
+            return 1;
+        }
+        if n == 0 {
+            println("[Magic] Migration registry is up to date.");
+        }
         return 0;
     }
 
@@ -499,6 +660,8 @@ public class Migration_" + ts + " extends Migration {
             return 1;
         }
         println("[Magic] Migration created successfully: " + file_path);
+        self.sync_migration_registry(true);
+        println("[Magic] Registered automatically — run `spid3r magic migrate` to apply.");
         return 0;
     }
 }

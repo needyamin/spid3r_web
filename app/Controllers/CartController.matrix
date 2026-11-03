@@ -3,14 +3,18 @@
 // Mutations return JSON for AJAX requests (no page reload) and redirect
 // otherwise — the storefront stays fully functional without JavaScript.
 
+import "framework/Controller";
 import "framework/Response";
 import "framework/View/BD";
+import "framework/Auth/Auth";
 import "app/Models/Order";
 import "app/Models/Product";
 import "app/Support/CartService";
 
-public class CartController {
-    fn new() {}
+public class CartController extends Controller {
+    fn new() {
+        super();
+    }
 
     fn is_ajax(self, req) -> bool {
         return req.header("x-requested-with", "") == "XMLHttpRequest";
@@ -69,16 +73,25 @@ public class CartController {
         let cart = new CartService();
         let token = cart.token(req);
 
-        return view("store.cart", map(
+        // Prefill checkout fields for signed-in customers
+        let customer_name = "";
+        if Auth.check() {
+            let user = Auth.user();
+            if user != null and user.has("name") {
+                customer_name = string(user["name"]);
+            }
+        }
+
+        return self.view("store.cart", self.shared(map(
             "title", "Your Cart - Spid3r Bazaar",
             "items", cart.items(token),
             "total", cart.total(token),
             "cart_count", cart.count(token),
             "error", "",
-            "customer_name", "",
+            "customer_name", customer_name,
             "phone", "",
             "address", ""
-        ));
+        )));
     }
 
     // POST /cart/update  (product_id, qty)
@@ -161,7 +174,7 @@ public class CartController {
         ));
         if validator.fails() {
             // Re-render the cart with the error summary and preserve form data
-            return view("store.cart", map(
+            return self.view("store.cart", self.shared(map(
                 "title", "Your Cart - Spid3r Bazaar",
                 "items", items,
                 "total", cart.total(token),
@@ -170,19 +183,24 @@ public class CartController {
                 "customer_name", customer_name,
                 "phone", phone,
                 "address", address
-            ));
+            )));
         }
 
-        // Snapshot the cart into the order
+        // Snapshot the cart into the order; attach the customer account
+        // when one is signed in (guest checkout stays supported).
         let total = cart.total(token);
-        let order = Order.create(map(
+        let order_attrs = map(
             "customer_name", customer_name.trim(),
             "phone", phone.trim(),
             "address", address.trim(),
             "items_json", json_write(items),
             "total", total,
             "status", "pending"
-        ));
+        );
+        if Auth.check() {
+            order_attrs["user_id"] = Auth.id();
+        }
+        let order = Order.create(order_attrs);
 
         // Decrement product stock and increment sold count
         for item in items {
@@ -196,10 +214,10 @@ public class CartController {
 
         cart.clear(token);
 
-        return view("store.success", map(
+        return self.view("store.success", self.shared(map(
             "title", "Order Placed - Spid3r Bazaar",
             "order", order.to_map(),
             "cart_count", 0
-        ));
+        )));
     }
 }

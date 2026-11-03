@@ -7,10 +7,12 @@ import "framework/Response";
 import "app/Controllers/AuthController";
 import "app/Controllers/StoreController";
 import "app/Controllers/CartController";
+import "app/Controllers/OrderController";
 
 let auth_ctrl = new AuthController();
 let store_ctrl = new StoreController();
 let cart_ctrl = new CartController();
+let order_ctrl = new OrderController();
 
 public fn register_web_routes() {
     // Store (e-commerce) — the homepage IS the store
@@ -26,6 +28,9 @@ public fn register_web_routes() {
     Route.post("/cart/remove", fn(req) { return cart_ctrl.remove(req); }).name("cart.remove");
     Route.get("/checkout", fn(req) { return redirect("/cart"); }).name("cart.checkout.redirect");
     Route.post("/checkout", fn(req) { return cart_ctrl.checkout(req); }).name("cart.checkout");
+
+    // Customer order history (requires login)
+    Route.get("/orders", fn(req) { return order_ctrl.index(req); }).name("orders.index");
 
     // User Authentication
     Route.get("/login", fn(req) { return auth_ctrl.showLogin(req); }).name("login");

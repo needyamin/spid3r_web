@@ -385,3 +385,14 @@ img, svg, picture, video {
     font-size: 13px;
   }
 }
+
+/* ---- Navbar auth area (MVC shared auth state) ---- */
+.sz-nav-user {
+  font-size: .875rem;
+  opacity: .9;
+  max-width: 140px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.sz-nav-link { white-space: nowrap; }

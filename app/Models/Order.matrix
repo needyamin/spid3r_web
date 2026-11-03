@@ -6,7 +6,7 @@ import "framework/Database/DB";
 
 public class Order extends Model {
     fn new(attrs = null) {
-        super("orders", ["customer_name", "phone", "address",
+        super("orders", ["customer_name", "phone", "address", "user_id",
                          "items_json", "total", "status"], attrs);
     }
 
@@ -24,6 +24,26 @@ public class Order extends Model {
         let order = new Order(attrs);
         order.save();
         return order;
+    }
+
+    // All orders belonging to a customer account, newest first
+    public static fn forUser(user_id) {
+        let _ = self;
+        let rows = DB.table("orders")
+            .where("user_id", "=", user_id)
+            .orderBy("id", "DESC")
+            .get();
+        return self.wrap_rows(rows);
+    }
+
+    // Wrap raw rows into Order instances
+    public static fn wrap_rows(rows) {
+        let _ = self;
+        let out = [];
+        for r in rows {
+            out.push(new Order(r));
+        }
+        return out;
     }
 }
 

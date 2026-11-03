@@ -1,0 +1,69 @@
+// app/Controllers/OrderController.matrix
+// Order history ("My Orders") for signed-in customers.
+// Guests are redirected to the login page.
+
+import "framework/Controller";
+import "framework/Auth/Auth";
+import "app/Models/Order";
+import "app/Support/CartService";
+
+public class OrderController extends Controller {
+    fn new() {
+        super();
+    }
+
+    // Decorate one order with display fields parsed from items_json so the
+    // template stays logic-free.
+    fn decorate_order(self, order) {
+        let m = order.to_map();
+
+        let items = [];
+        try {
+            items = json_parse(string(m["items_json"]));
+        } catch (_e) {
+            items = [];
+        }
+
+        let item_count = 0;
+        let first_emoji = "📦";
+        let first_name = "";
+        let extra_items = 0;
+
+        for it in items {
+            item_count = item_count + int(it["qty"]);
+            if first_name == "" {
+                first_emoji = it["product"]["emoji"];
+                first_name = it["product"]["name"];
+            }
+        }
+        if items.len() > 1 {
+            extra_items = items.len() - 1;
+        }
+
+        m["item_count"] = item_count;
+        m["first_emoji"] = first_emoji;
+        m["first_name"] = first_name;
+        m["extra_items"] = extra_items;
+        return m;
+    }
+
+    // GET /orders
+    public fn index(self, _req) {
+        if not Auth.check() {
+            return self.redirect("/login");
+        }
+
+        let cart = new CartService();
+        let rows = Order.forUser(Auth.id());
+
+        let orders = [];
+        for o in rows {
+            orders.push(self.decorate_order(o));
+        }
+
+        return self.view("store.orders", self.shared(map(
+            "title", "My Orders - Spid3r Bazaar",
+            "orders", orders
+        )));
+    }
+}

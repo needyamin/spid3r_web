@@ -1,8 +1,12 @@
 // framework/Controller.matrix
-// Spid3rWeb Base Controller
+// Spid3rWeb Base Controller — the "C" of the MVC triad.
+// Every application controller extends this class and inherits the
+// response/view helpers plus shared view data (auth state) that the
+// global layout template expects on every page.
 
 import "framework/Response";
 import "framework/View/BD";
+import "framework/Auth/Auth";
 
 public class Controller {
     fn new() {}
@@ -24,5 +28,26 @@ public class Controller {
 
     public fn validate(self, req, rules) {
         return req.validate(rules);
+    }
+
+    // ------------------------------------------------------------------
+    // Shared view data
+    // Merges caller data with the auth-state variables the global store
+    // layout renders in the navbar (is_auth, user_name). Controllers use
+    // it as:  return self.view("store.index", self.shared(map(...)));
+    // ------------------------------------------------------------------
+    public fn shared(self, data = null) {
+        if data == null {
+            data = map();
+        }
+        data["is_auth"] = Auth.check();
+
+        let user_name = "";
+        let user = Auth.user();
+        if user != null and user.has("name") {
+            user_name = string(user["name"]);
+        }
+        data["user_name"] = user_name;
+        return data;
     }
 }

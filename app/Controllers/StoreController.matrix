@@ -1,14 +1,17 @@
 // app/Controllers/StoreController.matrix
 // Storefront: product grid, search, category filter, product detail
 
+import "framework/Controller";
 import "framework/Response";
 import "framework/View/BD";
 import "framework/Database/DB";
 import "app/Models/Product";
 import "app/Support/CartService";
 
-public class StoreController {
-    fn new() {}
+public class StoreController extends Controller {
+    fn new() {
+        super();
+    }
 
     // Decorate raw product rows with display fields the templates can output
     // directly (keeps template logic minimal).
@@ -57,14 +60,14 @@ public class StoreController {
             categories.push(r["category"]);
         }
 
-        return view("store.index", map(
+        return self.view("store.index", self.shared(map(
             "title", "Spid3r Bazaar - Online Shopping",
             "products", self.decorate(rows),
             "categories", categories,
             "active_category", category,
             "search_term", search,
             "cart_count", cart_count
-        ));
+        )));
     }
 
     // GET /product/:id
@@ -85,11 +88,11 @@ public class StoreController {
             .limit(4)
             .get();
 
-        return view("store.show", map(
+        return self.view("store.show", self.shared(map(
             "title", product.get("name") + " - Spid3r Bazaar",
             "product", self.decorate([product.to_map()])[0],
             "related", self.decorate(related_rows),
             "cart_count", cart_count
-        ));
+        )));
     }
 }

@@ -503,7 +503,8 @@ PRAGMA busy_timeout = 5000;   <span class="cmt">// ms — tolerates concurrent w
     <tr><td><code>spid3r magic serve [--port N]</code></td><td>Start the HTTP development server (accepts <code>--port=N</code>, <code>--port N</code>, or a bare port; <code>--dry-run</code> validates boot)</td></tr>
     <tr><td><code>spid3r magic test</code></td><td>Run the automated test suite — exit code <code>0</code> on success, non-zero on any failure</td></tr>
     <tr><td><code>spid3r magic route:list</code></td><td>Print a formatted table of all registered routes</td></tr>
-    <tr><td><code>spid3r magic migrate</code></td><td>Run outstanding migrations (tracked in the <code>migrations</code> table with batch numbers)</td></tr>
+    <tr><td><code>spid3r magic migrate</code></td><td>Run outstanding migrations (tracked in the <code>migrations</code> table with batch numbers; auto-syncs the registry first)</td></tr>
+    <tr><td><code>spid3r magic migrate:sync</code><span class="badge b-green" style="margin-left:6px">safe</span></td><td>Re-scan <code>database/migrations/</code> and rebuild the auto-discovery registry</td></tr>
     <tr><td><code>spid3r magic migrate:rollback</code></td><td>Roll back the most recent migration batch (calls each <code>down()</code>)</td></tr>
     <tr><td><code>spid3r magic migrate:status</code><span class="badge b-green" style="margin-left:6px">safe</span></td><td>Show which migrations ran and in which batch</td></tr>
     <tr><td><code>spid3r magic db:seed</code></td><td>Execute registered seeders</td></tr>
@@ -513,9 +514,20 @@ PRAGMA busy_timeout = 5000;   <span class="cmt">// ms — tolerates concurrent w
     <tr><td><code>spid3r magic help</code></td><td>Show the command list (header: <code>Spid3rWeb Magic CLI</code>)</td></tr>
   </table>
 
+  <div class="callout">
+    <div class="co-title">✅ Migration auto-discovery (artisan-style)</div>
+    <p>Migrations are <strong>auto-discovered</strong> — you never edit the <code>magic</code> entrypoint. The kernel scans <code>database/migrations/*.matrix</code> and generates <code>database/migrations/registry.matrix</code>, which <code>magic</code> imports. Spid3r's <code>import</code> is a compile-time string literal, so the registry is a generated manifest rather than runtime loading:</p>
+    <ul>
+      <li><code>make:migration</code> registers the new file <strong>automatically</strong> — just run <code>spid3r magic migrate</code> next.</li>
+      <li>Hand-written migration files are detected by <code>migrate</code> (it re-syncs, then asks you to re-run).</li>
+      <li><code>spid3r magic migrate:sync</code> rebuilds the registry on demand.</li>
+      <li>Deleted a migration file by hand? Recover with <code>SPID3R_PATH=. spid3r run resync.matrix</code> (the registry may reference the missing module, which blocks <code>magic</code> from booting).</li>
+    </ul>
+  </div>
+
   <div class="callout warn">
-    <div class="co-title">⚠️ Registering new migrations</div>
-    <p>New migration classes must be <strong>imported and registered</strong> in the <code>magic</code> entrypoint (<code>kernel.register_migration(new …)</code>) before they will run. The same applies to new seeders via <code>kernel.register_seeder(fn() { … })</code>.</p>
+    <div class="co-title">⚠️ Registering new seeders</div>
+    <p>New seeders must still be registered in the <code>magic</code> entrypoint via <code>kernel.register_seeder(fn() { … })</code>.</p>
   </div>
 </section>
 

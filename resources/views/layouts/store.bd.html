@@ -12,7 +12,17 @@
 <nav class="navbar navbar-expand-lg navbar-dark sz-navbar">
   <div class="container sz-nav-container">
     <a class="navbar-brand fw-bold sz-brand" href="/">🛍️ Spid3r <span class="sz-brand-accent">Bazaar</span></a>
-    <div class="sz-nav-actions ms-auto ms-lg-0 order-lg-3">
+    <div class="sz-nav-actions ms-auto ms-lg-0 order-lg-3 d-flex align-items-center gap-2">
+      @if(is_auth)
+        <a class="nav-link text-white sz-nav-link sz-btn-touch" href="/orders">📦 Orders</a>
+        <span class="text-white d-none d-md-inline sz-nav-user">👤 {{ user_name }}</span>
+        <form method="POST" action="/logout" class="m-0">
+          <button class="btn btn-sm btn-outline-light sz-btn-touch" type="submit">Logout</button>
+        </form>
+      @else
+        <a class="nav-link text-white sz-nav-link sz-btn-touch" href="/login">Sign In</a>
+        <a class="btn btn-sm btn-light sz-btn-touch" href="/register">Register</a>
+      @endif
       <a class="nav-link text-white position-relative sz-cart-link sz-btn-touch" href="/cart" aria-label="Cart">
         <span>🛒 Cart</span>
         <span class="badge rounded-pill bg-light text-dark sz-cart-badge">{{ cart_count }}</span>
