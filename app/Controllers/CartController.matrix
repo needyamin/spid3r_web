@@ -1,0 +1,205 @@
+// app/Controllers/CartController.matrix
+// Shopping cart (Cache-backed via CartService) & checkout.
+// Mutations return JSON for AJAX requests (no page reload) and redirect
+// otherwise — the storefront stays fully functional without JavaScript.
+
+import "framework/Response";
+import "framework/View/BD";
+import "app/Models/Order";
+import "app/Models/Product";
+import "app/Support/CartService";
+
+public class CartController {
+    fn new() {}
+
+    fn is_ajax(self, req) -> bool {
+        return req.header("x-requested-with", "") == "XMLHttpRequest";
+    }
+
+    // POST /cart/add  (product_id, qty)
+    public fn add(self, req) {
+        let cart = new CartService();
+        let token = cart.token(req);
+        let new_cookie = false;
+
+        if token == "" {
+            let probe = response("", 200);
+            token = cart.issue_token(probe);
+            new_cookie = true;
+        }
+
+        let pid = req.int("product_id", 0);
+        let qty = req.int("qty", 1);
+        if qty <= 0 {
+            qty = 1;
+        }
+        if pid > 0 {
+            let data = cart.data(token);
+            let key = string(pid);
+            let cur = 0;
+            if data.has(key) {
+                cur = int(data[key]);
+            }
+            data[key] = cur + qty;
+            cart.save(token, data);
+        }
+
+        let count = cart.count(token);
+        if self.is_ajax(req) {
+            let res = json(map(
+                "ok", true,
+                "message", "Added to cart",
+                "cart_count", count
+            ));
+            if new_cookie {
+                res.cookie("spid3r_cart", token, "/", 604800);
+            }
+            return res;
+        }
+
+        let res = redirect("/cart");
+        if new_cookie {
+            res.cookie("spid3r_cart", token, "/", 604800);
+        }
+        return res;
+    }
+
+    // GET /cart
+    public fn index(self, req) {
+        let cart = new CartService();
+        let token = cart.token(req);
+
+        return view("store.cart", map(
+            "title", "Your Cart - Spid3r Bazaar",
+            "items", cart.items(token),
+            "total", cart.total(token),
+            "cart_count", cart.count(token),
+            "error", "",
+            "customer_name", "",
+            "phone", "",
+            "address", ""
+        ));
+    }
+
+    // POST /cart/update  (product_id, qty)
+    public fn update(self, req) {
+        let cart = new CartService();
+        let token = cart.token(req);
+        let count = 0;
+        let total = 0;
+
+        if token != "" {
+            let pid = req.int("product_id", 0);
+            let qty = req.int("qty", 1);
+            let data = cart.data(token);
+            let key = string(pid);
+            if qty <= 0 {
+                data.remove(key);
+            } else {
+                data[key] = qty;
+            }
+            cart.save(token, data);
+            count = cart.count(token);
+            total = cart.total(token);
+        }
+
+        if self.is_ajax(req) {
+            return json(map(
+                "ok", true,
+                "message", "Cart updated",
+                "cart_count", count,
+                "total", total
+            ));
+        }
+        return redirect("/cart");
+    }
+
+    // POST /cart/remove  (product_id)
+    public fn remove(self, req) {
+        let cart = new CartService();
+        let token = cart.token(req);
+        let count = 0;
+        let total = 0;
+
+        if token != "" {
+            let data = cart.data(token);
+            data.remove(string(req.int("product_id", 0)));
+            cart.save(token, data);
+            count = cart.count(token);
+            total = cart.total(token);
+        }
+
+        if self.is_ajax(req) {
+            return json(map(
+                "ok", true,
+                "message", "Removed from cart",
+                "cart_count", count,
+                "total", total
+            ));
+        }
+        return redirect("/cart");
+    }
+
+    // POST /checkout  (customer_name, phone, address)
+    public fn checkout(self, req) {
+        let cart = new CartService();
+        let token = cart.token(req);
+
+        let items = cart.items(token);
+        if items.len() == 0 {
+            return redirect("/cart");
+        }
+
+        let customer_name = req.string("customer_name");
+        let phone = req.string("phone");
+        let address = req.string("address");
+
+        let validator = req.validate(map(
+            "customer_name", "required|min:3",
+            "phone", "required|min:6",
+            "address", "required|min:10"
+        ));
+        if validator.fails() {
+            // Re-render the cart with the error summary and preserve form data
+            return view("store.cart", map(
+                "title", "Your Cart - Spid3r Bazaar",
+                "items", items,
+                "total", cart.total(token),
+                "cart_count", cart.count(token),
+                "error", validator.error_summary(" · "),
+                "customer_name", customer_name,
+                "phone", phone,
+                "address", address
+            ));
+        }
+
+        // Snapshot the cart into the order
+        let total = cart.total(token);
+        let order = Order.create(map(
+            "customer_name", customer_name.trim(),
+            "phone", phone.trim(),
+            "address", address.trim(),
+            "items_json", json_write(items),
+            "total", total,
+            "status", "pending"
+        ));
+
+        // Decrement product stock and increment sold count
+        for item in items {
+            let p = Product.find(item["product"]["id"]);
+            if p != null {
+                p.set("stock", max(0, p.get("stock") - item["qty"]));
+                p.set("sold", p.get("sold") + item["qty"]);
+                p.save();
+            }
+        }
+
+        cart.clear(token);
+
+        return view("store.success", map(
+            "title", "Order Placed - Spid3r Bazaar",
+            "order", order.to_map(),
+            "cart_count", 0
+        ));
+    }
+}

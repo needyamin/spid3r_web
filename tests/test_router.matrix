@@ -23,10 +23,10 @@ fn test_route_registration_and_match() {
 
 fn test_route_parameters() {
     let router = new Router();
-    router.get("/posts/:id", fn(req) { return response("Post " + req.param("id"), 200); });
+    router.get("/products/:id", fn(req) { return response("Product " + req.param("id"), 200); });
     router.get("/users/:uid/comments/:cid", fn(_req) { return response("ok", 200); });
 
-    let match1 = router.match_route("GET", "/posts/42");
+    let match1 = router.match_route("GET", "/products/42");
     assert(match1 != null, "Route with param should match");
     assert(match1["params"].has("id"), "Param 'id' should be extracted");
     assert(match1["params"]["id"] == "42", "Param 'id' value should be '42'");
@@ -42,14 +42,14 @@ fn test_route_groups() {
     let router = new Router();
     router.group(map("prefix", "/api/v1"), fn() {
         router.get("/users", fn(_req) { return response("users", 200); });
-        router.get("/posts", fn(_req) { return response("posts", 200); });
+        router.get("/products", fn(_req) { return response("products", 200); });
     });
 
     let m1 = router.match_route("GET", "/api/v1/users");
     assert(m1 != null, "Group prefixed route should match");
     assert(m1["route"].path == "/api/v1/users", "Group prefix should be applied");
 
-    let m2 = router.match_route("GET", "/api/v1/posts");
+    let m2 = router.match_route("GET", "/api/v1/products");
     assert(m2 != null, "Group prefixed route 2 should match");
     println("  [PASS] test_route_groups");
 }

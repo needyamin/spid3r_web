@@ -90,12 +90,13 @@ fn main() {
         test_assert_contains(out["stdout"], "Spid3rWeb Magic CLI", "Header must match contract");
     });
 
-    runner.test("F2.2: Magic route:list contains /api/v1/posts contract", fn() {
+    runner.test("F2.2: Magic route:list contains active storefront and API routes", fn() {
         let spid3r_bin = get_spid3r_bin();
         let res = exec_capture(spid3r_bin, list("magic", "route:list"), null);
         test_assert(res.is_ok(), "Executing 'magic route:list' should succeed");
         let out = res.unwrap();
-        test_assert_contains(out["stdout"], "/api/v1/posts", "route:list must include /api/v1/posts");
+        test_assert_contains(out["stdout"], "/api/v1/status", "route:list must include /api/v1/status");
+        test_assert_contains(out["stdout"], "/product/:id", "route:list must include /product/:id");
     });
 
     runner.test("F2.3: Magic route:list table formatting", fn() {

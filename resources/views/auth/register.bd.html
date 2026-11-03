@@ -1,50 +1,38 @@
-@extends('layouts/app')
+@extends('layouts/store')
 
-@section('title', 'Register - Spid3rWeb')
+@section('title', 'Create Account - Spid3r Bazaar')
 
 @section('content')
-<div class="container py-5">
+<div class="container py-4 py-md-5">
   <div class="row justify-content-center">
-    <div class="col-md-6 col-lg-5">
-      <div class="card bg-dark border-secondary border-opacity-25 shadow-lg p-4">
-        <div class="text-center mb-4">
-          <div class="d-inline-flex align-items-center justify-content-center bg-info text-dark rounded-3 mb-2" style="width: 48px; height: 48px; font-weight: 800; font-size: 1.5rem;">S</div>
-          <h3 class="fw-bold text-light">Create Account</h3>
-          <p class="text-secondary small">Join the Spid3rWeb developer community</p>
+    <div class="col-12 col-sm-10 col-md-7 col-lg-5">
+      <div class="card shadow-sm border-0">
+        <div class="card-body p-4">
+          <h1 class="h4 fw-bold mb-1">Create Account</h1>
+          <p class="text-muted mb-4">Join Spid3r Bazaar and start shopping.</p>
+
+          @if(error)
+          <div class="alert alert-danger py-2">{{ error }}</div>
+          @endif
+
+          <form action="/register" method="POST">
+            <div class="mb-3">
+              <label class="form-label" for="name">Name</label>
+              <input class="form-control" type="text" id="name" name="name" placeholder="Your name" required autofocus>
+            </div>
+            <div class="mb-3">
+              <label class="form-label" for="email">Email</label>
+              <input class="form-control" type="email" id="email" name="email" placeholder="you@example.com" required>
+            </div>
+            <div class="mb-3">
+              <label class="form-label" for="password">Password</label>
+              <input class="form-control" type="password" id="password" name="password" placeholder="At least 6 characters" required>
+            </div>
+            <button type="submit" class="btn btn-dark w-100 sz-btn-touch">Create Account</button>
+          </form>
+
+          <p class="text-muted small text-center mt-3 mb-0">Already registered? <a href="/login">Sign In</a></p>
         </div>
-
-        @if(error)
-        <div class="alert alert-danger py-2 px-3 small mb-3">
-          <i class="bi bi-exclamation-circle me-1"></i>{{ error }}
-        </div>
-        @endif
-
-        <form action="/register" method="POST">
-          <div class="mb-3">
-            <label class="form-label text-light small fw-semibold">Full Name</label>
-            <input type="text" name="name" class="form-control bg-black text-light border-secondary" placeholder="Ada Lovelace" required autofocus>
-          </div>
-
-          <div class="mb-3">
-            <label class="form-label text-light small fw-semibold">Email Address</label>
-            <input type="email" name="email" class="form-control bg-black text-light border-secondary" placeholder="developer@example.com" required>
-          </div>
-
-          <div class="mb-4">
-            <label class="form-label text-light small fw-semibold">Password (min 6 chars)</label>
-            <input type="password" name="password" class="form-control bg-black text-light border-secondary" placeholder="••••••••" required>
-          </div>
-
-          <button type="submit" class="btn btn-info w-100 text-dark fw-bold py-2 mb-3">
-            Register & Sign In
-          </button>
-
-          <div class="text-center">
-            <small class="text-secondary">
-              Already have an account? <a href="/login" class="text-info text-decoration-none">Sign In</a>
-            </small>
-          </div>
-        </form>
       </div>
     </div>
   </div>

@@ -2,7 +2,7 @@
 // Unit tests for Spid3rWeb SpiderBD Template Engine (.bd.html)
 
 import "framework/View/BD";
-import "app/Models/Post";
+import "app/Models/Product";
 
 fn test_html_escape() {
     let raw = "<script>alert('xss & dangerous')</script>";
@@ -16,27 +16,26 @@ fn test_html_escape() {
 
 fn test_bd_view_rendering() {
     let rendered = global_bd.render("home", map(
-        "title", "Home Page",
-        "posts", list(
+        "title", "Spid3r Bazaar - Online Shopping",
+        "search_term", "",
+        "cart_count", 2,
+        "categories", list("Electronics", "Fashion"),
+        "products", list(
             map(
                 "id", 1,
-                "title", "BD Architecture in Spid3r",
-                "slug", "bd-architecture",
-                "content", "Full templating capabilities with layouts and sections in .bd.html templates.",
-                "category", "Engine",
-                "status", "published",
-                "views_count", 99
+                "name", "Wireless Noise-Canceling Headphones",
+                "emoji", "🎧",
+                "price", 2490,
+                "discount_html", "",
+                "rating", 4.8,
+                "sold", 167
             )
-        ),
-        "is_auth", true,
-        "user_name", "Ada Lovelace",
-        "total_posts", 1,
-        "total_users", 1
+        )
     ));
-    assert(rendered.contains("Welcome to Spid3rWeb"), "Page title should be rendered");
-    assert(rendered.contains("BD Architecture in Spid3r"), "Post title should be interpolated");
-    assert(rendered.contains("Ada Lovelace"), "User name should be interpolated in auth section");
-    assert(rendered.contains("Spid3rWeb"), "Layout brand should be rendered");
+    assert(rendered.contains("Spid3r Bazaar"), "Store title should be rendered");
+    assert(rendered.contains("Electronics"), "Category chip should be rendered");
+    assert(rendered.contains("Wireless Noise-Canceling Headphones"), "Product name should be rendered");
+    assert(rendered.contains("/cart/add"), "Cart add form action should be present");
     println("  [PASS] test_bd_view_rendering");
 }
 
@@ -52,21 +51,21 @@ fn test_auth_views_rendering() {
         "title", "Register",
         "error", ""
     ));
-    assert(register_html.contains("Register"), "Register title should be present");
+    assert(register_html.contains("Create Account"), "Register heading should be present");
     println("  [PASS] test_auth_views_rendering");
 }
 
 fn test_dot_notation_and_nesting() {
     let t_view = "resources/views/test_nested.bd.html";
-    let content = "<p>" + "{{" + " post.title " + "}}" + "</p>" +
-                  "<span>" + "{{" + " $post.author.name " + "}}" + "</span>" +
-                  "<article>" + "{!!" + " post.meta.raw_badge " + "!!}" + "</article>";
+    let content = "<p>" + "{{" + " product.name " + "}}" + "</p>" +
+                  "<span>" + "{{" + " $product.brand.name " + "}}" + "</span>" +
+                  "<div>" + "{!!" + " product.meta.raw_badge " + "!!}" + "</div>";
     write_file(t_view, content);
 
     let rendered = global_bd.render("test_nested", map(
-        "post", map(
-            "title", "Modern SpiderBD Engine",
-            "author", map("name", "Ada Lovelace"),
+        "product", map(
+            "name", "Modern SpiderBD Engine",
+            "brand", map("name", "Ada Lovelace"),
             "meta", map("raw_badge", "<span class='badge'>Verified</span>")
         )
     ));
@@ -103,13 +102,13 @@ fn test_whitespace_tolerance() {
 fn test_null_safety_and_missing_properties() {
     let t_view = "resources/views/test_null_safe.bd.html";
     let content = "A:[" + "{{" + " missing_var " + "}}" + "] " +
-                  "B:[" + "{{" + " post.missing_prop " + "}}" + "] " +
-                  "C:[" + "{{" + " post.author.name " + "}}" + "] " +
+                  "B:[" + "{{" + " product.missing_prop " + "}}" + "] " +
+                  "C:[" + "{{" + " product.brand.name " + "}}" + "] " +
                   "D:[" + "{{" + " count " + "}}" + "]";
     write_file(t_view, content);
 
     let rendered = global_bd.render("test_null_safe", map(
-        "post", map("id", 1, "author", null),
+        "product", map("id", 1, "brand", null),
         "count", 0
     ));
     file_delete(t_view);
@@ -122,59 +121,70 @@ fn test_null_safety_and_missing_properties() {
 }
 
 fn test_model_dot_notation() {
-    let post = new Post(map(
-        "title", "Active Record in BD",
-        "category", "Architecture",
-        "views_count", 100
+    let product = new Product(map(
+        "name", "Mechanical Keyboard",
+        "category", "Peripherals",
+        "stock", 100
     ));
 
     let t_view = "resources/views/test_model.bd.html";
-    let content = "<h1>" + "{{" + " post.title " + "}}" + "</h1>" +
-                  "<span>" + "{{" + " post.category " + "}}" + "</span>" +
-                  "<small>" + "{{" + " post.views_count " + "}}" + "</small>";
+    let content = "<h1>" + "{{" + " product.name " + "}}" + "</h1>" +
+                  "<span>" + "{{" + " product.category " + "}}" + "</span>" +
+                  "<small>" + "{{" + " product.stock " + "}}" + "</small>";
     write_file(t_view, content);
 
-    let rendered = global_bd.render("test_model", map("post", post));
+    let rendered = global_bd.render("test_model", map("product", product));
     file_delete(t_view);
 
-    assert(rendered.contains("<h1>Active Record in BD</h1>"), "Model title attribute must resolve");
-    assert(rendered.contains("<span>Architecture</span>"), "Model category attribute must resolve");
+    assert(rendered.contains("<h1>Mechanical Keyboard</h1>"), "Model name attribute must resolve");
+    assert(rendered.contains("<span>Peripherals</span>"), "Model category attribute must resolve");
     assert(rendered.contains("<small>100</small>"), "Model integer attribute must resolve");
     println("  [PASS] test_model_dot_notation");
 }
 
-fn test_posts_show_and_edit_views() {
-    // Test posts.show
-    let rendered_show = global_bd.render("posts.show", map(
-        "post", map(
+fn test_store_show_and_index_views() {
+    // Test store.show
+    let rendered_show = global_bd.render("store.show", map(
+        "product", map(
             "id", 99,
-            "title", "Architecture Patterns",
+            "name", "Architecture Patterns Book",
             "slug", "architecture-patterns",
-            "content", "Building scalable Spid3r web apps.",
-            "category", "Guides",
-            "views_count", 250
+            "description", "Building scalable Spid3r web apps.",
+            "category", "Books",
+            "emoji", "📚",
+            "price", 49.99,
+            "discount_html", "",
+            "stock", 250,
+            "sold", 10,
+            "rating", 4.9
         ),
-        "is_auth", true
+        "related", list()
     ));
-    assert(rendered_show.contains("Architecture Patterns"), "Post title should resolve in posts.show view");
-    assert(rendered_show.contains("Guides"), "Post category should resolve in posts.show view");
-    assert(rendered_show.contains("250 views"), "Post view count should resolve in posts.show view");
-    assert(rendered_show.contains("/posts/99/edit"), "Post id should resolve in edit link");
+    assert(rendered_show.contains("Architecture Patterns Book"), "Product name should resolve in store.show view");
+    assert(rendered_show.contains("Books"), "Product category should resolve in store.show view");
+    assert(rendered_show.contains("250 in stock"), "Product stock count should resolve in store.show view");
+    assert(rendered_show.contains("/cart/add"), "Cart add form action should be present");
 
-    // Test posts.edit
-    let rendered_edit = global_bd.render("posts.edit", map(
-        "post", map(
-            "id", 99,
-            "title", "Architecture Patterns",
-            "category", "Guides",
-            "content", "Building scalable Spid3r web apps."
-        ),
-        "error", ""
+    // Test store.index
+    let rendered_index = global_bd.render("store.index", map(
+        "categories", list("Books", "Electronics"),
+        "search_term", "",
+        "products", list(
+            map(
+                "id", 99,
+                "name", "Architecture Patterns Book",
+                "emoji", "📚",
+                "price", 49.99,
+                "discount_html", "",
+                "rating", 4.9,
+                "sold", 10
+            )
+        )
     ));
-    assert(rendered_edit.contains("value=\"Architecture Patterns\""), "Post title should populate edit input");
-    assert(rendered_edit.contains("value=\"Guides\""), "Post category should populate edit input");
-    assert(rendered_edit.contains("/posts/99/update"), "Post id should populate form action");
-    println("  [PASS] test_posts_show_and_edit_views");
+    assert(rendered_index.contains("Architecture Patterns Book"), "Product name should populate store index");
+    assert(rendered_index.contains("Books"), "Category chip should be present");
+    assert(rendered_index.contains("/cart/add"), "Cart add form action should be present");
+    println("  [PASS] test_store_show_and_index_views");
 }
 
 fn main() {
@@ -186,6 +196,6 @@ fn main() {
     test_whitespace_tolerance();
     test_null_safety_and_missing_properties();
     test_model_dot_notation();
-    test_posts_show_and_edit_views();
+    test_store_show_and_index_views();
     println("=== All SpiderBD Tests Passed! ===\n");
 }

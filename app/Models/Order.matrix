@@ -1,0 +1,30 @@
+// app/Models/Order.matrix
+// Spid3rWeb Store — Order Active Record Model
+
+import "framework/Database/Model";
+import "framework/Database/DB";
+
+public class Order extends Model {
+    fn new(attrs = null) {
+        super("orders", ["customer_name", "phone", "address",
+                         "items_json", "total", "status"], attrs);
+    }
+
+    public static fn find(id) {
+        let _ = self;
+        let row = DB.table("orders").where("id", "=", id).first();
+        if row != null {
+            return new Order(row);
+        }
+        return null;
+    }
+
+    public static fn create(attrs) {
+        let _ = self;
+        let order = new Order(attrs);
+        order.save();
+        return order;
+    }
+}
+
+public let OrderModel = Order;

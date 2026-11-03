@@ -80,7 +80,7 @@ fn main() {
 
     runner.test("F12.4: CorsMiddleware handles OPTIONS request with 204", fn() {
         let cors = new CorsMiddleware();
-        let req_opt = new Request(make_request("OPTIONS", "/api/v1/posts"));
+        let req_opt = new Request(make_request("OPTIONS", "/api/v1/status"));
         let res = cors.handle(req_opt);
 
         test_assert_not_null(res, "CORS middleware should intercept OPTIONS");
@@ -93,13 +93,13 @@ fn main() {
         let auth_mw = new AuthMiddleware();
 
         // 1. API request without auth -> 401
-        let req_api = new Request(make_request("GET", "/api/v1/posts"));
+        let req_api = new Request(make_request("GET", "/api/v1/secret_test"));
         let res_api = auth_mw.handle(req_api);
         test_assert_not_null(res_api, "Auth middleware should intercept unauthenticated API request");
         test_assert_eq(res_api.status_code, 401, "API unauthenticated response should be 401");
 
         // 2. Web request without auth -> 302 redirect
-        let req_web = new Request(make_request("GET", "/posts/create"));
+        let req_web = new Request(make_request("GET", "/admin_test"));
         let res_web = auth_mw.handle(req_web);
         test_assert_not_null(res_web, "Auth middleware should intercept unauthenticated web request");
         test_assert_eq(res_web.status_code, 302, "Web unauthenticated response should redirect 302");
@@ -137,19 +137,24 @@ fn main() {
 
     runner.test("F13.4: SpiderBD nested dot-notation variable interpolation (M3 contract)", fn() {
         // Contract requirement: PROJECT.md Feature 10 / Survey 1:
-        // Support nested variable access ({{ post.title }}, {!! user.name !!}) outside @foreach
-        let rendered = global_bd.render("posts.show", map(
-            "post", map(
+        // Support nested variable access outside @foreach
+        let rendered = global_bd.render("store.show", map(
+            "product", map(
                 "id", 1,
-                "title", "Modern Spid3r Web",
+                "name", "Modern Spid3r Web",
                 "slug", "modern-spid3r",
-                "content", "Full stack framework for Spid3r.",
+                "description", "Full stack framework for Spid3r.",
                 "category", "Web",
-                "views_count", 42
+                "emoji", "🌐",
+                "price", 42,
+                "discount_html", "",
+                "stock", 10,
+                "sold", 5,
+                "rating", 4.9
             ),
-            "is_auth", false
+            "related", list()
         ));
-        test_assert_contains(rendered, "Modern Spid3r Web", "Dot notation post.title should resolve in posts.show view");
+        test_assert_contains(rendered, "Modern Spid3r Web", "Dot notation product.name should resolve in store.show view");
     });
 
     runner.test("F13.5: SpiderBD whitespace tolerance in tags", fn() {
@@ -167,14 +172,14 @@ fn main() {
 
     runner.test("F14.1: SpiderBD @extends and @yield layout structure", fn() {
         let rendered = global_bd.render("home", map(
-            "title", "Home Test Page",
-            "posts", list(),
-            "is_auth", false,
-            "total_posts", 0,
-            "total_users", 0
+            "title", "Spid3r Bazaar - Online Shopping",
+            "search_term", "",
+            "cart_count", 0,
+            "categories", list(),
+            "products", list()
         ));
-        test_assert_contains(rendered, "<title>Welcome to Spid3rWeb</title>", "Layout title should be rendered via yield");
-        test_assert_contains(rendered, "The Web Framework for", "Home view content section should be yielded into layout");
+        test_assert_contains(rendered, "<title>Spid3r Bazaar", "Layout title should be rendered via yield");
+        test_assert_contains(rendered, "Spid3rWeb", "Home view content section should be yielded into layout");
     });
 
     runner.test("F14.2: SpiderBD @section parsing and rendering", fn() {
@@ -182,7 +187,7 @@ fn main() {
             "title", "Sign In - Test",
             "error", "Custom Error Message"
         ));
-        test_assert_contains(rendered, "<title>Sign In - Spid3rWeb</title>", "Login view section title should be yielded");
+        test_assert_contains(rendered, "<title>Sign In", "Login view section title should be yielded");
         test_assert_contains(rendered, "Custom Error Message", "Error message section content should be rendered");
     });
 
@@ -201,41 +206,37 @@ fn main() {
     });
 
     runner.test("F14.4: SpiderBD @if @else conditional rendering", fn() {
-        let rendered_guest = global_bd.render("home", map(
-            "title", "Home",
-            "posts", list(),
-            "is_auth", false,
-            "total_posts", 0,
-            "total_users", 0
+        let rendered_guest = global_bd.render("auth.login", map(
+            "title", "Sign In",
+            "error", "",
+            "is_auth", false
         ));
         test_assert_contains(rendered_guest, "Sign In", "Guest should see Sign In link");
         test_assert(not rendered_guest.contains("Logout"), "Guest must not see Logout link");
 
-        let rendered_auth = global_bd.render("home", map(
-            "title", "Home",
-            "posts", list(),
+        let rendered_auth = global_bd.render("auth.login", map(
+            "title", "Sign In",
+            "error", "",
             "is_auth", true,
-            "user_name", "Ada Lovelace",
-            "total_posts", 0,
-            "total_users", 0
+            "user_name", "Ada Lovelace"
         ));
         test_assert_contains(rendered_auth, "Logout", "Authenticated user should see Logout button");
         test_assert_contains(rendered_auth, "Ada Lovelace", "Authenticated user name should be rendered");
     });
 
     runner.test("F14.5: SpiderBD @foreach loop iteration", fn() {
-        let post1 = map("id", 1, "title", "Post Alpha", "slug", "alpha", "content", "Text 1", "category", "Cat1", "status", "published", "views_count", 10);
-        let post2 = map("id", 2, "title", "Post Beta", "slug", "beta", "content", "Text 2", "category", "Cat2", "status", "published", "views_count", 20);
+        let prod1 = map("id", 1, "name", "Product Alpha", "emoji", "📦", "price", 100, "discount_html", "", "rating", 4.5, "sold", 10);
+        let prod2 = map("id", 2, "name", "Product Beta", "emoji", "🎁", "price", 200, "discount_html", "", "rating", 4.8, "sold", 20);
 
         let rendered = global_bd.render("home", map(
             "title", "Home",
-            "posts", list(post1, post2),
-            "is_auth", false,
-            "total_posts", 2,
-            "total_users", 1
+            "products", list(prod1, prod2),
+            "categories", list(),
+            "search_term", "",
+            "cart_count", 0
         ));
-        test_assert_contains(rendered, "Post Alpha", "First post should be rendered in loop");
-        test_assert_contains(rendered, "Post Beta", "Second post should be rendered in loop");
+        test_assert_contains(rendered, "Product Alpha", "First product should be rendered in loop");
+        test_assert_contains(rendered, "Product Beta", "Second product should be rendered in loop");
     });
 
     // ------------------------------------------------------------------------
@@ -371,7 +372,7 @@ fn main() {
 
     runner.test("F17.1: Static CSS asset delivery", fn() {
         let app = new Application();
-        let raw = make_request("GET", "/css/app.css");
+        let raw = make_request("GET", "/css/store.css");
         let res = app.handle_request(raw);
 
         test_assert_eq(res["status"], 200, "Static CSS request should return 200 OK");
@@ -390,7 +391,7 @@ fn main() {
 
     runner.test("F17.3: Static file delivery sets cache-control header", fn() {
         let app = new Application();
-        let raw = make_request("GET", "/css/app.css");
+        let raw = make_request("GET", "/css/store.css");
         let res = app.handle_request(raw);
 
         test_assert(res["headers"].has("cache-control"), "Must set cache-control header");

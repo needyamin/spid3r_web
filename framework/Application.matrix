@@ -89,7 +89,7 @@ public class Application {
             Auth.authenticate_token(req.session_id);
         }
 
-        // 1. Static file check (e.g. /css/app.css, /js/app.js)
+        // 1. Static file check (e.g. /css/store.css, /js/app.js)
         if req.method == "GET" and (req.path.starts_with("/css/") or req.path.starts_with("/js/") or req.path.starts_with("/assets/")) {
             let static_res = self.try_serve_static(req.path);
             if static_res != null {

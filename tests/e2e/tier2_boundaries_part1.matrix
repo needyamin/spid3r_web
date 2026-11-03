@@ -12,7 +12,7 @@ import "framework/Database/DB";
 import "framework/Database/Schema";
 import "framework/Database/Migration";
 import "app/Models/User";
-import "app/Models/Post";
+import "app/Models/Product";
 
 fn unique_suffix() -> string {
     return string(unix_ms()) + "_" + string(random_int(1000, 9999));
@@ -162,78 +162,43 @@ fn main() {
     // Feature 5: Active Record Relationships Boundaries
     // ------------------------------------------------------------------------
 
-    runner.test("B5.1: Relationship query with non-existent foreign key", fn() {
-        let orphan_post = new Post(map("id", 99999, "user_id", -1, "title", "Orphan"));
-        let author = orphan_post.author();
-        test_assert_null(author, "Author of post with user_id -1 must be null");
+    runner.test("B5.1: Model query with negative primary key returns null", fn() {
+        let missing_product = ProductModel.find(-1);
+        test_assert_null(missing_product, "Product with ID -1 must be null");
+        let missing_user = UserModel.find(-1);
+        test_assert_null(missing_user, "User with ID -1 must be null");
     });
 
-    runner.test("B5.2: Relationship query on unpersisted model instance", fn() {
-        let fresh_user = new User();
-        let posts = fresh_user.posts();
-        test_assert_eq(posts.len(), 0, "Unpersisted user posts should return empty list");
+    runner.test("B5.2: Model query on unpersisted model instance", fn() {
+        let fresh_prod = new Product();
+        test_assert_null(fresh_prod.get("id"), "Unpersisted product id should be null");
+        test_assert_eq(fresh_prod.get("name"), null, "Unpersisted product attribute should be null");
     });
 
-    runner.test("B5.3: Relationship query when parent record deleted", fn() {
+    runner.test("B5.3: Model findBySlug with non-existent slug returns null", fn() {
+        let missing = ProductModel.findBySlug("absolutely-non-existent-slug-xyz-99999");
+        test_assert_null(missing, "Non-existent slug must return null");
+    });
+
+    runner.test("B5.4: Multiple product creations reflect in all() count", fn() {
         let suffix = unique_suffix();
-        let user = UserModel.create(map(
-            "name", "Doomed Parent " + suffix,
-            "email", "doomed_" + suffix + "@example.com",
-            "password", "secret"
-        ));
-        let uid = int(user.get("id"));
+        let p1 = ProductModel.create(map("name", "P1", "slug", "p1_" + suffix, "description", "D1", "category", "C", "emoji", "1️⃣", "price", 10.0, "stock", 5, "sold", 0, "rating", 4.0));
+        let p2 = ProductModel.create(map("name", "P2", "slug", "p2_" + suffix, "description", "D2", "category", "C", "emoji", "2️⃣", "price", 10.0, "stock", 5, "sold", 0, "rating", 4.0));
+        let p3 = ProductModel.create(map("name", "P3", "slug", "p3_" + suffix, "description", "D3", "category", "C", "emoji", "3️⃣", "price", 10.0, "stock", 5, "sold", 0, "rating", 4.0));
 
-        let post = PostModel.create(map(
-            "title", "Child of Doomed",
-            "slug", "child-doomed-" + suffix,
-            "content", "Content",
-            "category", "Test",
-            "user_id", uid,
-            "status", "published",
-            "views_count", 0
-        ));
-
-        // Delete parent user
-        user.delete();
-
-        // Reload post and check author
-        let reloaded_post = PostModel.find(int(post.get("id")));
-        let missing_author = reloaded_post.author();
-        test_assert_null(missing_author, "Author of post whose parent was deleted must be null");
-
-        // Cleanup post
-        post.delete();
-    });
-
-    runner.test("B5.4: Relationship list length accuracy on multiple creations", fn() {
-        let suffix = unique_suffix();
-        let user = UserModel.create(map(
-            "name", "Batch Author " + suffix,
-            "email", "batch_" + suffix + "@example.com",
-            "password", "secret"
-        ));
-        let uid = int(user.get("id"));
-
-        let p1 = PostModel.create(map("title", "P1", "slug", "p1_" + suffix, "content", "C1", "category", "C", "user_id", uid, "status", "pub", "views_count", 0));
-        let p2 = PostModel.create(map("title", "P2", "slug", "p2_" + suffix, "content", "C2", "category", "C", "user_id", uid, "status", "pub", "views_count", 0));
-        let p3 = PostModel.create(map("title", "P3", "slug", "p3_" + suffix, "content", "C3", "category", "C", "user_id", uid, "status", "pub", "views_count", 0));
-
-        test_assert_eq(user.posts().len(), 3, "User should have exactly 3 posts");
+        let prods = ProductModel.all();
+        test_assert_gte(prods.len(), 3, "ProductModel.all() should include newly created items");
 
         p1.delete();
         p2.delete();
         p3.delete();
-        user.delete();
     });
 
-    runner.test("B5.5: Relationship returns distinct list instance", fn() {
-        let suffix = unique_suffix();
-        let user = UserModel.create(map("name", "List User", "email", "l_" + suffix + "@example.com", "password", "p"));
-        let l1 = user.posts();
-        let l2 = user.posts();
+    runner.test("B5.5: Model all() returns distinct list instance", fn() {
+        let l1 = ProductModel.all();
+        let l2 = ProductModel.all();
         l1.push("dummy");
-        test_assert_ne(l1.len(), l2.len(), "Each call to user.posts() should return a new list instance");
-        user.delete();
+        test_assert_ne(l1.len(), l2.len(), "Each call to ProductModel.all() should return a new list instance");
     });
 
     // ------------------------------------------------------------------------
@@ -326,12 +291,12 @@ fn main() {
 
     runner.test("B7.5: Static route takes priority over dynamic parameter route", fn() {
         let router = new Router();
-        router.get("/posts/recent", fn(_r) { return response("static_recent", 200); });
-        router.get("/posts/:id", fn(_r) { return response("dynamic_id", 200); });
+        router.get("/products/recent", fn(_r) { return response("static_recent", 200); });
+        router.get("/products/:id", fn(_r) { return response("dynamic_id", 200); });
 
-        let m = router.match_route("GET", "/posts/recent");
-        test_assert_not_null(m, "/posts/recent must match");
-        test_assert_eq(m["route"].path, "/posts/recent", "Exact static route should match");
+        let m = router.match_route("GET", "/products/recent");
+        test_assert_not_null(m, "/products/recent must match");
+        test_assert_eq(m["route"].path, "/products/recent", "Exact static route should match");
     });
 
     // ------------------------------------------------------------------------
@@ -364,7 +329,7 @@ fn main() {
 
     runner.test("B8.4: OPTIONS preflight on route with middleware", fn() {
         let cors = new CorsMiddleware();
-        let raw = make_request("OPTIONS", "/api/v1/posts");
+        let raw = make_request("OPTIONS", "/api/v1/status");
         let res = cors.handle(new Request(raw));
         test_assert_not_null(res, "OPTIONS preflight must be intercepted");
         test_assert_eq(res.status_code, 204, "Preflight must return 204");

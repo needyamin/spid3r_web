@@ -15,7 +15,7 @@ import "framework/View/BD";
 import "framework/Auth/Auth";
 import "framework/Auth/Hash";
 import "app/Models/User";
-import "app/Models/Post";
+import "app/Models/Product";
 
 fn unique_suffix() -> string {
     return string(unix_ms()) + "_" + string(random_int(1000, 9999));
@@ -103,30 +103,24 @@ fn main() {
     // ------------------------------------------------------------------------
     // Pair 6: Active Record Relationships (F5) + SpiderBD Loops (F14)
     // ------------------------------------------------------------------------
-    runner.test("P6: Model relationship iterated in SpiderBD @foreach loop", fn() {
+    runner.test("P6: Model collections iterated in SpiderBD @foreach loop", fn() {
         let suffix = unique_suffix();
-        let user = UserModel.create(map("name", "Loop Author", "email", "loop_" + suffix + "@example.com", "password", "p"));
-        let uid = int(user.get("id"));
+        let p1 = ProductModel.create(map("name", "Store Product 1", "slug", "a1_" + suffix, "description", "C1", "category", "Cat", "emoji", "📦", "price", 10.0, "stock", 5, "sold", 0, "rating", 4.0));
+        let p2 = ProductModel.create(map("name", "Store Product 2", "slug", "a2_" + suffix, "description", "C2", "category", "Cat", "emoji", "🎁", "price", 20.0, "stock", 5, "sold", 0, "rating", 4.0));
 
-        let p1 = PostModel.create(map("title", "Article 1", "slug", "a1_" + suffix, "content", "C1", "category", "Cat", "user_id", uid, "status", "pub", "views_count", 1));
-        let p2 = PostModel.create(map("title", "Article 2", "slug", "a2_" + suffix, "content", "C2", "category", "Cat", "user_id", uid, "status", "pub", "views_count", 2));
-
-        let user_posts = user.posts();
-        let rendered = global_bd.render("home", map(
-            "title", "Home",
-            "posts", user_posts,
-            "is_auth", false,
-            "total_posts", user_posts.len(),
-            "total_users", 1
+        let products = list(p1.to_map(), p2.to_map());
+        let rendered = global_bd.render("store.index", map(
+            "categories", list("Cat"),
+            "search_term", "",
+            "products", products
         ));
 
-        test_assert_contains(rendered, "Article 1", "First post from relationship rendered");
-        test_assert_contains(rendered, "Article 2", "Second post from relationship rendered");
+        test_assert_contains(rendered, "Store Product 1", "First product rendered");
+        test_assert_contains(rendered, "Store Product 2", "Second product rendered");
 
         // Teardown
         p1.delete();
         p2.delete();
-        user.delete();
     });
 
     // ------------------------------------------------------------------------
@@ -167,7 +161,7 @@ fn main() {
     runner.test("P9: Unauthenticated request to /api/ route returns 401 JSON", fn() {
         Auth.clear();
         let auth_mw = new AuthMiddleware();
-        let req = new Request(make_request("GET", "/api/v1/posts/create"));
+        let req = new Request(make_request("GET", "/api/v1/orders/secret"));
         let res = auth_mw.handle(req);
 
         test_assert_not_null(res, "AuthMiddleware must intercept unauthenticated API route");
@@ -262,7 +256,7 @@ fn main() {
     // ------------------------------------------------------------------------
     runner.test("P15: Static files bypass route handler and return fast", fn() {
         let app = new Application();
-        let raw = make_request("GET", "/css/app.css");
+        let raw = make_request("GET", "/css/store.css");
         let res = app.handle_request(raw);
 
         test_assert_eq(res["status"], 200, "Static asset should return 200");

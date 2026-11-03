@@ -1,0 +1,117 @@
+@extends('layouts/store')
+
+@section('title', 'Your Cart - Spid3r Bazaar')
+
+@section('content')
+
+<div class="container py-4">
+  <h4 class="fw-bold mb-3">🛒 Your Cart</h4>
+
+  @if(error)
+    <div class="alert alert-danger sz-alert">{{ error }}</div>
+  @endif
+
+  @if(not items)
+    <div class="text-center py-5">
+      <div style="font-size:3rem;">🛒</div>
+      <h5 class="mt-2">Your cart is empty</h5>
+      <a class="btn sz-add-btn mt-3 px-4 sz-btn-touch" href="/">Start shopping</a>
+    </div>
+  @endif
+
+  @if(items)
+    <div class="row g-3 g-lg-4">
+      <!-- Left Column: Responsive Cart Items List -->
+      <div class="col-12 col-lg-8">
+        @foreach(item in items)
+          <div class="card sz-desc-card sz-cart-item sz-cart-row mb-3" data-price="{{ item.product.price }}">
+            <div class="card-body p-3">
+              <div class="row align-items-center g-2 g-md-3">
+                <!-- Tier 1 Left / Desktop Col 1: Product Thumbnail & Name Info -->
+                <div class="col-8 col-md-5 order-md-1 d-flex align-items-center gap-2 gap-sm-3 min-w-0">
+                  <a href="/product/{{ item.product.id }}" class="sz-thumb sz-thumb-sm flex-shrink-0" style="width: 56px; height: 56px; min-width: 56px;">
+                    <span>{{ item.product.emoji }}</span>
+                  </a>
+                  <div class="min-w-0">
+                    <a class="sz-name text-truncate d-block fw-semibold" href="/product/{{ item.product.id }}">{{ item.product.name }}</a>
+                    <div class="sz-meta text-muted">৳{{ item.product.price }} each</div>
+                  </div>
+                </div>
+
+                <!-- Tier 1 Right / Desktop Col 4: Remove Button -->
+                <div class="col-4 col-md-1 order-md-4 text-end">
+                  <form method="POST" action="/cart/remove" class="js-cart-remove d-inline-block m-0">
+                    <input type="hidden" name="product_id" value="{{ item.product.id }}">
+                    <button class="btn btn-outline-danger sz-btn-touch sz-remove-btn" type="submit" title="Remove" aria-label="Remove item">✕</button>
+                  </form>
+                </div>
+
+                <!-- Tier 2 Left / Desktop Col 2: Quantity Input & Update Stepper -->
+                <div class="col-7 col-md-4 order-md-2">
+                  <form method="POST" action="/cart/update" class="d-flex align-items-center gap-2 js-cart-update m-0">
+                    <input type="hidden" name="product_id" value="{{ item.product.id }}">
+                    <div class="input-group sz-qty-group">
+                      <input class="form-control text-center sz-qty-input sz-btn-touch" type="number" name="qty" min="0" value="{{ item.qty }}" style="max-width: 64px;" aria-label="Quantity">
+                      <button class="btn btn-outline-secondary sz-btn-touch" type="submit">Update</button>
+                    </div>
+                  </form>
+                </div>
+
+                <!-- Tier 2 Right / Desktop Col 3: Line Subtotal -->
+                <div class="col-5 col-md-2 order-md-3 text-end text-md-center">
+                  <div class="sz-price fs-6 text-nowrap sz-line-subtotal">৳{{ item.subtotal }}</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        @endforeach
+      </div>
+
+      <!-- Right Column: Order Summary & Checkout Form -->
+      <div class="col-12 col-lg-4">
+        <!-- Summary Card -->
+        <div class="card sz-desc-card mb-3">
+          <div class="card-body">
+            <h6 class="fw-bold mb-3">Order Summary</h6>
+            <div class="d-flex justify-content-between mb-2">
+              <span>Subtotal</span>
+              <strong class="sz-cart-total">৳{{ total }}</strong>
+            </div>
+            <div class="d-flex justify-content-between mb-2 text-success">
+              <span>Delivery</span><strong>Free</strong>
+            </div>
+            <hr>
+            <div class="d-flex justify-content-between fs-5">
+              <span class="fw-bold">Total</span>
+              <span class="fw-bold sz-price sz-cart-total">৳{{ total }}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Checkout Form Card -->
+        <div class="card sz-desc-card">
+          <div class="card-body">
+            <h6 class="fw-bold mb-3">Checkout — Cash on Delivery</h6>
+            <form method="POST" action="/checkout">
+              <div class="mb-2">
+                <label for="customer_name" class="form-label fw-semibold small mb-1">Full Name</label>
+                <input id="customer_name" class="form-control" type="text" name="customer_name" placeholder="Full name" value="{{ customer_name }}" required>
+              </div>
+              <div class="mb-2">
+                <label for="phone" class="form-label fw-semibold small mb-1">Phone Number</label>
+                <input id="phone" class="form-control" type="tel" name="phone" placeholder="Phone number" value="{{ phone }}" required>
+              </div>
+              <div class="mb-3">
+                <label for="address" class="form-label fw-semibold small mb-1">Delivery Address</label>
+                <textarea id="address" class="form-control" name="address" rows="2" placeholder="Full delivery address" value="{{ address }}" required>{{ address }}</textarea>
+              </div>
+              <button class="btn w-100 sz-add-btn sz-btn-touch fw-semibold" type="submit">Place Order · <span class="sz-cart-total">৳{{ total }}</span></button>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+  @endif
+
+</div>
+@endsection

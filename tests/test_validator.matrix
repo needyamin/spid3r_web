@@ -214,6 +214,35 @@ fn test_form_encoded_trailing_newlines() {
     println("  [PASS] test_form_encoded_trailing_newlines");
 }
 
+fn test_multipart_form_parsing() {
+    // Browser FormData sends multipart/form-data — Request must parse text fields
+    let boundary = "----WebKitFormBoundaryXYZ789";
+    let body = "--" + boundary + "\r\nContent-Disposition: form-data; name=\"product_id\"\r\n\r\n1\r\n"
+        + "--" + boundary + "\r\nContent-Disposition: form-data; name=\"qty\"\r\n\r\n5\r\n"
+        + "--" + boundary + "--\r\n";
+    let raw = map(
+        "method", "POST",
+        "path", "/cart/add",
+        "headers", map("content-type", "multipart/form-data; boundary=" + boundary),
+        "body", body
+    );
+    let req = new Request(raw);
+    assert(req.int("product_id", 0) == 1, "multipart: product_id parsed");
+    assert(req.int("qty", 0) == 5, "multipart: qty parsed");
+
+    // Mixed-case boundary must match (case-sensitive protocol value)
+    let raw2 = map(
+        "method", "POST",
+        "path", "/cart/add",
+        "headers", map("content-type", "multipart/form-data; boundary=----WebKitFormBoundaryMiXeD123"),
+        "body", "------WebKitFormBoundaryMiXeD123\r\nContent-Disposition: form-data; name=\"product_id\"\r\n\r\n7\r\n------WebKitFormBoundaryMiXeD123--\r\n"
+    );
+    let req2 = new Request(raw2);
+    assert(req2.int("product_id", 0) == 7, "multipart: mixed-case boundary handled");
+
+    println("  [PASS] test_multipart_form_parsing");
+}
+
 fn main() {
     println("\n=== Running Validator Test Suite ===");
     test_url_decode();
@@ -226,5 +255,6 @@ fn main() {
     test_query_string_url_decoding();
     test_validator_helpers_and_new_rules();
     test_form_encoded_trailing_newlines();
+    test_multipart_form_parsing();
     println("=== All Validator Tests Passed! ===\n");
 }

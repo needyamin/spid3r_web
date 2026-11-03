@@ -6,7 +6,7 @@ import "framework/Database/DB";
 import "framework/Database/Schema";
 import "framework/Database/Migration";
 import "app/Models/User";
-import "app/Models/Post";
+import "app/Models/Product";
 
 fn unique_suffix() -> string {
     return string(unix_ms()) + "_" + string(random_int(1000, 9999));
@@ -114,143 +114,113 @@ fn main() {
     });
 
     // ------------------------------------------------------------------------
-    // Feature 5: Active Record Relationships
+    // Feature 5: Active Record Model Lifecycle & Queries (ProductModel)
     // ------------------------------------------------------------------------
 
-    runner.test("F5.1: Model hasMany relationship user.posts()", fn() {
+    runner.test("F5.1: ProductModel create persists record with slug", fn() {
         let suffix = unique_suffix();
-        let user = UserModel.create(map(
-            "name", "Author " + suffix,
-            "email", "author_" + suffix + "@example.com",
-            "password", "secret"
+        let slug = "product-" + suffix;
+        let product = ProductModel.create(map(
+            "name", "E2E Product " + suffix,
+            "slug", slug,
+            "description", "Product for model lifecycle test.",
+            "category", "TestCat",
+            "emoji", "📦",
+            "price", 49.99,
+            "stock", 20,
+            "sold", 0,
+            "rating", 4.5
         ));
-        let uid = int(user.get("id"));
+        let pid = int(product.get("id"));
+        test_assert(pid > 0, "Product create should persist with positive ID");
 
-        let post = PostModel.create(map(
-            "title", "Post Title " + suffix,
-            "slug", "post-title-" + suffix,
-            "content", "Sample content for relationship test.",
-            "category", "Tech",
-            "user_id", uid,
-            "status", "published",
-            "views_count", 10
-        ));
-
-        let posts = user.posts();
-        test_assert(posts.len() > 0, "user.posts() should return at least one post");
-        test_assert_eq(posts[0]["title"], "Post Title " + suffix, "Post title in relationship should match");
+        let found = ProductModel.findBySlug(slug);
+        test_assert_not_null(found, "ProductModel.findBySlug should find persisted product");
+        test_assert_eq(found.get("name"), "E2E Product " + suffix, "Product name should match");
 
         // Teardown
-        post.delete();
-        user.delete();
+        product.delete();
     });
 
-    runner.test("F5.2: Model belongsTo relationship post.author()", fn() {
+    runner.test("F5.2: ProductModel find retrieves by primary key", fn() {
         let suffix = unique_suffix();
-        let user = UserModel.create(map(
-            "name", "Belongs Author " + suffix,
-            "email", "belongs_" + suffix + "@example.com",
-            "password", "secret"
+        let product = ProductModel.create(map(
+            "name", "Find Product " + suffix,
+            "slug", "find-prod-" + suffix,
+            "description", "Testing find by ID.",
+            "category", "TestCat",
+            "emoji", "🔍",
+            "price", 29.99,
+            "stock", 10,
+            "sold", 0,
+            "rating", 5.0
         ));
-        let uid = int(user.get("id"));
+        let pid = int(product.get("id"));
 
-        let post = PostModel.create(map(
-            "title", "Child Post " + suffix,
-            "slug", "child-post-" + suffix,
-            "content", "Testing belongsTo author resolver.",
-            "category", "Testing",
-            "user_id", uid,
-            "status", "published",
-            "views_count", 0
-        ));
-
-        let author = post.author();
-        test_assert_not_null(author, "post.author() should resolve parent user");
-        test_assert_eq(author["name"], "Belongs Author " + suffix, "Author name should match parent");
+        let found = ProductModel.find(pid);
+        test_assert_not_null(found, "ProductModel.find should resolve product by ID");
+        test_assert_eq(found.get("name"), "Find Product " + suffix, "Product name should match");
 
         // Teardown
-        post.delete();
-        user.delete();
+        product.delete();
     });
 
-    runner.test("F5.3: User with multiple posts retrieves all posts", fn() {
+    runner.test("F5.3: ProductModel all retrieves list of active products", fn() {
         let suffix = unique_suffix();
-        let user = UserModel.create(map(
-            "name", "Multi Post Author " + suffix,
-            "email", "multi_" + suffix + "@example.com",
-            "password", "secret"
+        let p1 = ProductModel.create(map(
+            "name", "Batch Prod 1 " + suffix,
+            "slug", "b1-" + suffix,
+            "description", "Batch 1",
+            "category", "TestCat",
+            "emoji", "1️⃣",
+            "price", 10.0,
+            "stock", 5,
+            "sold", 0,
+            "rating", 4.0
         ));
-        let uid = int(user.get("id"));
-
-        let p1 = PostModel.create(map(
-            "title", "Post One " + suffix,
-            "slug", "p1-" + suffix,
-            "content", "Content 1",
-            "category", "News",
-            "user_id", uid,
-            "status", "published",
-            "views_count", 1
-        ));
-
-        let p2 = PostModel.create(map(
-            "title", "Post Two " + suffix,
-            "slug", "p2-" + suffix,
-            "content", "Content 2",
-            "category", "News",
-            "user_id", uid,
-            "status", "published",
-            "views_count", 2
+        let p2 = ProductModel.create(map(
+            "name", "Batch Prod 2 " + suffix,
+            "slug", "b2-" + suffix,
+            "description", "Batch 2",
+            "category", "TestCat",
+            "emoji", "2️⃣",
+            "price", 20.0,
+            "stock", 5,
+            "sold", 0,
+            "rating", 4.0
         ));
 
-        let posts = user.posts();
-        test_assert_gte(posts.len(), 2, "user.posts() should return 2 or more posts");
+        let all_prods = ProductModel.all();
+        test_assert_gte(all_prods.len(), 2, "ProductModel.all() should return 2 or more products");
 
         // Teardown
         p1.delete();
         p2.delete();
-        user.delete();
     });
 
-    runner.test("F5.4: User with no posts returns empty posts list", fn() {
-        let suffix = unique_suffix();
-        let user = UserModel.create(map(
-            "name", "Lonely User " + suffix,
-            "email", "lonely_" + suffix + "@example.com",
-            "password", "secret"
-        ));
-
-        let posts = user.posts();
-        test_assert_eq(posts.len(), 0, "User without posts should return empty list");
-
-        // Teardown
-        user.delete();
+    runner.test("F5.4: ProductModel find with non-existent ID returns null", fn() {
+        let missing = ProductModel.find(-99999);
+        test_assert_null(missing, "ProductModel.find(-99999) should return null");
     });
 
-    runner.test("F5.5: Deleting child post updates relationship query", fn() {
+    runner.test("F5.5: Deleting model removes record from database", fn() {
         let suffix = unique_suffix();
-        let user = UserModel.create(map(
-            "name", "Ephemeral Author " + suffix,
-            "email", "ephemeral_" + suffix + "@example.com",
-            "password", "secret"
-        ));
-        let uid = int(user.get("id"));
-
-        let post = PostModel.create(map(
-            "title", "Ephemeral Post " + suffix,
+        let product = ProductModel.create(map(
+            "name", "Ephemeral Product " + suffix,
             "slug", "ephemeral-" + suffix,
-            "content", "Will be deleted immediately.",
-            "category", "Testing",
-            "user_id", uid,
-            "status", "draft",
-            "views_count", 0
+            "description", "Will be deleted immediately.",
+            "category", "TestCat",
+            "emoji", "💨",
+            "price", 15.0,
+            "stock", 1,
+            "sold", 0,
+            "rating", 4.0
         ));
+        let pid = int(product.get("id"));
 
-        test_assert_eq(user.posts().len(), 1, "Should have 1 post before deletion");
-        post.delete();
-        test_assert_eq(user.posts().len(), 0, "Should have 0 posts after deletion");
-
-        // Teardown
-        user.delete();
+        test_assert_not_null(ProductModel.find(pid), "Product should exist before delete");
+        product.delete();
+        test_assert_null(ProductModel.find(pid), "Product should not exist after delete");
     });
 
     // ------------------------------------------------------------------------
@@ -318,7 +288,7 @@ fn main() {
         let runner_instance = new MigrationRunner();
         let applied = runner_instance.get_applied();
         test_assert_not_null(applied, "Applied migrations map should not be null");
-        // Core migrations (users, posts, sessions) should be recorded
+        // Core migrations (users, sessions, products, orders) should be recorded
         test_assert(applied.has("001_create_users_table"), "Should contain 001_create_users_table");
     });
 

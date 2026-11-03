@@ -1,0 +1,59 @@
+// app/Models/Product.matrix
+// Spid3rWeb Store — Product Active Record Model
+
+import "framework/Database/Model";
+import "framework/Database/DB";
+
+public class Product extends Model {
+    fn new(attrs = null) {
+        super("products", ["name", "slug", "description", "price", "old_price",
+                           "category", "emoji", "stock", "sold", "rating"], attrs);
+    }
+
+    // ------------------------------------------------------------------
+    // Static Query Methods
+    // ------------------------------------------------------------------
+
+    public static fn find(id) {
+        let _ = self;
+        let row = DB.table("products").where("id", "=", id).first();
+        if row != null {
+            return new Product(row);
+        }
+        return null;
+    }
+
+    public static fn findBySlug(slug: string) {
+        let _ = self;
+        let row = DB.table("products").where("slug", "=", slug).first();
+        if row != null {
+            return new Product(row);
+        }
+        return null;
+    }
+
+    public static fn all() {
+        let _ = self;
+        let rows = DB.table("products").orderBy("id", "DESC").get();
+        return self.wrap_rows(rows);
+    }
+
+    public static fn create(attrs) {
+        let _ = self;
+        let product = new Product(attrs);
+        product.save();
+        return product;
+    }
+
+    // Wrap raw rows into Product instances
+    public static fn wrap_rows(rows) {
+        let _ = self;
+        let products = [];
+        for r in rows {
+            products.push(new Product(r));
+        }
+        return products;
+    }
+}
+
+public let ProductModel = Product;

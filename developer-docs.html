@@ -239,6 +239,10 @@
     <a href="#views">SpiderBD Templates</a>
   </div>
   <div class="group">
+    <div class="group-title">Performance</div>
+    <a href="#cache">Caching System</a>
+  </div>
+  <div class="group">
     <div class="group-title">Security</div>
     <a href="#auth">Authentication &amp; Hashing</a>
     <a href="#security">Security Hardening</a>
@@ -312,18 +316,19 @@
 ├── <span class="d">app/</span>                          <span class="n"># Application layer (your code)</span>
 │   ├── <span class="d">Controllers/</span>              <span class="n"># MVC controllers (.matrix)</span>
 │   │   ├── AuthController.matrix
-│   │   ├── HomeController.matrix
-│   │   └── PostController.matrix
+│   │   ├── CartController.matrix
+│   │   └── StoreController.matrix
 │   ├── <span class="d">Middleware/</span>               <span class="n"># App-specific middleware</span>
 │   └── <span class="d">Models/</span>                   <span class="n"># Active Record models</span>
 │       ├── User.matrix
-│       └── Post.matrix
+│       ├── Product.matrix
+│       └── Order.matrix
 ├── <span class="d">config/</span>
 │   ├── app.matrix                <span class="n"># App name, env, debug, URL, locale</span>
 │   └── database.matrix           <span class="n"># SQLite connection &amp; pragmas</span>
 ├── <span class="d">database/</span>
 │   ├── database.sqlite           <span class="n"># SQLite storage file</span>
-│   ├── <span class="d">migrations/</span>              <span class="n"># 001_…, 002_…, 003_…</span>
+│   ├── <span class="d">migrations/</span>              <span class="n"># 001_…, 003_…, 004_…, 005_…</span>
 │   └── <span class="d">seeders/</span>                 <span class="n"># DatabaseSeeder.matrix</span>
 ├── <span class="d">framework/</span>                    <span class="n"># Spid3rWeb core (do not edit casually)</span>
 │   ├── Application.matrix · Router.matrix · Request.matrix
@@ -333,12 +338,12 @@
 │   ├── <span class="d">Database/</span>  <span class="n">DB, Model, Schema, Migration</span>
 │   └── <span class="d">View/</span>  <span class="n">BD.matrix</span>
 ├── <span class="d">public/</span>                       <span class="n"># Static assets (path-traversal protected)</span>
-│   ├── <span class="d">css/</span> app.css
+│   ├── <span class="d">css/</span> store.css
 │   └── <span class="d">js/</span> app.js
 ├── <span class="d">resources/views/</span>              <span class="n"># SpiderBD templates (.bd.html)</span>
-│   ├── <span class="d">layouts/</span>  <span class="n">app.bd.html</span>
+│   ├── <span class="d">layouts/</span>  <span class="n">store.bd.html</span>
 │   ├── <span class="d">auth/</span>    <span class="n">login, register</span>
-│   └── <span class="d">posts/</span>   <span class="n">index, show, create, edit</span>
+│   └── <span class="d">store/</span>   <span class="n">index, show, cart, success</span>
 ├── <span class="d">routes/</span>
 │   ├── web.matrix                <span class="n"># Frontend routes</span>
 │   └── api.matrix                <span class="n"># JSON REST routes (/api/v1)</span>
@@ -364,10 +369,10 @@
   </ul>
 
   <h3>2. Initialize the database</h3>
-  <pre><code><span class="cmt"># Run outstanding migrations (creates users, posts, sessions tables)</span>
+  <pre><code><span class="cmt"># Run outstanding migrations (creates users, sessions, products, orders tables)</span>
 spid3r magic migrate
 
-<span class="cmt"># Seed demo data (user ada@example.com + sample articles)</span>
+<span class="cmt"># Seed demo data (user ada@example.com + sample products)</span>
 spid3r magic db:seed
 
 <span class="cmt"># Verify migration status</span>
@@ -382,7 +387,7 @@ spid3r magic serve --dry-run  <span class="cmt"># validate boot without binding<
 
   <div class="callout tip">
     <div class="co-title">💡 Verify everything works</div>
-    <p>Run <code>spid3r magic test</code> — it executes all 6 unit suites plus the E2E track and exits <code>0</code> only if everything passes. <code>spid3r magic route:list</code> prints the full route table including <code>/api/v1/posts</code>.</p>
+    <p>Run <code>spid3r magic test</code> — it executes all 6 unit suites plus the E2E track and exits <code>0</code> only if everything passes. <code>spid3r magic route:list</code> prints the full route table including <code>/cart</code> and <code>/api/v1/status</code>.</p>
   </div>
 
   <h3>4. Manifest (<code>spider.toml</code>)</h3>
@@ -523,19 +528,19 @@ PRAGMA busy_timeout = 5000;   <span class="cmt">// ms — tolerates concurrent w
   <pre><code><span class="kw">import</span> "framework/Router";
 
 Route.<span class="fn">get</span>("/", <span class="kw">fn</span>(req) { <span class="kw">return</span> <span class="fn">view</span>("home", <span class="fn">map</span>("title", "Welcome")); });
-Route.<span class="fn">post</span>("/posts", <span class="kw">fn</span>(req) { <span class="cmt">/* store */</span> });
-Route.<span class="fn">put</span>("/posts/:id", handler);
-Route.<span class="fn">patch</span>("/posts/:id", handler);
-Route.<span class="fn">delete</span>("/posts/:id", handler);</code></pre>
+Route.<span class="fn">post</span>("/products", <span class="kw">fn</span>(req) { <span class="cmt">/* create */</span> });
+Route.<span class="fn">put</span>("/products/:id", handler);
+Route.<span class="fn">patch</span>("/products/:id", handler);
+Route.<span class="fn">delete</span>("/products/:id", handler);</code></pre>
 
   <h3>Route parameters</h3>
   <p>Two syntaxes are supported — both populate <code>req.params</code>:</p>
-  <pre><code>Route.<span class="fn">get</span>("/posts/:id", <span class="kw">fn</span>(req) {
-    let id = <span class="fn">int</span>(req.<span class="fn">param</span>("id"));   <span class="cmt">// /posts/42 → id = 42</span>
+  <pre><code>Route.<span class="fn">get</span>("/products/:id", <span class="kw">fn</span>(req) {
+    let id = <span class="fn">int</span>(req.<span class="fn">param</span>("id"));   <span class="cmt">// /products/42 → id = 42</span>
 });
 
 <span class="cmt">// Brace syntax is equivalent:</span>
-Route.<span class="fn">get</span>("/posts/{id}/comments/{commentId}", handler);</code></pre>
+Route.<span class="fn">get</span>("/products/{id}/reviews/{reviewId}", handler);</code></pre>
 
   <h3>Route groups</h3>
   <p>Groups apply a <strong>prefix</strong> and <strong>middleware inheritance</strong> to nested registrations, then restore prior state:</p>
@@ -546,13 +551,13 @@ Route.<span class="fn">get</span>("/posts/{id}/comments/{commentId}", handler);<
 
   <h3>Fluent route options</h3>
   <p><code>add()</code> returns a <code>RouteEntry</code>, so you can chain:</p>
-  <pre><code>Route.<span class="fn">get</span>("/posts/create", handler)
+  <pre><code>Route.<span class="fn">get</span>("/products/create", handler)
      .<span class="fn">middleware</span>("auth")      <span class="cmt">// single name or list</span>
-     .<span class="fn">name</span>("posts.create");   <span class="cmt">// named route</span></code></pre>
+     .<span class="fn">name</span>("products.create");   <span class="cmt">// named route</span></code></pre>
 
   <h3>Controller string dispatch</h3>
-  <pre><code>Route.<span class="fn">get</span>("/home", "HomeController@index");
-<span class="cmt">// Requires: Route.register_controller("HomeController", new HomeController());</span></code></pre>
+  <pre><code>Route.<span class="fn">get</span>("/home", "StoreController@index");
+<span class="cmt">// Requires: Route.register_controller("StoreController", new StoreController());</span></code></pre>
 
   <h3>Matching rules</h3>
   <ul>
@@ -567,25 +572,25 @@ Route.<span class="fn">get</span>("/posts/{id}/comments/{commentId}", handler);<
   <h2>Controllers</h2>
   <p>Controllers live in <code>app/Controllers/</code> and group request handling logic. Instantiate them at the top of your route file and wrap them in closures:</p>
 
-  <pre><code><span class="cmt">// app/Controllers/PostController.matrix</span>
+  <pre><code><span class="cmt">// app/Controllers/ProductController.matrix</span>
 <span class="kw">import</span> "framework/Response";
 <span class="kw">import</span> "framework/View/BD";
 <span class="kw">import</span> "framework/Auth/Auth";
 <span class="kw">import</span> "framework/Database/DB";
-<span class="kw">import</span> "app/Models/Post";
+<span class="kw">import</span> "app/Models/Product";
 
-<span class="kw">public class</span> PostController {
+<span class="kw">public class</span> ProductController {
     <span class="kw">fn</span> <span class="fn">new</span>() {}
 
     <span class="kw">public fn</span> <span class="fn">index</span>(self, _req) {
-        let posts = DB.<span class="fn">table</span>("posts")
-            .<span class="fn">where</span>("status", "=", "published")
+        let products = DB.<span class="fn">table</span>("products")
+            .<span class="fn">where</span>("stock", ">", 0)
             .<span class="fn">orderBy</span>("id", "DESC")
             .<span class="fn">get</span>();
 
-        <span class="kw">return</span> <span class="fn">view</span>("posts.index", <span class="fn">map</span>(
-            "title", "All Articles - Spid3rWeb",
-            "posts", posts,
+        <span class="kw">return</span> <span class="fn">view</span>("products.index", <span class="fn">map</span>(
+            "title", "All Products - Spid3rWeb",
+            "products", products,
             "is_auth", Auth.<span class="fn">check</span>()
         ));
     }
@@ -593,19 +598,19 @@ Route.<span class="fn">get</span>("/posts/{id}/comments/{commentId}", handler);<
 
   <div class="callout info">
     <div class="co-title">ℹ️ Method signature convention</div>
-    <p>Instance methods take <code>(self, req)</code>. When binding routes, wrap with a closure: <code>Route.get("/posts", fn(req) { return post_ctrl.index(req); })</code>.</p>
+    <p>Instance methods take <code>(self, req)</code>. When binding routes, wrap with a closure: <code>Route.get("/products", fn(req) { return product_ctrl.index(req); })</code>.</p>
   </div>
 
   <h3>Resource-style action map</h3>
   <table>
     <tr><th>Action</th><th>Verb + Path</th><th>Purpose</th></tr>
-    <tr><td><code>index</code></td><td><code>GET /posts</code></td><td>List records</td></tr>
-    <tr><td><code>create</code></td><td><code>GET /posts/create</code></td><td>Show creation form</td></tr>
-    <tr><td><code>store</code></td><td><code>POST /posts</code></td><td>Persist new record</td></tr>
-    <tr><td><code>show</code></td><td><code>GET /posts/:id</code></td><td>Display one record</td></tr>
-    <tr><td><code>edit</code></td><td><code>GET /posts/:id/edit</code></td><td>Show edit form</td></tr>
-    <tr><td><code>update</code></td><td><code>POST /posts/:id/update</code></td><td>Apply update</td></tr>
-    <tr><td><code>destroy</code></td><td><code>POST /posts/:id/delete</code></td><td>Delete record</td></tr>
+    <tr><td><code>index</code></td><td><code>GET /products</code></td><td>List records</td></tr>
+    <tr><td><code>create</code></td><td><code>GET /products/create</code></td><td>Show creation form</td></tr>
+    <tr><td><code>store</code></td><td><code>POST /products</code></td><td>Persist new record</td></tr>
+    <tr><td><code>show</code></td><td><code>GET /products/:id</code></td><td>Display one record</td></tr>
+    <tr><td><code>edit</code></td><td><code>GET /products/:id/edit</code></td><td>Show edit form</td></tr>
+    <tr><td><code>update</code></td><td><code>POST /products/:id/update</code></td><td>Apply update</td></tr>
+    <tr><td><code>destroy</code></td><td><code>POST /products/:id/delete</code></td><td>Delete record</td></tr>
   </table>
 </section>
 
@@ -616,7 +621,7 @@ Route.<span class="fn">get</span>("/posts/{id}/comments/{commentId}", handler);<
 
   <h3>Parsing behavior</h3>
   <ul>
-    <li><strong>Query strings</strong> — parsed from the path (<code>/posts?page=2</code>) and/or the server's <code>raw_query</code>, with <code>url_decode</code> applied to keys and values.</li>
+    <li><strong>Query strings</strong> — parsed from the path (<code>/products?page=2</code>) and/or the server's <code>raw_query</code>, with <code>url_decode</code> applied to keys and values.</li>
     <li><strong>JSON bodies</strong> — via stdlib <code>http_body_json</code>; map keys merged into input data.</li>
     <li><strong>Form bodies</strong> — <code>application/x-www-form-urlencoded</code> (or bare bodies containing <code>=</code>) are parsed as key/value pairs.</li>
     <li><strong>Headers</strong> — normalized to lowercase; access with <code>req.header("content-type")</code>.</li>
@@ -638,15 +643,15 @@ Route.<span class="fn">get</span>("/posts/{id}/comments/{commentId}", handler);<
   <h3>Declarative validation</h3>
   <pre><code><span class="kw">public fn</span> <span class="fn">store</span>(self, req) {
     let validator = req.<span class="fn">validate</span>(<span class="fn">map</span>(
-        "title",   "required|min:5",
+        "name",    "required|min:3",
         "email",   "required|email",
-        "content", "required|min:20",
-        "status",  "in:draft,published",
+        "description", "required|min:20",
+        "status",  "in:active,archived",
         "password","required|confirmed"
     ));
 
     <span class="kw">if</span> validator.<span class="fn">fails</span>() {
-        <span class="kw">return</span> <span class="fn">view</span>("posts.create", <span class="fn">map</span>("error", validator.<span class="fn">error_summary</span>()));
+        <span class="kw">return</span> <span class="fn">view</span>("products.create", <span class="fn">map</span>("error", validator.<span class="fn">error_summary</span>()));
     }
     <span class="cmt">// …proceed</span>
 }</code></pre>
@@ -753,22 +758,22 @@ app.<span class="fn">use</span>(<span class="kw">new</span> LoggerMiddleware());
   <p>The global <code>DB</code> facade (<code>framework/Database/DB.matrix</code>) is a <code>DatabaseManager</code> singleton. <code>DB.table(name)</code> returns a fluent <code>QueryBuilder</code>; all values are bound as <code>?</code> parameters (SQL-injection safe for data).</p>
 
   <h3>Reading</h3>
-  <pre><code>let articles = DB.<span class="fn">table</span>("posts")
-    .<span class="fn">select</span>(["id", "title", "status"])   <span class="cmt">// default: ["*"]</span>
-    .<span class="fn">where</span>("status", "=", "published")
-    .<span class="fn">orWhere</span>("views_count", ">", 100)
+  <pre><code>let products = DB.<span class="fn">table</span>("products")
+    .<span class="fn">select</span>(["id", "name", "price"])   <span class="cmt">// default: ["*"]</span>
+    .<span class="fn">where</span>("category", "=", "Electronics")
+    .<span class="fn">orWhere</span>("sold", ">", 100)
     .<span class="fn">orderBy</span>("id", "DESC")
     .<span class="fn">limit</span>(10)
     .<span class="fn">offset</span>(20)
     .<span class="fn">get</span>();                               <span class="cmt">// → list of row maps</span>
 
-let one   = DB.<span class="fn">table</span>("posts").<span class="fn">where</span>("id", "=", 7).<span class="fn">first</span>();  <span class="cmt">// map or null</span>
-let row   = DB.<span class="fn">table</span>("posts").<span class="fn">find</span>(7);                        <span class="cmt">// where(id).first()</span>
-let total = DB.<span class="fn">table</span>("posts").<span class="fn">where</span>("status", "=", "draft").<span class="fn">count</span>();
+let one   = DB.<span class="fn">table</span>("products").<span class="fn">where</span>("id", "=", 7).<span class="fn">first</span>();  <span class="cmt">// map or null</span>
+let row   = DB.<span class="fn">table</span>("products").<span class="fn">find</span>(7);                        <span class="cmt">// where(id).first()</span>
+let total = DB.<span class="fn">table</span>("products").<span class="fn">where</span>("stock", "=", 0).<span class="fn">count</span>();
 
 <span class="cmt">// Debug: inspect compiled SQL and bindings without executing</span>
-let sql = DB.<span class="fn">table</span>("posts").<span class="fn">where</span>("id", "=", 1).<span class="fn">toSql</span>();
-let bnd = DB.<span class="fn">table</span>("posts").<span class="fn">where</span>("id", "=", 1).<span class="fn">getBindings</span>();</code></pre>
+let sql = DB.<span class="fn">table</span>("products").<span class="fn">where</span>("id", "=", 1).<span class="fn">toSql</span>();
+let bnd = DB.<span class="fn">table</span>("products").<span class="fn">where</span>("id", "=", 1).<span class="fn">getBindings</span>();</code></pre>
 
   <div class="callout tip">
     <div class="co-title">💡 2-argument where shorthand</div>
@@ -777,23 +782,23 @@ let bnd = DB.<span class="fn">table</span>("posts").<span class="fn">where</span
 
   <h3>Writing</h3>
   <pre><code><span class="cmt">// INSERT — returns last insert id</span>
-let id = DB.<span class="fn">table</span>("posts").<span class="fn">insert</span>(<span class="fn">map</span>(
-    "title", "Hello World",
-    "content", "Full stack framework in Spid3r",
-    "user_id", 1
+let id = DB.<span class="fn">table</span>("products").<span class="fn">insert</span>(<span class="fn">map</span>(
+    "name", "Wireless Mouse",
+    "slug", "wireless-mouse",
+    "price", 850
 ));
 
 <span class="cmt">// UPDATE — returns number of changed rows</span>
-DB.<span class="fn">table</span>("posts").<span class="fn">where</span>("id", "=", id).<span class="fn">update</span>(<span class="fn">map</span>("title", "Updated"));
+DB.<span class="fn">table</span>("products").<span class="fn">where</span>("id", "=", id).<span class="fn">update</span>(<span class="fn">map</span>("price", 799));
 
 <span class="cmt">// DELETE — returns number of deleted rows</span>
-DB.<span class="fn">table</span>("posts").<span class="fn">where</span>("id", "=", id).<span class="fn">delete</span>();</code></pre>
+DB.<span class="fn">table</span>("products").<span class="fn">where</span>("id", "=", id).<span class="fn">delete</span>();</code></pre>
 
   <h3>Joins</h3>
-  <pre><code>DB.<span class="fn">table</span>("posts")
-  .<span class="fn">join</span>("users", "posts.user_id", "=", "users.id")      <span class="cmt">// INNER</span>
-  .<span class="fn">leftJoin</span>("comments", "posts.id", "=", "comments.post_id")
-  .<span class="fn">select</span>(["posts.title", "users.name"])
+  <pre><code>DB.<span class="fn">table</span>("products")
+  .<span class="fn">join</span>("users", "orders.user_id", "=", "users.id")      <span class="cmt">// INNER</span>
+  .<span class="fn">leftJoin</span>("payments", "orders.id", "=", "payments.order_id")
+  .<span class="fn">select</span>(["orders.total", "users.name"])
   .<span class="fn">get</span>();
 <span class="cmt">// also: innerJoin, rightJoin, crossJoin(table)</span></code></pre>
 
@@ -811,31 +816,31 @@ DB.close()                       <span class="cmt"># checkpoint, close, remove -
   <h2>Active Record Models</h2>
   <p>Extend <code>Model</code> (from <code>framework/Database/Model</code>). The constructor takes <code>super(table, fillable_list, attrs)</code>:</p>
 
-  <pre><code><span class="cmt">// app/Models/Post.matrix</span>
+  <pre><code><span class="cmt">// app/Models/Product.matrix</span>
 <span class="kw">import</span> "framework/Database/Model";
 <span class="kw">import</span> "framework/Database/DB";
 
-<span class="kw">public class</span> Post <span class="kw">extends</span> Model {
+<span class="kw">public class</span> Product <span class="kw">extends</span> Model {
     <span class="kw">fn</span> <span class="fn">new</span>(attrs = <span class="kw">null</span>) {
-        <span class="fn">super</span>("posts", ["title", "slug", "content", "category",
-                         "status", "user_id", "views_count"], attrs);
+        <span class="fn">super</span>("products", ["name", "slug", "description", "price",
+                         "category", "stock", "sold"], attrs);
     }
 
-    <span class="cmt">// Relationship: post → author</span>
-    <span class="kw">public fn</span> <span class="fn">author</span>(self) {
-        <span class="kw">return</span> DB.<span class="fn">table</span>("users").<span class="fn">where</span>("id", "=", self.<span class="fn">get</span>("user_id")).<span class="fn">first</span>();
+    <span class="cmt">// Helper: is the product in stock?</span>
+    <span class="kw">public fn</span> <span class="fn">in_stock</span>(self) {
+        <span class="kw">return</span> self.<span class="fn">get</span>("stock", 0) > 0;
     }
 
     <span class="cmt">// Static finders</span>
     <span class="kw">public static fn</span> <span class="fn">find</span>(id) { … }
     <span class="kw">public static fn</span> <span class="fn">findBySlug</span>(slug) { … }
-    <span class="kw">public static fn</span> <span class="fn">published</span>() { … }
+    <span class="kw">public static fn</span> <span class="fn">byCategory</span>(category) { … }
     <span class="kw">public static fn</span> <span class="fn">all</span>() { … }
     <span class="kw">public static fn</span> <span class="fn">create</span>(attrs) { … }
 }
 
 <span class="cmt">// Backwards-compatible alias</span>
-<span class="kw">public let</span> PostModel = Post;</code></pre>
+<span class="kw">public let</span> ProductModel = Product;</code></pre>
 
   <h3>Instance API (inherited from <code>Model</code>)</h3>
   <table>
@@ -856,18 +861,17 @@ DB.close()                       <span class="cmt"># checkpoint, close, remove -
 
   <h3>Usage</h3>
   <pre><code><span class="cmt">// Create</span>
-let post = Post.<span class="fn">create</span>(<span class="fn">map</span>("title", "New", "content", "…", "user_id", 1));
+let product = Product.<span class="fn">create</span>(<span class="fn">map</span>("name", "New", "price", 500, "stock", 10));
 
 <span class="cmt">// Find & mutate</span>
-let p = Post.<span class="fn">find</span>(42);
-p.<span class="fn">update</span>(<span class="fn">map</span>("status", "published"));
+let p = Product.<span class="fn">find</span>(42);
+p.<span class="fn">update</span>(<span class="fn">map</span>("stock", 25));
 
-<span class="cmt">// Relations</span>
-let posts = user.<span class="fn">posts</span>();    <span class="cmt">// User model accessor</span>
-let author = post.<span class="fn">author</span>();
+<span class="cmt">// Custom helpers</span>
+let available = product.<span class="fn">in_stock</span>();
 
 <span class="cmt">// Backwards-compatible style (pre-2.0 code)</span>
-let m = <span class="kw">new</span> PostModel(<span class="fn">map</span>("title", "…")); m.<span class="fn">save</span>();</code></pre>
+let m = <span class="kw">new</span> ProductModel(<span class="fn">map</span>("name", "…")); m.<span class="fn">save</span>();</code></pre>
 </section>
 
 <!-- ============ SCHEMA ============ -->
@@ -875,18 +879,18 @@ let m = <span class="kw">new</span> PostModel(<span class="fn">map</span>("title
   <h2>Schema Builder</h2>
   <p><code>Schema</code> (global singleton in <code>framework/Database/Schema.matrix</code>) compiles blueprints into <code>CREATE TABLE IF NOT EXISTS</code> DDL.</p>
 
-  <pre><code>Schema.<span class="fn">create</span>("posts", table => {
+  <pre><code>Schema.<span class="fn">create</span>("products", table => {
     table.<span class="fn">id</span>();                 <span class="cmt">// INTEGER PRIMARY KEY AUTOINCREMENT</span>
-    table.<span class="fn">string</span>("title");      <span class="cmt">// TEXT</span>
+    table.<span class="fn">string</span>("name");       <span class="cmt">// TEXT</span>
     table.<span class="fn">string</span>("slug").<span class="fn">unique</span>();
-    table.<span class="fn">text</span>("content");
-    table.<span class="fn">integer</span>("user_id");   <span class="cmt">// INTEGER</span>
+    table.<span class="fn">text</span>("description");
+    table.<span class="fn">integer</span>("price");     <span class="cmt">// INTEGER</span>
     table.<span class="fn">float</span>("rating");      <span class="cmt">// REAL</span>
     table.<span class="fn">boolean</span>("is_active"); <span class="cmt">// INTEGER (0/1)</span>
     table.<span class="fn">timestamps</span>();         <span class="cmt">// created_at TEXT, updated_at TEXT (nullable)</span>
 });
 
-Schema.<span class="fn">dropIfExists</span>("posts");</code></pre>
+Schema.<span class="fn">dropIfExists</span>("products");</code></pre>
 
   <h4>Column modifiers (chainable)</h4>
   <table>
@@ -907,20 +911,20 @@ Schema.<span class="fn">dropIfExists</span>("posts");</code></pre>
   <h2>Migrations &amp; Seeders</h2>
   <p>Migrations live in <code>database/migrations/</code>, numbered <code>NNN_name.matrix</code>. Each extends <code>Migration</code> and implements <code>up()</code> / <code>down()</code>:</p>
 
-  <pre><code><span class="cmt">// database/migrations/002_create_posts_table.matrix</span>
+  <pre><code><span class="cmt">// database/migrations/004_create_products_table.matrix</span>
 <span class="kw">import</span> "framework/Database/Schema";
 <span class="kw">import</span> "framework/Database/Migration";
 
-<span class="kw">public class</span> CreatePostsTable <span class="kw">extends</span> Migration {
-    <span class="kw">fn</span> <span class="fn">new</span>(name: string = "002_create_posts_table") {
+<span class="kw">public class</span> CreateProductsTable <span class="kw">extends</span> Migration {
+    <span class="kw">fn</span> <span class="fn">new</span>(name: string = "004_create_products_table") {
         <span class="fn">super</span>(name);
     }
 
     <span class="kw">public fn</span> <span class="fn">up</span>(self) {
-        Schema.<span class="fn">create</span>("posts", table => { … });
+        Schema.<span class="fn">create</span>("products", table => { … });
     }
     <span class="kw">public fn</span> <span class="fn">down</span>(self) {
-        Schema.<span class="fn">dropIfExists</span>("posts");
+        Schema.<span class="fn">dropIfExists</span>("products");
     }
 }</code></pre>
 
@@ -935,15 +939,15 @@ Schema.<span class="fn">dropIfExists</span>("posts");</code></pre>
   <h3>Seeders</h3>
   <p>Seeders live in <code>database/seeders/</code>. Define <code>run_database_seeder()</code> and register a closure in the <code>magic</code> entrypoint:</p>
   <pre><code>kernel.<span class="fn">register_seeder</span>(<span class="kw">fn</span>() { <span class="fn">run_database_seeder</span>(); });</code></pre>
-  <p>The bundled <code>DatabaseSeeder</code> creates the demo user <code>ada@example.com</code> (bcrypt-hashed password) and initial blog articles.</p>
+  <p>The bundled <code>DatabaseSeeder</code> creates the demo user <code>ada@example.com</code> (bcrypt-hashed password) and a sample product catalog.</p>
 </section>
 
 <!-- ============ VIEWS ============ -->
 <section id="views">
   <h2>SpiderBD Templates</h2>
   <p>Templates are <code>.bd.html</code> files under <code>resources/views/</code>, compiled by <code>framework/View/BD.matrix</code>. Render with the global <code>view()</code> helper — dot notation maps to directories:</p>
-  <pre><code><span class="fn">view</span>("posts.index", <span class="fn">map</span>("posts", posts));
-<span class="cmt">// → resources/views/posts/index.bd.html</span></code></pre>
+  <pre><code><span class="fn">view</span>("store.index", <span class="fn">map</span>("products", products));
+<span class="cmt">// → resources/views/store/index.bd.html</span></code></pre>
 
   <h3>Compilation pipeline</h3>
   <div class="flow">
@@ -959,38 +963,38 @@ Schema.<span class="fn">dropIfExists</span>("posts");</code></pre>
   <h3>Directives</h3>
   <table>
     <tr><th>Directive</th><th>Description</th></tr>
-    <tr><td><code>@extends('layouts/app')</code></td><td>Inherit a layout (must appear near the top of the file)</td></tr>
-    <tr><td><code>@section('title', 'value')</code></td><td>Inline section (string or expression like <code>post.title</code>)</td></tr>
+    <tr><td><code>@extends('layouts/store')</code></td><td>Inherit a layout (must appear near the top of the file)</td></tr>
+    <tr><td><code>@section('title', 'value')</code></td><td>Inline section (string or expression like <code>product.name</code>)</td></tr>
     <tr><td><code>@section('content') … @endsection</code></td><td>Block section</td></tr>
     <tr><td><code>@yield('content')</code> / <code>@yield('title', 'default')</code></td><td>Layout placeholder filled by child sections</td></tr>
     <tr><td><code>@include('partials.nav')</code></td><td>Inline a partial template</td></tr>
     <tr><td><code>@if cond</code> / <code>@else</code> / <code>@endif</code></td><td>Conditional blocks evaluated against template data</td></tr>
     <tr><td><code>@foreach(item in items)</code> … <code>@endforeach</code></td><td>Loop over lists</td></tr>
-    <tr><td><code>{{ $var }}</code> / <code>{{ $post.title }}</code></td><td>Escaped output (<code>html_escape</code>: <code>&amp; &lt; &gt; " '</code>)</td></tr>
+    <tr><td><code>{{ $var }}</code> / <code>{{ $product.name }}</code></td><td>Escaped output (<code>html_escape</code>: <code>&amp; &lt; &gt; " '</code>)</td></tr>
     <tr><td><code>{!! $raw !!}</code></td><td><strong>Unescaped</strong> raw output — only for trusted HTML</td></tr>
   </table>
 
   <div class="callout tip">
     <div class="co-title">💡 Syntax tolerance</div>
-    <p>Whitespace is flexible: <code>{{$var}}</code>, <code>{{ $var }}</code>, and <code>{{ var }}</code> all work. Nested dot-notation (<code>{{ post.author.name }}</code>) resolves on maps and Model instances, inside and outside loops.</p>
+    <p>Whitespace is flexible: <code>{{$var}}</code>, <code>{{ $var }}</code>, and <code>{{ var }}</code> all work. Nested dot-notation (<code>{{ product.brand.name }}</code>) resolves on maps and Model instances, inside and outside loops.</p>
   </div>
 
   <h3>Full layout example</h3>
-  <pre><code><span class="tag">&lt;!-- resources/views/layouts/app.bd.html --&gt;</span>
+  <pre><code><span class="tag">&lt;!-- resources/views/layouts/store.bd.html --&gt;</span>
 &lt;html&gt;&lt;head&gt;&lt;title&gt;@<span class="fn">yield</span>('title', 'Spid3rWeb')&lt;/title&gt;&lt;/head&gt;
 &lt;body&gt;
   @<span class="fn">include</span>('partials.nav')
   &lt;main&gt;@<span class="fn">yield</span>('content')&lt;/main&gt;
 &lt;/body&gt;&lt;/html&gt;
 
-<span class="tag">&lt;!-- resources/views/posts/index.bd.html --&gt;</span>
-@<span class="fn">extends</span>('layouts/app')
-@<span class="fn">section</span>('title', 'All Articles')
+<span class="tag">&lt;!-- resources/views/store/index.bd.html --&gt;</span>
+@<span class="fn">extends</span>('layouts/store')
+@<span class="fn">section</span>('title', 'All Products')
 @<span class="fn">section</span>('content')
-  @<span class="fn">foreach</span>(post in posts)
-    &lt;h3&gt;{{ $post.title }}&lt;/h3&gt;
-    &lt;p&gt;{{ $post.content }}&lt;/p&gt;
-    &lt;a href="/posts/{{ $post.id }}"&gt;Read →&lt;/a&gt;
+  @<span class="fn">foreach</span>(product in products)
+    &lt;h3&gt;{{ $product.name }}&lt;/h3&gt;
+    &lt;p&gt;৳{{ $product.price }}&lt;/p&gt;
+    &lt;a href="/product/{{ $product.id }}"&gt;View →&lt;/a&gt;
   @<span class="fn">endforeach</span>
 @<span class="fn">endsection</span></code></pre>
 </section>
@@ -1027,6 +1031,56 @@ let hash = Hash.<span class="fn">make</span>("plain-password");      <span class
   <div class="callout info">
     <div class="co-title">ℹ️ Sessions schema</div>
     <p>The <code>sessions</code> table (migration 003) stores <code>token TEXT UNIQUE</code>, <code>user_id INTEGER</code>, and <code>last_activity INTEGER</code> (unix). <code>Auth.clear()</code> is invoked at the start of every request so state never leaks between connections.</p>
+  </div>
+</section>
+
+<!-- ============ CACHE ============ -->
+<section id="cache">
+  <h2>Caching System</h2>
+  <p>A fluent, expressive <code>Cache</code> facade (<code>framework/Cache/</code>) with swappable store drivers. Selected via <code>SPID3R_CACHE_DRIVER</code> (env or <code>.env</code>); default <code>memory</code>.</p>
+
+  <h3>Drivers</h3>
+  <table>
+    <tr><th>Driver</th><th>Persistent</th><th>Shared across processes</th><th>Best for</th></tr>
+    <tr><td><code>memory</code> <span class="badge b-blue">default</span></td><td>No</td><td>No</td><td>Per-request memoization, fastest access</td></tr>
+    <tr><td><code>file</code></td><td>Yes</td><td>Yes (filesystem)</td><td>Single-server apps surviving restarts (<code>storage/framework/cache/</code>)</td></tr>
+    <tr><td><code>database</code></td><td>Yes</td><td>Yes (SQL)</td><td>Multi-process/multi-server; works on SQLite, PostgreSQL, MySQL, MariaDB via the DB facade (lazy <code>cache</code> table)</td></tr>
+  </table>
+
+  <h3>API</h3>
+  <pre><code><span class="cmt">// Store &amp; fetch</span>
+Cache.<span class="fn">put</span>("stats", stats_map, 600);            <span class="cmt">// 10 minutes (0 = forever)</span>
+let stats = Cache.<span class="fn">get</span>("stats", <span class="kw">null</span>);
+Cache.<span class="fn">has</span>("stats");  Cache.<span class="fn">forget</span>("stats");  Cache.<span class="fn">flush</span>();
+
+<span class="cmt">// Get-or-compute (the workhorse)</span>
+let products = Cache.<span class="fn">remember</span>("products.catalog", 300, <span class="kw">fn</span>() {
+    <span class="kw">return</span> DB.<span class="fn">table</span>("products").<span class="fn">where</span>("category", "=", "Electronics").<span class="fn">get</span>();
+});
+
+<span class="cmt">// Store only if absent / counters / explicit driver</span>
+Cache.<span class="fn">add</span>("lock:job", <span class="kw">true</span>, 30);
+Cache.<span class="fn">increment</span>("pageviews");  Cache.<span class="fn">decrement</span>("quota", 5);
+Cache.<span class="fn">store</span>("file").<span class="fn">put</span>("key", val, 60);      <span class="cmt">// target a specific driver</span></code></pre>
+
+  <h3>Semantics</h3>
+  <ul>
+    <li><strong>TTL</strong> — seconds > 0 expire after N seconds; <code>0</code>/<code>null</code> = forever; negative = already expired.</li>
+    <li><strong>Values</strong> — strings, numbers, booleans, lists, and maps round-trip via JSON in the file/database drivers. <code>null</code> is always treated as a miss.</li>
+    <li><strong>Expiry</strong> — lazy eviction: expired entries are removed on access.</li>
+    <li><strong>remember</strong> — returns the cached value on hit; otherwise calls the closure, caches the result, and returns it.</li>
+  </ul>
+
+  <div class="callout tip">
+    <div class="co-title">💡 Usage example in a controller</div>
+    <pre><code><span class="kw">public fn</span> <span class="fn">index</span>(self, _req) {
+    let products = Cache.<span class="fn">remember</span>("products.catalog", 300, <span class="kw">fn</span>() {
+        <span class="kw">return</span> DB.<span class="fn">table</span>("products")
+            .<span class="fn">where</span>("category", "=", "Electronics")
+            .<span class="fn">orderBy</span>("id", "DESC").<span class="fn">get</span>();
+    });
+    <span class="kw">return</span> <span class="fn">view</span>("store.index", <span class="fn">map</span>("products", products));
+}</code></pre>
   </div>
 </section>
 
@@ -1123,12 +1177,12 @@ spid3r magic migrate</code></pre>
   <pre><code><span class="kw">public fn</span> <span class="fn">index</span>(self, req) {
     let page    = req.<span class="fn">int</span>("page", 1);
     let per     = 10;
-    let total   = DB.<span class="fn">table</span>("posts").<span class="fn">count</span>();
-    let posts   = DB.<span class="fn">table</span>("posts")
+    let total   = DB.<span class="fn">table</span>("products").<span class="fn">count</span>();
+    let products = DB.<span class="fn">table</span>("products")
         .<span class="fn">orderBy</span>("id", "DESC")
         .<span class="fn">limit</span>(per).<span class="fn">offset</span>((page - 1) * per)
         .<span class="fn">get</span>();
-    <span class="kw">return</span> <span class="fn">view</span>("posts.index", <span class="fn">map</span>("posts", posts, "page", page));
+    <span class="kw">return</span> <span class="fn">view</span>("store.index", <span class="fn">map</span>("products", products, "page", page));
 }</code></pre>
 
   <h3>5. Login/logout flow (as implemented in AuthController)</h3>
@@ -1159,6 +1213,7 @@ spid3r magic migrate</code></pre>
     <tr><td><code>Schema</code></td><td>SchemaBuilder</td><td><code>create · dropIfExists</code></td></tr>
     <tr><td><code>Auth</code></td><td>AuthManager</td><td><code>attempt · login · logout · check · guest · user · id · token · authenticate_token · clear</code></td></tr>
     <tr><td><code>Hash</code></td><td>HashManager</td><td><code>make · check</code></td></tr>
+    <tr><td><code>Cache</code></td><td>CacheManager</td><td><code>get · put · add · remember · rememberForever · forget · flush · has · increment · decrement · store</code> — drivers: memory (default), file, database</td></tr>
     <tr><td><code>view(name, data)</code></td><td>fn</td><td>Render SpiderBD template → Response</td></tr>
     <tr><td><code>response / json / html / redirect / text_405</code></td><td>fn</td><td>Response factories</td></tr>
   </table>
@@ -1174,6 +1229,13 @@ spid3r magic migrate</code></pre>
   <h3>Model chain</h3>
   <div class="sig">Model:  get(k) set(k,v) save() update(attrs) delete() to_map() query()
 Static: find(id) all() create(attrs)      <span class="cmt"># + your custom finders</span></div>
+
+  <h3>Cache chain</h3>
+  <div class="sig">Cache.get(k, def)      Cache.put(k, v, ttl)   Cache.add(k, v, ttl)
+Cache.remember(k, ttl, fn)   Cache.rememberForever(k, fn)
+Cache.forget(k)        Cache.flush()          Cache.has(k)
+Cache.increment(k, n)  Cache.decrement(k, n)  Cache.store(name)
+<span class="cmt"># drivers: memory (default) | file | database   via SPID3R_CACHE_DRIVER</span></div>
 
   <h3>Template directives</h3>
   <div class="sig">@extends('layout')      @section('name','val')  @section('n')…@endsection

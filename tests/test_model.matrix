@@ -2,10 +2,10 @@
 // Unit tests for Spid3rWeb Active Record Models
 
 import "app/Models/User";
-import "app/Models/Post";
+import "app/Models/Product";
 import "framework/Database/DB";
 
-fn test_user_post_models() {
+fn test_user_product_models() {
     let now = string(unix_time());
 
     // 1. Create User
@@ -23,40 +23,42 @@ fn test_user_post_models() {
     assert(found_user != null, "UserModel.find should return user");
     assert(found_user.get("name") == "Linus Torvalds", "User name should match");
 
-    // 3. Create Post
-    let post = PostModel.create(map(
-        "title", "Git: Fast Version Control",
-        "slug", "git-fast-vcs-" + now,
-        "content", "Git was designed for high performance and reliability.",
-        "category", "Tools",
-        "user_id", uid,
-        "status", "published",
-        "views_count", 100
+    // 3. Create Product
+    let product = ProductModel.create(map(
+        "name", "Git Pro Mechanical Keyboard",
+        "slug", "git-pro-keyboard-" + now,
+        "description", "Custom tactile mechanical keyboard for kernel hackers.",
+        "category", "Peripherals",
+        "emoji", "⌨️",
+        "price", 149.99,
+        "old_price", 199.99,
+        "stock", 50,
+        "sold", 12,
+        "rating", 4.9
     ));
-    assert(post != null, "Post should be created");
-    let pid = int(post.get("id"));
+    assert(product != null, "Product should be created");
+    assert(product.get("id") != null, "Product should have id");
+    let pid = int(product.get("id"));
 
-    // 4. Test Relationships
-    let user_posts = user.posts();
-    assert(user_posts.len() > 0, "User should have at least 1 post");
-    assert(user_posts[0]["title"] == "Git: Fast Version Control", "Post title should match");
+    // 4. Test Product attributes and finding
+    let found_product = ProductModel.find(pid);
+    assert(found_product != null, "ProductModel.find should return product");
+    assert(found_product.get("name") == "Git Pro Mechanical Keyboard", "Product name should match");
+    assert(found_product.get("category") == "Peripherals", "Product category should match");
 
-    let author = post.author();
-    assert(author != null, "Post author should be resolved");
-    assert(author["name"] == "Linus Torvalds", "Author name should match");
-
-    // 5. Update Post
-    post.update(map("title", "Git: Distributed Version Control"));
-    let reloaded_post = PostModel.find(pid);
-    assert(reloaded_post.get("title") == "Git: Distributed Version Control", "Updated title should match");
+    // 5. Update Product
+    product.update(map("name", "Git Pro RGB Mechanical Keyboard", "stock", 45));
+    let reloaded_product = ProductModel.find(pid);
+    assert(reloaded_product.get("name") == "Git Pro RGB Mechanical Keyboard", "Updated name should match");
+    assert(int(reloaded_product.get("stock")) == 45, "Updated stock should match");
 
     // 6. Clean up
-    post.delete();
+    product.delete();
     user.delete();
 
-    assert(PostModel.find(pid) == null, "Post should be deleted");
+    assert(ProductModel.find(pid) == null, "Product should be deleted");
     assert(UserModel.find(uid) == null, "User should be deleted");
-    println("  [PASS] test_user_post_models");
+    println("  [PASS] test_user_product_models");
 }
 
 fn test_modern_static_and_inheritance() {
@@ -83,51 +85,51 @@ fn test_modern_static_and_inheritance() {
     assert(found_by_email != null, "User.findByEmail should locate user");
     assert(int(found_by_email.get("id")) == uid, "Found by email ID should match");
 
-    // 3. Test direct static method Post.create and Post.findBySlug
-    let slug = "first-algorithm-" + now;
-    let post = Post.create({
-        "title": "Note G: The First Algorithm",
+    // 3. Test direct static method Product.create and Product.findBySlug
+    let slug = "first-edition-mouse-" + now;
+    let product = Product.create({
+        "name": "First Edition Precision Mouse",
         "slug": slug,
-        "content": "Algorithm for calculating Bernoulli numbers.",
-        "category": "History",
-        "user_id": uid,
-        "status": "published",
-        "views_count": 42
+        "description": "Ergonomic precision mouse.",
+        "category": "Peripherals",
+        "emoji": "🖱️",
+        "price": 59.99,
+        "old_price": 79.99,
+        "stock": 30,
+        "sold": 5,
+        "rating": 4.8
     });
-    assert(post != null, "Post.create should succeed");
-    let pid = int(post.get("id"));
+    assert(product != null, "Product.create should succeed");
+    let pid = int(product.get("id"));
 
-    let found_slug = Post.findBySlug(slug);
-    assert(found_slug != null, "Post.findBySlug should locate post");
-    assert(found_slug.get("title") == "Note G: The First Algorithm", "Post title should match");
+    let found_slug = Product.findBySlug(slug);
+    assert(found_slug != null, "Product.findBySlug should locate product");
+    assert(found_slug.get("name") == "First Edition Precision Mouse", "Product name should match");
 
-    // 4. Test Post.published() and Post.all()
-    let pub_posts = Post.published();
-    assert(pub_posts.len() > 0, "Post.published should return at least 1 post");
-
-    let all_posts = Post.all();
-    assert(all_posts.len() > 0, "Post.all should return at least 1 post");
+    // 4. Test Product.all()
+    let all_products = Product.all();
+    assert(all_products.len() > 0, "Product.all should return at least 1 product");
 
     // 5. Test User.all()
     let all_users = User.all();
     assert(all_users.len() > 0, "User.all should return at least 1 user");
 
     // 6. Test Model to_map()
-    let post_map = post.to_map();
-    assert(post_map.has("title"), "to_map should contain title");
-    assert(post_map["slug"] == slug, "to_map slug should match");
+    let prod_map = product.to_map();
+    assert(prod_map.has("name"), "to_map should contain name");
+    assert(prod_map["slug"] == slug, "to_map slug should match");
 
     // Teardown
-    post.delete();
+    product.delete();
     user.delete();
     assert(User.find(uid) == null, "User should be deleted");
-    assert(Post.find(pid) == null, "Post should be deleted");
+    assert(Product.find(pid) == null, "Product should be deleted");
     println("  [PASS] test_modern_static_and_inheritance");
 }
 
 fn main() {
     println("\n=== Running Model Test Suite ===");
-    test_user_post_models();
+    test_user_product_models();
     test_modern_static_and_inheritance();
     DB.close();
     println("=== All Model Tests Passed! ===\n");

@@ -114,7 +114,7 @@ public class BD {
         for raw_line in lines {
             let line = raw_line.trim();
 
-            // Simple 1-line section: @section('title', 'My Page') or @section('title', post.title)
+            // Simple 1-line section: @section('title', 'My Page') or @section('title', product.name)
             if line.starts_with("@section(") and line.contains(",") and line.ends_with(")") {
                 let inner = line.slice(9, line.len() - 1).trim();
                 let comma_idx = inner.index_of(",");
@@ -125,7 +125,7 @@ public class BD {
                     if (raw_val.starts_with("'") and raw_val.ends_with("'")) or (raw_val.starts_with("\"") and raw_val.ends_with("\"")) {
                         sec_val = raw_val.slice(1, raw_val.len() - 1);
                     } else {
-                        // Unquoted expression (e.g. post.title): wrap in {{ ... }} so layout @yield renders the evaluated title
+                        // Unquoted expression (e.g. product.name): wrap in {{ ... }} so layout @yield renders the evaluated title
                         sec_val = "{{" + raw_val + "}}";
                     }
                     sections[sec_name] = sec_val;
@@ -240,11 +240,22 @@ public class BD {
             if line.starts_with("@if(") and line.ends_with(")") {
                 in_conditional = true;
                 let cond_expr = self.extract_quoted_arg(line, "@if(");
+                let invert = false;
                 let var_name = cond_expr.replace("$", "").trim();
 
+                // Support a leading `not` / `!` negation (e.g. @if(not products))
+                let effective = var_name;
+                if effective.starts_with("not ") {
+                    invert = true;
+                    effective = effective.slice(4, effective.len()).trim();
+                } elif effective.starts_with("!") {
+                    invert = true;
+                    effective = effective.slice(1, effective.len()).trim();
+                }
+
                 let val = null;
-                if data.has(var_name) {
-                    val = data[var_name];
+                if data.has(effective) {
+                    val = data[effective];
                 }
 
                 // Truthiness check
@@ -261,6 +272,10 @@ public class BD {
                     } else if type_of(val) == "map" and val.len() > 0 {
                         is_true = true;
                     }
+                }
+
+                if invert {
+                    is_true = not is_true;
                 }
 
                 if is_true {
@@ -312,14 +327,27 @@ public class BD {
             if line.starts_with("@foreach(") and line.ends_with(")") {
                 in_loop = true;
                 let expr = line.replace("@foreach(", "");
-                expr = expr.slice(0, expr.len() - 1).trim(); // "$items as $item"
-                let parts = expr.split(" as ");
-                if parts.len() == 2 {
-                    loop_list_name = parts[0].trim();
-                    loop_item_name = parts[1].trim();
-                    if loop_item_name.starts_with("$") {
-                        loop_item_name = loop_item_name.slice(1, loop_item_name.len()).trim();
+                expr = expr.slice(0, expr.len() - 1).trim(); // "$items as $item" | "item in items"
+                // Documented syntax: @foreach(item in items)
+                if expr.contains(" in ") {
+                    let in_parts = expr.split(" in ");
+                    if in_parts.len() == 2 {
+                        loop_list_name = in_parts[1].trim();
+                        loop_item_name = in_parts[0].trim();
                     }
+                } else {
+                    // Legacy syntax: @foreach($items as $item)
+                    let parts = expr.split(" as ");
+                    if parts.len() == 2 {
+                        loop_list_name = parts[0].trim();
+                        loop_item_name = parts[1].trim();
+                    }
+                }
+                if loop_item_name.starts_with("$") {
+                    loop_item_name = loop_item_name.slice(1, loop_item_name.len()).trim();
+                }
+                if loop_list_name.starts_with("$") {
+                    loop_list_name = loop_list_name.slice(1, loop_list_name.len()).trim();
                 }
                 loop_body_lines = list();
                 continue;
@@ -436,24 +464,6 @@ public class BD {
                     return val;
                 }
             } catch (_e2) {}
-
-            // Check Active Record relation methods (e.g. post.author(), user.posts())
-            if prop == "author" {
-                try {
-                    let rel = obj.author();
-                    if rel != null {
-                        return rel;
-                    }
-                } catch (_e3) {}
-            }
-            if prop == "posts" {
-                try {
-                    let rel = obj.posts();
-                    if rel != null {
-                        return rel;
-                    }
-                } catch (_e4) {}
-            }
 
             return null;
         }

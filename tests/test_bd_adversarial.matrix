@@ -3,7 +3,7 @@
 
 import "framework/View/BD";
 import "app/Models/User";
-import "app/Models/Post";
+import "app/Models/Product";
 import "framework/Database/DB";
 
 fn assert_eq(actual, expected, msg) {
@@ -213,72 +213,72 @@ fn test_adv_active_record_models_and_relations() {
     let now = string(unix_time());
 
     // 1. In-memory model instance testing
-    let post_mem = new Post(map(
-        "title", "In-Memory Post Title",
+    let prod_mem = new Product(map(
+        "name", "In-Memory Product Name",
         "category", "InMemory",
-        "views_count", 777
+        "stock", 777
     ));
 
     let t_view = "resources/views/adv_model.bd.html";
-    let content = "title:" + "{{" + " post.title " + "}}" + " " +
-                  "cat:" + "{{" + " post.category " + "}}" + " " +
-                  "views:" + "{{" + " post.views_count " + "}}" + " " +
-                  "missing:" + "[" + "{{" + " post.non_existent " + "}}" + "]";
+    let content = "name:" + "{{" + " product.name " + "}}" + " " +
+                  "cat:" + "{{" + " product.category " + "}}" + " " +
+                  "stock:" + "{{" + " product.stock " + "}}" + " " +
+                  "missing:" + "[" + "{{" + " product.non_existent " + "}}" + "]";
     write_file(t_view, content);
 
-    let rendered_mem = global_bd.render("adv_model", map("post", post_mem));
+    let rendered_mem = global_bd.render("adv_model", map("product", prod_mem));
     file_delete(t_view);
 
-    assert(rendered_mem.contains("title:In-Memory Post Title"), "In-memory model attribute 'title' must resolve");
+    assert(rendered_mem.contains("name:In-Memory Product Name"), "In-memory model attribute 'name' must resolve");
     assert(rendered_mem.contains("cat:InMemory"), "In-memory model attribute 'category' must resolve");
-    assert(rendered_mem.contains("views:777"), "In-memory model attribute 'views_count' must resolve");
+    assert(rendered_mem.contains("stock:777"), "In-memory model attribute 'stock' must resolve");
     assert(rendered_mem.contains("missing:[]"), "Missing model attribute must resolve to empty string safely");
 
-    // 2. Database persisted Model & Relations: Post -> Author and User -> Posts
+    // 2. Database persisted Model & Attribute Resolution
     let user = UserModel.create(map(
         "name", "Grace Hopper",
         "email", "grace_" + now + "@navy.mil",
         "password", "nanoseconds"
     ));
     assert(user != null, "User must be created");
-    let uid = int(user.get("id"));
 
-    let post = PostModel.create(map(
-        "title", "Compilers and Flow-Matic",
+    let product = ProductModel.create(map(
+        "name", "Compilers and Flow-Matic",
         "slug", "compilers-flow-matic-" + now,
-        "content", "Programming languages should be human readable.",
+        "description", "Programming languages should be human readable.",
         "category", "History",
-        "user_id", uid,
-        "status", "published",
-        "views_count", 1952
+        "emoji", "📦",
+        "price", 45.0,
+        "stock", 100,
+        "sold", 1952,
+        "rating", 4.8
     ));
-    assert(post != null, "Post must be created");
-    let pid = int(post.get("id"));
+    assert(product != null, "Product must be created");
 
     let t_rel_view = "resources/views/adv_rel.bd.html";
-    let rel_content = "post_title:" + "{{" + " post.title " + "}}" + " " +
-                      "post_author_name:" + "{{" + " post.author.name " + "}}" + " " +
-                      "post_author_email:" + "{{" + " post.author.email " + "}}" + " " +
-                      "user_first_post_title:" + "{{" + " user.posts.0.title " + "}}" + " " +
-                      "user_post_oob:" + "[" + "{{" + " user.posts.99.title " + "}}" + "]";
+    let rel_content = "product_name:" + "{{" + " product.name " + "}}" + " " +
+                      "product_price:" + "{{" + " product.price " + "}}" + " " +
+                      "user_name:" + "{{" + " user.name " + "}}" + " " +
+                      "user_email:" + "{{" + " user.email " + "}}" + " " +
+                      "product_oob:" + "[" + "{{" + " product.non_existent.deep " + "}}" + "]";
     write_file(t_rel_view, rel_content);
 
     let rendered_rel = global_bd.render("adv_rel", map(
-        "post", post,
+        "product", product,
         "user", user
     ));
     file_delete(t_rel_view);
 
     // Clean up database entities before assertions to ensure zero leaks
-    post.delete();
+    product.delete();
     user.delete();
     DB.checkpoint();
 
-    assert(rendered_rel.contains("post_title:Compilers and Flow-Matic"), "Post title must resolve");
-    assert(rendered_rel.contains("post_author_name:Grace Hopper"), "post.author.name relation chaining must resolve");
-    assert(rendered_rel.contains("post_author_email:grace_" + now + "@navy.mil"), "post.author.email relation chaining must resolve");
-    assert(rendered_rel.contains("user_first_post_title:Compilers and Flow-Matic"), "user.posts.0.title relation chaining must resolve");
-    assert(rendered_rel.contains("user_post_oob:[]"), "user.posts.99.title out of bounds relation must resolve to empty string safely");
+    assert(rendered_rel.contains("product_name:Compilers and Flow-Matic"), "Product name must resolve");
+    assert(rendered_rel.contains("product_price:45"), "Product price must resolve");
+    assert(rendered_rel.contains("user_name:Grace Hopper"), "User name must resolve");
+    assert(rendered_rel.contains("user_email:grace_" + now + "@navy.mil"), "User email must resolve");
+    assert(rendered_rel.contains("product_oob:[]"), "out of bounds property must resolve to empty string safely");
 
     println("  [PASS] test_adv_active_record_models_and_relations");
 }

@@ -97,16 +97,17 @@ fn test_lifecycle_requests() {
     assert(string(res2["body"]).contains("healthy"), "API status should contain healthy");
     println("  [PASS] GET /api/v1/status -> 200 OK (JSON API)");
 
-    // 8. GET /api/v1/posts (JSON posts list)
+    // 8. GET /product/1 (Product detail)
     let res3 = app.handle_request(map(
         "method", "GET",
-        "path", "/api/v1/posts",
-        "headers", map("accept", "application/json"),
+        "path", "/product/1",
+        "headers", map("accept", "text/html"),
         "body", ""
     ));
-    assert(res3["status"] == 200, "GET /api/v1/posts should return 200 OK");
-    assert(string(res3["body"]).contains("data"), "Posts list should contain data field");
-    println("  [PASS] GET /api/v1/posts -> 200 OK (JSON Resource)");
+    assert(res3["status"] == 200, "GET /product/1 should return 200 OK");
+    assert(string(res3["body"]).contains("Add to Cart"), "Product page should render store template");
+    println("  [PASS] GET /product/1 -> 200 OK (SpiderBD rendered)");
+
 
     // 9. GET /non-existent (404 Not Found)
     let res4 = app.handle_request(map(

@@ -13,7 +13,12 @@ public class AuthController {
         if Auth.check() {
             return redirect("/");
         }
-        return view("auth.login", map("title", "Sign In - Spid3rWeb", "error", ""));
+        return view("auth.login", map(
+            "title", "Sign In - Spid3rWeb",
+            "error", "",
+            "is_auth", false,
+            "user_name", ""
+        ));
     }
 
     public fn login(self, req) {
@@ -28,7 +33,9 @@ public class AuthController {
             }
             return view("auth.login", map(
                 "title", "Sign In - Spid3rWeb",
-                "error", validator.error_summary()
+                "error", validator.error_summary(),
+                "is_auth", false,
+                "user_name", ""
             ));
         }
 
@@ -50,7 +57,9 @@ public class AuthController {
 
         return view("auth.login", map(
             "title", "Sign In - Spid3rWeb",
-            "error", "Invalid email or password combination."
+            "error", "Invalid email or password combination.",
+            "is_auth", false,
+            "user_name", ""
         ));
     }
 
@@ -58,7 +67,12 @@ public class AuthController {
         if Auth.check() {
             return redirect("/");
         }
-        return view("auth.register", map("title", "Create Account - Spid3rWeb", "error", ""));
+        return view("auth.register", map(
+            "title", "Create Account - Spid3rWeb",
+            "error", "",
+            "is_auth", false,
+            "user_name", ""
+        ));
     }
 
     public fn register(self, req) {
@@ -74,7 +88,9 @@ public class AuthController {
             }
             return view("auth.register", map(
                 "title", "Create Account - Spid3rWeb",
-                "error", validator.error_summary()
+                "error", validator.error_summary(),
+                "is_auth", false,
+                "user_name", ""
             ));
         }
 
@@ -87,7 +103,9 @@ public class AuthController {
             }
             return view("auth.register", map(
                 "title", "Create Account - Spid3rWeb",
-                "error", "This email address is already registered."
+                "error", "This email address is already registered.",
+                "is_auth", false,
+                "user_name", ""
             ));
         }
 

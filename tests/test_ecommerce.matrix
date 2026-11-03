@@ -1,0 +1,435 @@
+// tests/test_ecommerce.matrix
+// Automated Test Suite for Spid3r Bazaar E-Commerce Shopping Experience (Requirement R2)
+// Covers: Catalog browsing & route aliases, Category filtering, Product detail & fallback,
+// Cart quantity additions & calculations, Cart quantity updates & item removal,
+// Direct GET /checkout redirect, Checkout validation, Order creation & inventory deduction.
+
+import "framework/Application";
+import "routes/web";
+import "framework/Database/DB";
+import "app/Models/Product";
+import "app/Models/Order";
+import "app/Support/CartService";
+import "database/seeders/DatabaseSeeder";
+
+fn extract_cart_token(res) -> string {
+    if res == null or not res.has("headers") {
+        return "";
+    }
+    if not res["headers"].has("set-cookie") {
+        return "";
+    }
+    let sc = string(res["headers"]["set-cookie"]);
+    for part in sc.split(";") {
+        let pair = part.trim().split("=");
+        if pair[0] == "spid3r_cart" and pair.len() > 1 {
+            return pair[1].trim();
+        }
+    }
+    return "";
+}
+
+// ----------------------------------------------------------------------------
+// Phase 1: Catalog Browsing & Route Aliases
+// ----------------------------------------------------------------------------
+fn test_catalog_browsing(app) {
+    println("--- Testing Catalog Browsing & Route Aliases ---");
+
+    // 1. GET / (Homepage catalog index)
+    let res_root = app.handle_request(map(
+        "method", "GET",
+        "path", "/",
+        "headers", map("accept", "text/html"),
+        "body", ""
+    ));
+    assert(res_root["status"] == 200, "GET / should return HTTP 200");
+    assert(string(res_root["body"]).contains("Wireless Earbuds Pro"), "GET / should list catalog products");
+    println("  [PASS] GET / -> 200 OK (lists products)");
+
+    // 2. GET /store (Catalog alias)
+    let res_store = app.handle_request(map(
+        "method", "GET",
+        "path", "/store",
+        "headers", map("accept", "text/html"),
+        "body", ""
+    ));
+    assert(res_store["status"] == 200, "GET /store should return HTTP 200");
+    assert(string(res_store["body"]).contains("Wireless Earbuds Pro"), "GET /store should list catalog products");
+    println("  [PASS] GET /store -> 200 OK (catalog alias)");
+
+    // 3. GET /products (Catalog alias)
+    let res_products = app.handle_request(map(
+        "method", "GET",
+        "path", "/products",
+        "headers", map("accept", "text/html"),
+        "body", ""
+    ));
+    assert(res_products["status"] == 200, "GET /products should return HTTP 200");
+    assert(string(res_products["body"]).contains("Wireless Earbuds Pro"), "GET /products should list catalog products");
+    println("  [PASS] GET /products -> 200 OK (catalog alias)");
+}
+
+// ----------------------------------------------------------------------------
+// Phase 2: Category Filtering
+// ----------------------------------------------------------------------------
+fn test_category_filtering(app) {
+    println("--- Testing Category Filtering ---");
+
+    // GET /?category=Electronics
+    let res_cat = app.handle_request(map(
+        "method", "GET",
+        "path", "/?category=Electronics",
+        "headers", map("accept", "text/html"),
+        "body", ""
+    ));
+    assert(res_cat["status"] == 200, "GET /?category=Electronics should return HTTP 200");
+    let body_cat = string(res_cat["body"]);
+    assert(body_cat.contains("Wireless Earbuds Pro"), "Filtered view should include Electronics item (Wireless Earbuds Pro)");
+    assert(body_cat.contains("Smart Watch Fit 2"), "Filtered view should include Electronics item (Smart Watch Fit 2)");
+    assert(not body_cat.contains("Cotton Casual T-Shirt"), "Filtered view should exclude non-Electronics item (Cotton Casual T-Shirt)");
+    assert(not body_cat.contains("Backpack 25L Waterproof"), "Filtered view should exclude non-Electronics item (Backpack 25L Waterproof)");
+    println("  [PASS] GET /?category=Electronics -> 200 OK (correctly filtered)");
+}
+
+// ----------------------------------------------------------------------------
+// Phase 3: Product Detail Page & Fallback Handling
+// ----------------------------------------------------------------------------
+fn test_product_detail_page(app) {
+    println("--- Testing Product Detail Page & Fallback Handling ---");
+
+    // 1. GET /product/1 (Existing product)
+    let res_prod = app.handle_request(map(
+        "method", "GET",
+        "path", "/product/1",
+        "headers", map("accept", "text/html"),
+        "body", ""
+    ));
+    assert(res_prod["status"] == 200, "GET /product/1 should return HTTP 200");
+    let body_prod = string(res_prod["body"]);
+    assert(body_prod.contains("Wireless Earbuds Pro"), "Product detail page should show product name");
+    assert(body_prod.contains("2490"), "Product detail page should show product price");
+    assert(body_prod.contains("Add to Cart") or body_prod.contains("cart"), "Product detail page should contain add to cart action");
+    println("  [PASS] GET /product/1 -> 200 OK (renders product name, price, action)");
+
+    // 2. GET /product/9999 (Missing product fallback)
+    let res_missing = app.handle_request(map(
+        "method", "GET",
+        "path", "/product/9999",
+        "headers", map("accept", "text/html"),
+        "body", ""
+    ));
+    assert(res_missing["status"] == 302, "Missing product GET /product/9999 should redirect (HTTP 302)");
+    let loc = string(res_missing["headers"]["location"]);
+    assert(loc == "/store" or loc == "/", "Missing product should redirect to /store or / (got " + loc + ")");
+    println("  [PASS] GET /product/9999 -> 302 Redirect to " + loc);
+}
+
+// ----------------------------------------------------------------------------
+// Phase 4: Cart Additions with Quantity
+// ----------------------------------------------------------------------------
+fn test_cart_additions_with_quantity(app, cart_service) -> string {
+    println("--- Testing Cart Additions with Quantity ---");
+
+    // 1. POST /cart/add with product_id=1 and qty=3
+    let res_add1 = app.handle_request(map(
+        "method", "POST",
+        "path", "/cart/add",
+        "headers", map(
+            "content-type", "application/x-www-form-urlencoded",
+            "x-requested-with", "XMLHttpRequest"
+        ),
+        "body", "product_id=1&qty=3"
+    ));
+    assert(res_add1["status"] == 200, "POST /cart/add AJAX should return HTTP 200");
+    let token = extract_cart_token(res_add1);
+    assert(token != "", "POST /cart/add should issue spid3r_cart cookie token");
+
+    let json1 = json_parse(res_add1["body"]);
+    assert(json1["ok"] == true, "Response JSON ok should be true");
+    assert(int(json1["cart_count"]) == 3, "Cart count in JSON should be 3 (got " + string(json1["cart_count"]) + ")");
+    assert(cart_service.count(token) == 3, "CartService count should be 3");
+    println("  [PASS] POST /cart/add (product_id=1, qty=3) -> cart_count is 3");
+
+    // 2. POST /cart/add with product_id=2 and qty=1
+    let res_add2 = app.handle_request(map(
+        "method", "POST",
+        "path", "/cart/add",
+        "headers", map(
+            "content-type", "application/x-www-form-urlencoded",
+            "cookie", "spid3r_cart=" + token,
+            "x-requested-with", "XMLHttpRequest"
+        ),
+        "body", "product_id=2&qty=1"
+    ));
+    assert(res_add2["status"] == 200, "POST /cart/add AJAX should return HTTP 200");
+    let json2 = json_parse(res_add2["body"]);
+    assert(json2["ok"] == true, "Response JSON ok should be true");
+    assert(int(json2["cart_count"]) == 4, "Cart count in JSON should be 4 (got " + string(json2["cart_count"]) + ")");
+    assert(cart_service.count(token) == 4, "CartService count should be 4");
+    println("  [PASS] POST /cart/add (product_id=2, qty=1) -> cart_count is 4");
+
+    return token;
+}
+
+// ----------------------------------------------------------------------------
+// Phase 5: Cart View & Calculations
+// ----------------------------------------------------------------------------
+fn test_cart_view(app, cart_service, token: string) {
+    println("--- Testing Cart View & Subtotals ---");
+
+    // Product 1: 3 * 2490 = 7470
+    // Product 2: 1 * 3200 = 3200
+    // Total: 7470 + 3200 = 10670
+    let res_cart = app.handle_request(map(
+        "method", "GET",
+        "path", "/cart",
+        "headers", map(
+            "accept", "text/html",
+            "cookie", "spid3r_cart=" + token
+        ),
+        "body", ""
+    ));
+    assert(res_cart["status"] == 200, "GET /cart should return HTTP 200");
+    let body_cart = string(res_cart["body"]);
+    assert(body_cart.contains("Wireless Earbuds Pro"), "Cart view should contain product 1 name");
+    assert(body_cart.contains("Smart Watch Fit 2"), "Cart view should contain product 2 name");
+    assert(body_cart.contains("7470"), "Cart view should display accurate item 1 subtotal (7470)");
+    assert(body_cart.contains("3200"), "Cart view should display accurate item 2 subtotal (3200)");
+    assert(body_cart.contains("10670"), "Cart view should display accurate order total (10670)");
+
+    let items = cart_service.items(token);
+    assert(items.len() == 2, "Cart should contain exactly 2 line items");
+    assert(cart_service.total(token) == 10670, "CartService total should be 10670");
+    println("  [PASS] GET /cart -> 200 OK (accurate line subtotals 7470, 3200 and total 10670)");
+}
+
+// ----------------------------------------------------------------------------
+// Phase 6: Cart Quantity Updates & Item Removal
+// ----------------------------------------------------------------------------
+fn test_cart_quantity_updates_and_removal(app, cart_service, token: string) {
+    println("--- Testing Cart Quantity Updates & Item Removal ---");
+
+    // 1. POST /cart/update with product_id=1 and qty=5
+    // New subtotal: 5 * 2490 = 12450. Item 2: 3200. Total = 15650. Count = 5 + 1 = 6.
+    let res_upd = app.handle_request(map(
+        "method", "POST",
+        "path", "/cart/update",
+        "headers", map(
+            "content-type", "application/x-www-form-urlencoded",
+            "cookie", "spid3r_cart=" + token,
+            "x-requested-with", "XMLHttpRequest"
+        ),
+        "body", "product_id=1&qty=5"
+    ));
+    assert(res_upd["status"] == 200, "POST /cart/update should return HTTP 200");
+    let json_upd = json_parse(res_upd["body"]);
+    assert(json_upd["ok"] == true, "Update ok should be true");
+    assert(int(json_upd["cart_count"]) == 6, "Cart count should be 6 after update");
+    assert(int(json_upd["total"]) == 15650, "Order total should be 15650 after update");
+    assert(cart_service.total(token) == 15650, "CartService total should be 15650");
+    println("  [PASS] POST /cart/update (product_id=1, qty=5) -> line subtotal 12450, total 15650, cart_count 6");
+
+    // 2. POST /cart/remove with product_id=2
+    // Removed item 2. Remaining: item 1 (qty 5). Total = 12450. Count = 5.
+    let res_rem = app.handle_request(map(
+        "method", "POST",
+        "path", "/cart/remove",
+        "headers", map(
+            "content-type", "application/x-www-form-urlencoded",
+            "cookie", "spid3r_cart=" + token,
+            "x-requested-with", "XMLHttpRequest"
+        ),
+        "body", "product_id=2"
+    ));
+    assert(res_rem["status"] == 200, "POST /cart/remove should return HTTP 200");
+    let json_rem = json_parse(res_rem["body"]);
+    assert(json_rem["ok"] == true, "Remove ok should be true");
+    assert(int(json_rem["cart_count"]) == 5, "Cart count should be 5 after item removal");
+    assert(int(json_rem["total"]) == 12450, "Order total should be 12450 after item removal");
+    assert(cart_service.items(token).len() == 1, "Cart should have 1 item remaining");
+    assert(cart_service.total(token) == 12450, "CartService total should be 12450");
+    println("  [PASS] POST /cart/remove (product_id=2) -> item removed, recalculated total 12450, cart_count 5");
+
+    // Verify GET /cart reflects removal
+    let res_cart_after = app.handle_request(map(
+        "method", "GET",
+        "path", "/cart",
+        "headers", map(
+            "accept", "text/html",
+            "cookie", "spid3r_cart=" + token
+        ),
+        "body", ""
+    ));
+    assert(res_cart_after["status"] == 200, "GET /cart should return HTTP 200");
+    let body_after = string(res_cart_after["body"]);
+    assert(body_after.contains("Wireless Earbuds Pro"), "Cart should retain Wireless Earbuds Pro");
+    assert(not body_after.contains("Smart Watch Fit 2"), "Cart should no longer contain Smart Watch Fit 2");
+    assert(body_after.contains("12450"), "Cart should show recalculated total 12450");
+    println("  [PASS] GET /cart reflects item removal and recalculated total");
+}
+
+// ----------------------------------------------------------------------------
+// Phase 7: Direct GET Checkout Handling
+// ----------------------------------------------------------------------------
+fn test_direct_get_checkout(app) {
+    println("--- Testing Direct GET /checkout Handling ---");
+
+    let res_get_chk = app.handle_request(map(
+        "method", "GET",
+        "path", "/checkout",
+        "headers", map("accept", "text/html"),
+        "body", ""
+    ));
+    assert(res_get_chk["status"] == 302, "Direct GET /checkout should redirect with HTTP 302 (got " + string(res_get_chk["status"]) + ")");
+    assert(res_get_chk["headers"]["location"] == "/cart", "Direct GET /checkout should redirect to /cart");
+    println("  [PASS] GET /checkout -> 302 Redirect to /cart (eliminates 405 error)");
+}
+
+// ----------------------------------------------------------------------------
+// Phase 8: Checkout Validation & Error Re-rendering
+// ----------------------------------------------------------------------------
+fn test_checkout_validation(app, cart_service, token: string) {
+    println("--- Testing Checkout Validation ---");
+
+    // 1. Missing customer name
+    let res_no_name = app.handle_request(map(
+        "method", "POST",
+        "path", "/checkout",
+        "headers", map(
+            "content-type", "application/x-www-form-urlencoded",
+            "cookie", "spid3r_cart=" + token
+        ),
+        "body", "customer_name=&phone=01711223344&address=House+12+Road+5+Dhanmondi+Dhaka"
+    ));
+    assert(res_no_name["status"] == 200, "Validation failure should re-render cart with HTTP 200");
+    let body_no_name = string(res_no_name["body"]);
+    assert(body_no_name.contains("Wireless Earbuds Pro"), "Re-rendered cart must retain cart items");
+    assert(body_no_name.contains("customer_name") or body_no_name.contains("required") or body_no_name.contains("alert"),
+           "Validation failure should render error alert");
+    assert(cart_service.count(token) == 5, "Cart items must not be cleared on validation failure");
+    assert(DB.table("orders").where("phone", "=", "01711223344").first() == null, "No order should be created on validation failure");
+    println("  [PASS] POST /checkout (missing name) -> returns error alert, re-renders cart, retains items");
+
+    // 2. Missing phone
+    let res_no_phone = app.handle_request(map(
+        "method", "POST",
+        "path", "/checkout",
+        "headers", map(
+            "content-type", "application/x-www-form-urlencoded",
+            "cookie", "spid3r_cart=" + token
+        ),
+        "body", "customer_name=Rahim+Ahmed&phone=&address=House+12+Road+5+Dhanmondi+Dhaka"
+    ));
+    assert(res_no_phone["status"] == 200, "Validation failure should re-render cart with HTTP 200");
+    let body_no_phone = string(res_no_phone["body"]);
+    assert(body_no_phone.contains("phone") or body_no_phone.contains("required") or body_no_phone.contains("alert"),
+           "Validation failure should render phone error alert");
+    assert(cart_service.count(token) == 5, "Cart must remain intact");
+    println("  [PASS] POST /checkout (missing phone) -> returns error alert, retains cart");
+}
+
+// ----------------------------------------------------------------------------
+// Phase 9: Checkout Completion, Order Creation & Inventory Stock Decrement
+// ----------------------------------------------------------------------------
+fn test_checkout_completion_and_inventory(app, cart_service, token: string) {
+    println("--- Testing Checkout Completion & Inventory Stock Decrement ---");
+
+    let p1_before = Product.find(1);
+    assert(p1_before != null, "Product 1 should exist");
+    let init_stock = int(p1_before.get("stock"));
+    let init_sold = int(p1_before.get("sold"));
+
+    let test_phone = "01799887766";
+    let test_name = "Rahim Ahmed";
+    let test_addr = "House 12 Road 5 Dhanmondi Dhaka";
+
+    // Submit valid checkout
+    let res_chk = app.handle_request(map(
+        "method", "POST",
+        "path", "/checkout",
+        "headers", map(
+            "content-type", "application/x-www-form-urlencoded",
+            "cookie", "spid3r_cart=" + token
+        ),
+        "body", "customer_name=Rahim+Ahmed&phone=" + test_phone + "&address=House+12+Road+5+Dhanmondi+Dhaka"
+    ));
+    assert(res_chk["status"] == 200 or res_chk["status"] == 302, "Valid checkout should succeed (200 confirmation or 302)");
+    if res_chk["status"] == 200 {
+        let body_chk = string(res_chk["body"]);
+        assert(body_chk.contains("Order") or body_chk.contains("Rahim"), "Confirmation view should be rendered");
+    }
+    println("  [PASS] POST /checkout -> Order confirmation response received");
+
+    // 1. Verify Order in database
+    let order_row = DB.table("orders").where("phone", "=", test_phone).orderBy("id", "DESC").first();
+    assert(order_row != null, "Order must be created in orders table");
+    assert(order_row["customer_name"] == test_name, "Order customer_name should match");
+    assert(int(order_row["total"]) == 12450, "Order total should match cart total 12450 (got " + string(order_row["total"]) + ")");
+    assert(order_row["status"] == "pending", "Order status should be pending");
+    assert(string(order_row["items_json"]).contains("Wireless Earbuds Pro"), "Order items_json should contain purchased item");
+    println("  [PASS] Order verified in database (id=" + string(order_row["id"]) + ", total=12450, status=pending)");
+
+    // 2. Verify Product stock decremented and sold incremented
+    let p1_after = Product.find(1);
+    let expected_stock = init_stock - 5;
+    let expected_sold = init_sold + 5;
+    assert(int(p1_after.get("stock")) == expected_stock,
+           "Product 1 stock should decrement by 5: expected " + string(expected_stock) + ", got " + string(p1_after.get("stock")));
+    assert(int(p1_after.get("sold")) == expected_sold,
+           "Product 1 sold should increment by 5: expected " + string(expected_sold) + ", got " + string(p1_after.get("sold")));
+    println("  [PASS] Product inventory verified (stock " + string(init_stock) + " -> " + string(expected_stock) + ", sold " + string(init_sold) + " -> " + string(expected_sold) + ")");
+
+    // 3. Verify Cart is cleared
+    assert(cart_service.count(token) == 0, "Cart count should be 0 after successful checkout");
+    assert(cart_service.items(token).len() == 0, "Cart items should be empty after checkout");
+    assert(cart_service.total(token) == 0, "Cart total should be 0 after checkout");
+    println("  [PASS] Cart cleared in cache store");
+
+    // 4. Test checkout on empty cart redirects to /cart
+    let res_empty = app.handle_request(map(
+        "method", "POST",
+        "path", "/checkout",
+        "headers", map(
+            "content-type", "application/x-www-form-urlencoded",
+            "cookie", "spid3r_cart=" + token
+        ),
+        "body", "customer_name=Rahim+Ahmed&phone=" + test_phone + "&address=House+12+Road+5+Dhanmondi+Dhaka"
+    ));
+    assert(res_empty["status"] == 302 and res_empty["headers"]["location"] == "/cart",
+           "Empty cart checkout should redirect to /cart");
+    println("  [PASS] Empty cart checkout -> 302 Redirect to /cart");
+
+    // Clean up test order and restore product baseline
+    DB.table("orders").where("phone", "=", test_phone).delete();
+    p1_after.update(map("stock", init_stock, "sold", init_sold));
+    println("  [PASS] Test order cleaned and product inventory baseline restored");
+}
+
+fn main() -> int {
+    println("\n==================================================================");
+    println("       E-Commerce Shopping Experience Test Suite (Requirement R2) ");
+    println("==================================================================");
+
+    run_database_seeder();
+    let app = new Application();
+    register_web_routes();
+    let cart_service = new CartService();
+
+    test_catalog_browsing(app);
+    test_category_filtering(app);
+    test_product_detail_page(app);
+    let token = test_cart_additions_with_quantity(app, cart_service);
+    test_cart_view(app, cart_service, token);
+    test_cart_quantity_updates_and_removal(app, cart_service, token);
+    test_direct_get_checkout(app);
+    test_checkout_validation(app, cart_service, token);
+    test_checkout_completion_and_inventory(app, cart_service, token);
+
+    cart_service.clear(token);
+    DB.close();
+
+    println("==================================================================");
+    println("  [SUCCESS] All E-Commerce Requirement R2 Test Scenarios Passed!  ");
+    println("==================================================================\n");
+    return 0;
+}

@@ -99,8 +99,8 @@ fn test_interpolation() {
     assert(s5 == "SELECT * FROM t WHERE name = 'x''; DROP TABLE t;--'", "pg: placeholder value escaped");
 
     // WHERE with multiple conditions (QueryBuilder pattern)
-    let s6 = sql_interpolate("SELECT * FROM posts WHERE status = ? AND user_id = ? ORDER BY id DESC", ["published", 7], "mysql");
-    assert(s6 == "SELECT * FROM posts WHERE status = 'published' AND user_id = 7 ORDER BY id DESC", "mysql: multi-condition interpolation");
+    let s6 = sql_interpolate("SELECT * FROM orders WHERE status = ? AND user_id = ? ORDER BY id DESC", ["published", 7], "mysql");
+    assert(s6 == "SELECT * FROM orders WHERE status = 'published' AND user_id = 7 ORDER BY id DESC", "mysql: multi-condition interpolation");
 
     println("  [PASS] test_interpolation");
 }
@@ -291,7 +291,7 @@ fn test_bytes_rejected() {
 fn test_identifier_guardrail() {
     // Valid identifiers pass through
     assert(sql_check_identifier("users") == "users", "plain identifier ok");
-    assert(sql_check_identifier("posts.user_id") == "posts.user_id", "qualified identifier ok");
+    assert(sql_check_identifier("orders.user_id") == "orders.user_id", "qualified identifier ok");
     assert(sql_check_identifier("col_1") == "col_1", "underscore ok");
 
     // Injection-shaped identifiers throw

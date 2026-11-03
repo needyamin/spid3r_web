@@ -1,0 +1,89 @@
+// app/Support/CartService.matrix
+// Store cart state backed by the Cache facade.
+// The visitor holds a `spid3r_cart` cookie token; the cart contents live in
+// Cache under "cart:<token>" as a map of product_id -> qty.
+
+import "framework/Cache/Cache";
+import "framework/Response";
+import "framework/Database/DB";
+
+public class CartService {
+    fn new() {}
+
+    // Read the cart token from the request cookie ("" when absent)
+    public fn token(self, req) -> string {
+        let cookies = req.header("cookie", "");
+        for c in string(cookies).split(";") {
+            let pair = c.trim().split("=");
+            if pair[0] == "spid3r_cart" and pair.len() > 1 {
+                return pair[1].trim();
+            }
+        }
+        return "";
+    }
+
+    // Generate a fresh token and attach it to the response as a cookie
+    public fn issue_token(self, res) {
+        let token = "cart_" + hex_encode(random_bytes(12).unwrap());
+        res.cookie("spid3r_cart", token, "/", 604800); // 7 days
+        return token;
+    }
+
+    fn cache_key(self, token: string) -> string {
+        return "cart:" + token;
+    }
+
+    // Raw cart data: map of "<product_id>" -> qty
+    public fn data(self, token: string) {
+        if token == "" {
+            return map();
+        }
+        return Cache.get(self.cache_key(token), map());
+    }
+
+    public fn save(self, token: string, data) {
+        Cache.put(self.cache_key(token), data, 0); // never expires
+        return true;
+    }
+
+    public fn clear(self, token: string) {
+        Cache.forget(self.cache_key(token));
+        return true;
+    }
+
+    // Total number of units in the cart (for the navbar badge)
+    public fn count(self, token: string) -> int {
+        let total = 0;
+        let data = self.data(token);
+        for k in data.keys() {
+            total = total + int(data[k]);
+        }
+        return total;
+    }
+
+    // Detailed line items: [{ product: {...}, qty, subtotal }]
+    public fn items(self, token: string) {
+        let out = [];
+        let data = self.data(token);
+        for k in data.keys() {
+            let row = DB.table("products").where("id", "=", int(k)).first();
+            if row != null {
+                let qty = int(data[k]);
+                out.push(map(
+                    "product", row,
+                    "qty", qty,
+                    "subtotal", int(row["price"]) * qty
+                ));
+            }
+        }
+        return out;
+    }
+
+    public fn total(self, token: string) -> int {
+        let total = 0;
+        for item in self.items(token) {
+            total = total + int(item["subtotal"]);
+        }
+        return total;
+    }
+}

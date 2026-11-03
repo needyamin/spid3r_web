@@ -1,0 +1,93 @@
+@extends('layouts/store')
+
+@section('title', '{{ product.name }} - Spid3r Bazaar')
+
+@section('content')
+
+<div class="container py-4">
+
+  <nav aria-label="breadcrumb">
+    <ol class="breadcrumb small">
+      <li class="breadcrumb-item"><a href="/">Store</a></li>
+      <li class="breadcrumb-item"><a href="/?category={{ product.category }}">{{ product.category }}</a></li>
+      <li class="breadcrumb-item active">{{ product.name }}</li>
+    </ol>
+  </nav>
+
+  <div class="row g-4">
+    <!-- Product Image Preview: Stacks on top on mobile (<768px), 5 columns on desktop (>=768px) -->
+    <div class="col-md-5">
+      <div class="sz-thumb sz-thumb-lg d-flex align-items-center justify-content-center">
+        <span>{{ product.emoji }}</span>
+      </div>
+    </div>
+
+    <!-- Product Details: Stacks below image on mobile (<768px), 7 columns on desktop (>=768px) -->
+    <div class="col-md-7">
+      <h3 class="fw-bold">{{ product.name }}</h3>
+      <div class="sz-meta mb-2">★ {{ product.rating }} rating · {{ product.sold }} sold · {{ product.stock }} in stock</div>
+
+      <div class="sz-price-row mb-3">
+        <span class="sz-price sz-price-lg">৳{{ product.price }}</span>
+        {!! product.discount_html !!}
+      </div>
+
+      <!-- Add to Cart Form with Quantity Stepper and Touch Targets -->
+      <form method="POST" action="/cart/add" class="mb-4 js-cart-add">
+        <input type="hidden" name="product_id" value="{{ product.id }}">
+
+        <div class="d-flex align-items-center gap-3 mb-3">
+          <label for="detailQty" class="fw-semibold text-secondary small mb-0">Quantity:</label>
+          <div class="input-group sz-qty-stepper" style="max-width: 140px;">
+            <button class="btn btn-outline-secondary sz-btn-touch" type="button" onclick="let q=this.nextElementSibling; if(q.stepDown) q.stepDown(); else if(q.value>1) q.value--;" aria-label="Decrease quantity" style="min-width: 44px; min-height: 44px;">−</button>
+            <input id="detailQty" class="form-control text-center sz-qty-input" type="number" name="qty" min="1" max="{{ product.stock }}" value="1" style="min-height: 44px;">
+            <button class="btn btn-outline-secondary sz-btn-touch" type="button" onclick="let q=this.previousElementSibling; if(q.stepUp) q.stepUp(); else q.value++;" aria-label="Increase quantity" style="min-width: 44px; min-height: 44px;">+</button>
+          </div>
+          <span class="small text-muted">({{ product.stock }} available)</span>
+        </div>
+
+        <div class="d-grid d-sm-flex gap-2">
+          <button class="btn sz-add-btn sz-btn-lg px-4" type="submit" style="min-height: 44px;">🛒 Add to Cart</button>
+          <a class="btn btn-outline-secondary sz-btn-lg d-flex align-items-center justify-content-center" href="/" style="min-height: 44px;">Continue shopping</a>
+        </div>
+      </form>
+
+      <div class="card sz-desc-card">
+        <div class="card-body">
+          <h6 class="fw-bold mb-2">Description</h6>
+          <p class="mb-0 text-secondary">{{ product.description }}</p>
+        </div>
+      </div>
+
+      <div class="small text-muted mt-3">
+        🚚 Free delivery inside Dhaka · 💵 Cash on Delivery · ↩️ 7-day return
+      </div>
+    </div>
+  </div>
+
+  @if(related)
+  <h5 class="fw-bold mt-5 mb-3">You may also like</h5>
+  <div class="row g-3">
+    @foreach(rp in related)
+      <div class="col-6 col-md-4 col-lg-3">
+        <div class="card h-100 sz-card">
+          <a href="/product/{{ rp.id }}" class="sz-thumb"><span>{{ rp.emoji }}</span></a>
+          <div class="card-body p-2 d-flex flex-column">
+            <a class="sz-name" href="/product/{{ rp.id }}">{{ rp.name }}</a>
+            <div class="sz-price-row mt-1">
+              <span class="sz-price">৳{{ rp.price }}</span>
+              {!! rp.discount_html !!}
+            </div>
+            <form method="POST" action="/cart/add" class="mt-auto pt-2 js-cart-add">
+              <input type="hidden" name="product_id" value="{{ rp.id }}">
+              <button class="btn btn-sm w-100 sz-add-btn sz-btn-touch" type="submit">+ Add to Cart</button>
+            </form>
+          </div>
+        </div>
+      </div>
+    @endforeach
+  </div>
+  @endif
+
+</div>
+@endsection

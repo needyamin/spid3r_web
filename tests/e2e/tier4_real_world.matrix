@@ -11,10 +11,11 @@ import "framework/Auth/Hash";
 import "framework/Database/DB";
 import "framework/View/BD";
 import "framework/Console/ConsoleKernel";
+import "framework/Middleware";
 import "routes/web";
 import "routes/api";
 import "app/Models/User";
-import "app/Models/Post";
+import "app/Models/Product";
 
 fn unique_suffix() -> string {
     return string(unix_ms()) + "_" + string(random_int(1000, 9999));
@@ -119,63 +120,57 @@ fn main() {
     });
 
     // ------------------------------------------------------------------------
-    // Scenario 2: Article Publishing, Editing & Detail Rendering
+    // Scenario 2: Product Catalog Browsing, Detail Rendering & Search Flow
     // ------------------------------------------------------------------------
-    runner.test("Scenario 2: Article Publishing, Editing & Detail Rendering", fn() {
+    runner.test("Scenario 2: Product Catalog Browsing, Detail Rendering & Search Flow", fn() {
         let app = new Application();
         let suffix = unique_suffix();
-        let author_email = "editor_" + suffix + "@example.com";
 
-        // Setup author user
-        let user = UserModel.create(map(
-            "name", "Article Editor",
-            "email", author_email,
-            "password", Hash.make("secret")
+        // Step 1: Create Store Product
+        let prod_name = "Premium Wireless Headphones " + suffix;
+        let prod_slug = "wireless-headphones-" + suffix;
+        let product = ProductModel.create(map(
+            "name", prod_name,
+            "slug", prod_slug,
+            "description", "High-fidelity wireless sound with active noise cancelling.",
+            "category", "Audio",
+            "emoji", "🎧",
+            "price", 199.99,
+            "old_price", 249.99,
+            "stock", 50,
+            "sold", 15,
+            "rating", 4.8
         ));
-        let uid = int(user.get("id"));
+        let pid = int(product.get("id"));
+        test_assert(pid > 0, "Product should be persisted with positive ID");
 
-        // Step 1: Create Article
-        let post_title = "Building Fast Web Systems with Spid3r " + suffix;
-        let post_slug = "fast-web-" + suffix;
-        let post_content = "Spid3r combines simplicity and performance for modern web stacks.";
-        let post = PostModel.create(map(
-            "title", post_title,
-            "slug", post_slug,
-            "content", post_content,
-            "category", "Architecture",
-            "user_id", uid,
-            "status", "published",
-            "views_count", 150
-        ));
-        let pid = int(post.get("id"));
-        test_assert(pid > 0, "Post should be persisted with positive ID");
+        // Step 2: GET / -> Catalog index lists the storefront
+        let res_list = app.handle_request(make_request("GET", "/", map("accept", "text/html")));
+        test_assert_eq(res_list["status"], 200, "GET / should return 200 OK");
+        test_assert_contains(res_list["body"], "Spid3r Bazaar", "Storefront home should contain Spid3r Bazaar");
 
-        // Step 2: GET /posts -> Index lists the article
-        let res_list = app.handle_request(make_request("GET", "/posts", map("accept", "text/html")));
-        test_assert_eq(res_list["status"], 200, "GET /posts should return 200 OK");
-        test_assert_contains(res_list["body"], "Articles", "Page should contain Articles heading");
+        // Step 3: GET /product/:id -> Product detail page
+        let res_detail = app.handle_request(make_request("GET", "/product/" + string(pid), map("accept", "text/html")));
+        test_assert_eq(res_detail["status"], 200, "GET /product/:id should return 200 OK");
+        test_assert_contains(res_detail["body"], prod_name, "Detail page should contain product name");
+        test_assert_contains(res_detail["body"], "199.99", "Detail page should contain product price");
 
-        // Step 3: GET /posts/:id -> Article detail page
-        let res_detail = app.handle_request(make_request("GET", "/posts/" + string(pid), map("accept", "text/html")));
-        test_assert_eq(res_detail["status"], 200, "GET /posts/:id should return 200 OK");
-        test_assert_contains(res_detail["body"], "Articles", "Detail page breadcrumbs should contain Articles");
+        // Step 4: Update Product attributes
+        let updated_name = "Updated: " + prod_name;
+        product.update(map("name", updated_name, "stock", 45));
 
-        // Step 4: Update Post attributes
-        let updated_title = "Updated: " + post_title;
-        post.update(map("title", updated_title, "views_count", 250));
+        let reloaded = ProductModel.find(pid);
+        test_assert_eq(reloaded.get("name"), updated_name, "Product name should be updated in DB");
+        test_assert_eq(int(reloaded.get("stock")), 45, "Product stock should be updated in DB");
 
-        let reloaded = PostModel.find(pid);
-        test_assert_eq(reloaded.get("title"), updated_title, "Post title should be updated in DB");
-
-        // Step 5: Relationship resolution
-        let author = post.author();
-        test_assert_not_null(author, "Post author relationship must resolve");
-        test_assert_eq(author["name"], "Article Editor", "Author name must match user name");
+        // Step 5: Lookup by slug
+        let by_slug = ProductModel.findBySlug(prod_slug);
+        test_assert_not_null(by_slug, "Product should be found by slug");
+        test_assert_eq(by_slug.get("name"), updated_name, "Slug lookup should return updated product");
 
         // Teardown
-        post.delete();
-        user.delete();
-        test_assert_null(PostModel.find(pid), "Post should be removed from database");
+        product.delete();
+        test_assert_null(ProductModel.find(pid), "Product should be removed from database");
     });
 
     // ------------------------------------------------------------------------
@@ -211,20 +206,6 @@ fn main() {
             "body", bad_reg_body
         ));
         test_assert_eq(res_bad_reg["status"], 422, "Invalid registration must return 422 Unprocessable");
-
-        // Step 4: POST /api/v1/posts without auth token -> 401 Unauthorized
-        let res_unauth_post = app.handle_request(map(
-            "method", "POST",
-            "path", "/api/v1/posts",
-            "headers", map("content-type", "application/json"),
-            "body", "{\"title\":\"Unauthorized Post\"}"
-        ));
-        test_assert_eq(res_unauth_post["status"], 401, "Protected POST /api/v1/posts requires auth");
-
-        // Step 5: GET /api/v1/posts -> Public posts list
-        let res_posts = app.handle_request(make_request("GET", "/api/v1/posts", map("accept", "application/json")));
-        test_assert_eq(res_posts["status"], 200, "GET /api/v1/posts should return 200 OK");
-        test_assert_contains(res_posts["body"], "data", "Posts list must contain data key");
     });
 
     // ------------------------------------------------------------------------
@@ -242,9 +223,10 @@ fn main() {
 
         // Defense 2: Tampered / invalid session cookie
         Auth.clear();
-        let raw_tamper = make_request("GET", "/posts/create", map("cookie", "spid3r_session=sess_forged_tampered_token_9999"));
-        let res_tamper = app.handle_request(raw_tamper);
-        test_assert_eq(res_tamper["status"], 302, "Request with forged cookie should be redirected to login");
+        let auth_mw = new AuthMiddleware();
+        let raw_tamper = make_request("GET", "/checkout/confirm", map("cookie", "spid3r_session=sess_forged_tampered_token_9999"));
+        let res_tamper = auth_mw.handle(new Request(raw_tamper));
+        test_assert_eq(res_tamper.status_code, 302, "Request with forged cookie should be redirected to login");
         test_assert(not Auth.check(), "Forged session token must not authenticate user");
 
         // Defense 3: Method mismatch handling

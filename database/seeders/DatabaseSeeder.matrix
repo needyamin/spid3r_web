@@ -18,45 +18,39 @@ public fn run_database_seeder() {
         println("  -> Seeded demo user: ada@example.com (Password: secret123)");
     }
 
-    // 2. Seed initial posts
-    let posts_count = DB.table("posts").count();
-    if posts_count == 0 {
+    // 2. Seed store products (Daraz-style demo catalog)
+    let products_count = DB.table("products").count();
+    if products_count == 0 {
         let now = string(unix_time());
-        DB.table("posts").insert(map(
-            "title", "Welcome to Spid3rWeb: The Modern Full-Stack Framework for Spid3r",
-            "slug", "welcome-to-spid3rweb",
-            "content", "Spid3rWeb brings elegant syntax and developer productivity directly to the Spid3r language. Features include an Active Record ORM, fluent migrations, SpiderBD template compiler, and Magic CLI tooling.",
-            "category", "Announcements",
-            "user_id", 1,
-            "status", "published",
-            "views_count", 42,
-            "created_at", now,
-            "updated_at", now
-        ));
+        let catalog = [
+            ["Wireless Earbuds Pro", "wireless-earbuds-pro", "Bluetooth 5.3 earbuds with noise cancellation, 30-hour battery life and charging case.", 2490, 3500, "Electronics", "🎧", 42, 156, 4.6],
+            ["Smart Watch Fit 2", "smart-watch-fit-2", "1.85 inch HD display, heart-rate and SpO2 monitoring, 100+ sport modes, IP68 water resistance.", 3200, 4500, "Electronics", "⌚", 30, 98, 4.4],
+            ["Power Bank 20000mAh", "power-bank-20000mah", "Fast-charging 22.5W dual-output power bank with LED display and triple ports.", 1850, null, "Electronics", "🔋", 55, 210, 4.7],
+            ["Cotton Casual T-Shirt", "cotton-casual-tshirt", "100% combed cotton half-sleeve t-shirt. Breathable, pre-shrunk, available in 6 colors.", 690, 990, "Fashion", "👕", 120, 340, 4.3],
+            ["Slim Fit Denim Jeans", "slim-fit-denim-jeans", "Stretchable slim-fit denim with reinforced stitching and zip fly.", 1450, 1990, "Fashion", "👖", 65, 87, 4.2],
+            ["Running Shoes AirLite", "running-shoes-airlite", "Lightweight mesh running shoes with cushioned EVA sole and anti-slip grip.", 2290, 3200, "Fashion", "👟", 48, 132, 4.5],
+            ["Non-Stick Cookware Set", "non-stick-cookware-set", "5-piece granite-coated cookware set with glass lids. Induction and gas compatible.", 3850, 5200, "Home & Kitchen", "🍳", 25, 64, 4.6],
+            ["LED Desk Lamp", "led-desk-lamp", "Rechargeable touch-control LED lamp with 3 light modes and foldable arm.", 1250, null, "Home & Kitchen", "💡", 80, 156, 4.4],
+            ["Vitamin C Face Serum", "vitamin-c-face-serum", "20% Vitamin C brightening serum with hyaluronic acid. 30ml, dermatologist tested.", 890, 1290, "Beauty", "🧴", 90, 275, 4.5],
+            ["Backpack 25L Waterproof", "backpack-25l-waterproof", "Water-resistant 25L laptop backpack with USB charging port and anti-theft pocket.", 1690, 2400, "Bags", "🎒", 70, 198, 4.5]
+        ];
 
-        DB.table("posts").insert(map(
-            "title", "Building High-Throughput REST APIs with Spid3r",
-            "slug", "high-throughput-rest-apis",
-            "content", "Thanks to Spid3r's native HTTP engine, route pipeline, and zero runtime dependencies, API responses achieve sub-millisecond latencies across Windows, Linux, and WebAssembly.",
-            "category", "Performance",
-            "user_id", 1,
-            "status", "published",
-            "views_count", 18,
-            "created_at", now,
-            "updated_at", now
-        ));
-
-        DB.table("posts").insert(map(
-            "title", "Database Migrations and the Active Record Pattern",
-            "slug", "migrations-and-active-record",
-            "content", "With Spid3rWeb's Schema builder and QueryBuilder, creating tables, managing transactions, and querying rows is declarative and type-safe.",
-            "category", "Tutorials",
-            "user_id", 1,
-            "status", "published",
-            "views_count", 29,
-            "created_at", now,
-            "updated_at", now
-        ));
-        println("  -> Seeded 3 baseline blog posts.");
+        for item in catalog {
+            DB.table("products").insert(map(
+                "name", item[0],
+                "slug", item[1],
+                "description", item[2],
+                "price", item[3],
+                "old_price", item[4],
+                "category", item[5],
+                "emoji", item[6],
+                "stock", item[7],
+                "sold", item[8],
+                "rating", item[9],
+                "created_at", now,
+                "updated_at", now
+            ));
+        }
+        println("  -> Seeded 10 store products.");
     }
 }

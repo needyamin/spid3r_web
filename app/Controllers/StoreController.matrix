@@ -1,0 +1,95 @@
+// app/Controllers/StoreController.matrix
+// Storefront: product grid, search, category filter, product detail
+
+import "framework/Response";
+import "framework/View/BD";
+import "framework/Database/DB";
+import "app/Models/Product";
+import "app/Support/CartService";
+
+public class StoreController {
+    fn new() {}
+
+    // Decorate raw product rows with display fields the templates can output
+    // directly (keeps template logic minimal).
+    fn decorate(self, rows) {
+        let out = [];
+        for row in rows {
+            let d = map();
+            for k in row.keys() {
+                d[k] = row[k];
+            }
+            let price = int(row["price"]);
+            let old = row["old_price"];
+            let discount_html = "";
+            if old != null and int(old) > price {
+                let pct = (100 * (int(old) - price)) / price;
+                discount_html = "<span class='old-price'>৳" + string(old) + "</span>"
+                    + "<span class='discount-badge'>-" + string(pct) + "%</span>";
+            }
+            d["discount_html"] = discount_html;
+            out.push(d);
+        }
+        return out;
+    }
+
+    // GET /store  (optional ?search= & ?category=)
+    public fn index(self, req) {
+        let cart = new CartService();
+        let cart_count = cart.count(cart.token(req));
+
+        let search = req.query("search", "");
+        let category = req.query("category", "");
+
+        let q = DB.table("products");
+        if search != "" {
+            let like = "%" + search + "%";
+            q.where("name", "LIKE", like).orWhere("description", "LIKE", like);
+        }
+        if category != "" {
+            q.where("category", "=", category);
+        }
+        let rows = q.orderBy("sold", "DESC").get();
+
+        let cat_rows = DB.select("SELECT DISTINCT category FROM products ORDER BY category");
+        let categories = [];
+        for r in cat_rows {
+            categories.push(r["category"]);
+        }
+
+        return view("store.index", map(
+            "title", "Spid3r Bazaar - Online Shopping",
+            "products", self.decorate(rows),
+            "categories", categories,
+            "active_category", category,
+            "search_term", search,
+            "cart_count", cart_count
+        ));
+    }
+
+    // GET /product/:id
+    public fn show(self, req) {
+        let cart = new CartService();
+        let cart_count = cart.count(cart.token(req));
+
+        let product_id = req.int("id", 0);
+        let product = Product.find(product_id);
+        if product == null {
+            return redirect("/");
+        }
+
+        // Related products from the same category
+        let related_rows = DB.table("products")
+            .where("category", "=", product.get("category"))
+            .where("id", "!=", product.get("id"))
+            .limit(4)
+            .get();
+
+        return view("store.show", map(
+            "title", product.get("name") + " - Spid3r Bazaar",
+            "product", self.decorate([product.to_map()])[0],
+            "related", self.decorate(related_rows),
+            "cart_count", cart_count
+        ));
+    }
+}

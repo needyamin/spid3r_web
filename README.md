@@ -13,6 +13,7 @@ A full-stack web framework for the [Spid3r programming language](https://github.
 - **Expressive router** — static & parameterized routes (`:id`), groups, middleware, 405 handling
 - **Middleware pipeline** — CORS, logging, auth guards, custom error pages
 - **Built-in auth** — bcrypt hashing, CSPRNG session tokens (cookie or Bearer)
+- **Caching system** — expressive `Cache` facade with memory, file, and database drivers: `Cache.remember(key, ttl, fn)`
 - **Magic CLI** — migrations, seeding, scaffolding, route listing, test runner
 
 ## Quick Start
@@ -26,7 +27,7 @@ spid3r magic db:seed
 spid3r magic serve
 ```
 
-Open **http://localhost:8000** — demo login: `ada@example.com` / `secret123`.
+Open **http://localhost:8000** — the Spid3r Bazaar storefront loads here. Demo data includes a product catalog and the demo user `ada@example.com` / `secret123`.
 
 ### Using PostgreSQL / MySQL / MariaDB
 

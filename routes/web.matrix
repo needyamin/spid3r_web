@@ -1,27 +1,31 @@
 // routes/web.matrix
 // Spid3rWeb Web Application Route Registrations
+// Storefront-first: the e-commerce store lives at "/".
 
 import "framework/Router";
-import "app/Controllers/HomeController";
+import "framework/Response";
 import "app/Controllers/AuthController";
-import "app/Controllers/PostController";
+import "app/Controllers/StoreController";
+import "app/Controllers/CartController";
 
-let home_ctrl = new HomeController();
 let auth_ctrl = new AuthController();
-let post_ctrl = new PostController();
+let store_ctrl = new StoreController();
+let cart_ctrl = new CartController();
 
 public fn register_web_routes() {
-    // Landing & Feed
-    Route.get("/", fn(req) { return home_ctrl.index(req); }).name("home");
+    // Store (e-commerce) — the homepage IS the store
+    Route.get("/", fn(req) { return store_ctrl.index(req); }).name("home");
+    Route.get("/store", fn(req) { return store_ctrl.index(req); }).name("store.catalog");
+    Route.get("/products", fn(req) { return store_ctrl.index(req); }).name("products.catalog");
+    Route.get("/product/:id", fn(req) { return store_ctrl.show(req); }).name("store.show");
 
-    // Articles & Publishing
-    Route.get("/posts", fn(req) { return post_ctrl.index(req); }).name("posts.index");
-    Route.get("/posts/create", fn(req) { return post_ctrl.create(req); }).middleware("auth").name("posts.create");
-    Route.post("/posts", fn(req) { return post_ctrl.store(req); }).middleware("auth").name("posts.store");
-    Route.get("/posts/:id", fn(req) { return post_ctrl.show(req); }).name("posts.show");
-    Route.get("/posts/:id/edit", fn(req) { return post_ctrl.edit(req); }).middleware("auth").name("posts.edit");
-    Route.post("/posts/:id/update", fn(req) { return post_ctrl.update(req); }).middleware("auth").name("posts.update");
-    Route.post("/posts/:id/delete", fn(req) { return post_ctrl.destroy(req); }).middleware("auth").name("posts.destroy");
+    // Cart & Checkout (AJAX-friendly: JSON for XMLHttpRequest, redirect otherwise)
+    Route.post("/cart/add", fn(req) { return cart_ctrl.add(req); }).name("cart.add");
+    Route.get("/cart", fn(req) { return cart_ctrl.index(req); }).name("cart.index");
+    Route.post("/cart/update", fn(req) { return cart_ctrl.update(req); }).name("cart.update");
+    Route.post("/cart/remove", fn(req) { return cart_ctrl.remove(req); }).name("cart.remove");
+    Route.get("/checkout", fn(req) { return redirect("/cart"); }).name("cart.checkout.redirect");
+    Route.post("/checkout", fn(req) { return cart_ctrl.checkout(req); }).name("cart.checkout");
 
     // User Authentication
     Route.get("/login", fn(req) { return auth_ctrl.showLogin(req); }).name("login");

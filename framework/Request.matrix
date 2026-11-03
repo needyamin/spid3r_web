@@ -142,7 +142,7 @@ public class Request {
             }
         }
 
-        // Parse query string if present in path (e.g., /posts?page=2&sort=desc)
+        // Parse query string if present in path (e.g., /products?page=2&sort=desc)
         if self.path.contains("?") {
             let parts = self.path.split("?");
             self.path = parts[0];
@@ -173,6 +173,12 @@ public class Request {
                 }
                 if ct.contains("application/x-www-form-urlencoded") or (ct == "" and self.body.contains("=")) {
                     self.parse_form_encoded(self.body);
+                } elif ct.contains("multipart/form-data") {
+                    // Browser forms with FormData send multipart bodies.
+                    // Pass the ORIGINAL-case header: the boundary value is
+                    // case-sensitive and must match the body exactly.
+                    let ct_raw = string(self.headers["content-type"]);
+                    self.parse_multipart(self.body, ct_raw);
                 }
             }
         }
@@ -224,6 +230,70 @@ public class Request {
                     let k = url_decode(p_trim);
                     self.data[k] = "";
                 }
+            }
+        }
+    }
+
+    // Parse a multipart/form-data body (what browser FormData sends).
+    // Text fields only — file upload parts (filename=...) are skipped.
+    fn parse_multipart(self, body_text: string, content_type: string) {
+        let b_idx = content_type.index_of("boundary=");
+        if b_idx < 0 {
+            return;
+        }
+        let boundary = content_type.slice(b_idx + 9, content_type.len()).trim();
+        if boundary.starts_with("\"") and boundary.ends_with("\"") {
+            boundary = boundary.slice(1, boundary.len() - 1);
+        }
+        let delim = "--" + boundary;
+
+        let chunks = body_text.split(delim);
+        for chunk in chunks {
+            let c = chunk;
+            if c.starts_with("\r\n") {
+                c = c.slice(2, c.len());
+            } elif c.starts_with("\n") {
+                c = c.slice(1, c.len());
+            }
+            if c.len() == 0 or c == "--" {
+                continue;
+            }
+
+            // Split part into headers and value
+            let sep = c.index_of("\r\n\r\n");
+            let header_len = 4;
+            if sep < 0 {
+                sep = c.index_of("\n\n");
+                header_len = 2;
+                if sep < 0 {
+                    continue;
+                }
+            }
+            let part_headers = c.slice(0, sep).lower();
+            let value = c.slice(sep + header_len, c.len());
+
+            // Strip the trailing newline that preceded the boundary
+            while value.ends_with("\n") or value.ends_with("\r") {
+                value = value.slice(0, value.len() - 1);
+            }
+
+            // Skip file uploads (binary content is not supported here)
+            if part_headers.contains("filename=") {
+                continue;
+            }
+
+            let n_idx = part_headers.index_of("name=\"");
+            if n_idx < 0 {
+                continue;
+            }
+            let rest = part_headers.slice(n_idx + 6, part_headers.len());
+            let end_q = rest.index_of("\"");
+            if end_q < 0 {
+                continue;
+            }
+            let field = rest.slice(0, end_q);
+            if field != "" {
+                self.data[field] = value;
             }
         }
     }

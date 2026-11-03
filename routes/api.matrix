@@ -4,10 +4,8 @@
 import "framework/Router";
 import "framework/Response";
 import "app/Controllers/AuthController";
-import "app/Controllers/PostController";
 
 let api_auth = new AuthController();
-let api_posts = new PostController();
 
 public fn register_api_routes() {
     Route.group(map("prefix", "/api/v1"), fn() {
@@ -23,11 +21,5 @@ public fn register_api_routes() {
 
         Route.post("/login", fn(req) { return api_auth.login(req); });
         Route.post("/register", fn(req) { return api_auth.register(req); });
-
-        Route.get("/posts", fn(req) { return api_posts.apiIndex(req); });
-        Route.get("/posts/:id", fn(req) { return api_posts.apiShow(req); });
-
-        // Authenticated API
-        Route.post("/posts", fn(req) { return api_posts.apiStore(req); }).middleware("auth");
     });
 }
