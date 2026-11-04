@@ -206,14 +206,15 @@ public class SchemaBuilder {
 
     // ALTER TABLE helper: add new columns to an existing table.
     // Emits one ALTER TABLE ... ADD COLUMN per column in the blueprint.
-    // Duplicate-column errors are tolerated so the call is idempotent.
+    // Note: Column.to_sql() already renders "name TYPE", so no extra
+    // name prefix here. Duplicate-column errors are tolerated so the
+    // call is idempotent.
     public fn table(self, table_name: string, callback) {
         let blueprint = new Blueprint();
         callback(blueprint);
         let safe_name = self.check_identifier(table_name);
         for col in blueprint.columns {
             let sql = "ALTER TABLE " + safe_name + " ADD COLUMN "
-                + self.check_identifier(col.name) + " "
                 + col.to_sql(self.dialect()) + ";";
             try {
                 DB.statement(sql);
