@@ -52,6 +52,7 @@ jobs:
     name: Tests (${{ matrix.engine }})
     runs-on: ubuntu-24.04
     needs: lint
+    timeout-minutes: 45
     strategy:
       fail-fast: false
       matrix:
@@ -95,11 +96,31 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v5
 
+      - name: Cache cargo (speeds up the source-build fallback)
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+          key: cargo-spid3r-${{ runner.os }}-${{ github.run_id }}
+          restore-keys: cargo-spid3r-${{ runner.os }}-
+
+      # Prefer the prebuilt release tarball; fall back to a core-only
+      # source build (needs just cargo + cc, both preinstalled) while the
+      # spid3r release only ships the Windows installer. Both paths
+      # install into ~/.spid3r/bin.
       - name: Install Spid3r toolchain
         run: |
-          sh -c "$(curl -fsSL https://raw.githubusercontent.com/needyamin/spid3r/main/install.sh)"
+          if ! curl -fsSL https://raw.githubusercontent.com/needyamin/spid3r/main/install.sh | sh -s -- --no-modify-path; then
+            echo "Prebuilt install unavailable — building spid3r from source (core only)..."
+            curl -fsSL https://raw.githubusercontent.com/needyamin/spid3r/main/install.sh | sh -s -- --source --core --no-modify-path
+          fi
           echo "$HOME/.spid3r/bin" >> "$GITHUB_PATH"
-          echo "Installed: $(spid3r --version)"
+
+      # NOTE: GITHUB_PATH only affects LATER steps — do not call spid3r in
+      # the install step itself.
+      - name: Toolchain version
+        run: spid3r --version
 
       - name: Prepare project (.env from example + engine connection)
         env:
