@@ -252,6 +252,11 @@
     <a href="#security">Security Hardening</a>
   </div>
   <div class="group">
+    <div class="group-title">Deployment</div>
+    <a href="#docker">Docker</a>
+    <a href="#ci">Continuous Integration</a>
+  </div>
+  <div class="group">
     <div class="group-title">Quality</div>
     <a href="#testing">Testing</a>
     <a href="#recipes">Common Recipes</a>
@@ -276,9 +281,11 @@
     <div class="card"><div class="c-icon">🧅</div><h4>Middleware Pipeline</h4><p>Onion-architecture pipeline, global CORS &amp; logging, session auth guards, role gates, cache-backed rate limiting (<code>throttle</code>), custom 404/500 error pages.</p></div>
     <div class="card"><div class="c-icon">🔐</div><h4>Built-in Auth</h4><p>Native bcrypt hashing, CSPRNG session tokens (<code>sess_…</code>), cookie or Bearer-token sessions.</p></div>
     <div class="card"><div class="c-icon">⚡</div><h4>Multi-Engine Database</h4><p><strong>SQLite</strong>, <strong>PostgreSQL</strong>, <strong>MySQL</strong>, and <strong>MariaDB</strong> behind one API — selected via <code>SPID3R_DB_DRIVER</code> with dialect-aware DDL and last-id handling.</p></div>
-    <div class="card"><div class="c-icon">✨</div><h4>Fresh-Install Welcome Page</h4><p>A clean installation serves a single welcome page at <code>/</code> — your app layer (<code>app/</code>, views, routes) starts empty and ready to build on.</p></div>
+    <div class="card"><div class="c-icon">✨</div><h4>Fresh-Install Welcome Page</h4><p>A clean installation serves a welcome page at <code>/</code> plus a raw runtime dump at <code>/info</code> (the language builtin <code>spid3rinfo()</code>) — your app layer (<code>app/</code>, views, routes) starts empty and ready to build on.</p></div>
     <div class="card"><div class="c-icon">🔍</div><h4>SEO-Friendly URLs</h4><p>Descriptive, crawlable routes (<code>/product/{slug}</code> style), <code>/sitemap.xml</code> + <code>/robots.txt</code> support, and per-page <code>&lt;meta name="description"&gt;</code> are conventions your app can follow from day one.</p></div>
     <div class="card"><div class="c-icon">🪄</div><h4>Magic CLI</h4><p><code>spid3r magic serve / migrate / make:*</code> — scaffolding, migrations, route inspection, test runner.</p></div>
+    <div class="card"><div class="c-icon">🐳</div><h4>Docker Ready</h4><p>Multi-stage <code>Dockerfile</code> (toolchain compiled from source) + <code>docker compose</code> stack with MySQL 8.0 and PostgreSQL 16 — migrations run automatically on boot.</p></div>
+    <div class="card"><div class="c-icon">🤖</div><h4>Continuous Integration</h4><p>GitHub Actions: shellcheck + actionlint lint job, then the full test matrix on SQLite, MySQL 8.0 and PostgreSQL 16 service containers — no secrets required.</p></div>
   </div>
 </section>
 
@@ -299,7 +306,7 @@
     <tr><td><strong>Cache</strong></td><td>Cache facade</td><td>Memory / file (<code>storage/framework/cache</code>) / database drivers behind one API; powers login rate-limiting and app-level caching</td></tr>
     <tr><td><strong>Core systems</strong></td><td>Config · Log · Storage · Mail · Queue</td><td>Dot-notation config repository over <code>config/*.matrix</code>; leveled file logging (<code>storage/logs/</code>); local storage disks with traversal guards; mail with a log driver; database-backed job queue (<code>magic queue:work</code>) — see <a href="#core-systems">Core Systems</a></td></tr>
     <tr><td><strong>CLI tooling</strong></td><td>Magic (<code>ConsoleKernel</code>)</td><td>serve · migrate/rollback/status · db:seed · queue:work · make:controller/model/migration · route:list · test — migrations auto-discovered from <code>database/migrations/</code></td></tr>
-    <tr><td><strong>Testing</strong></td><td>In-language suites</td><td>9 framework suites (router, validator, query builder, drivers, HTTP lifecycle, cache, throttle, core systems, multi-DB live) — 9/9 green on SQLite, MySQL 8.0, MariaDB 11 and PostgreSQL 16; <code>magic test</code> runs everything with a recursion guard</td></tr>
+    <tr><td><strong>Testing</strong></td><td>In-language suites</td><td>10 framework suites (router, validator, query builder, drivers, HTTP lifecycle, cache, throttle, core systems, multi-DB live, live systems) — 10/10 green on SQLite, MySQL 8.0, MariaDB 11 and PostgreSQL 16; <code>magic test</code> runs everything with a recursion guard</td></tr>
     <tr><td><strong>Config &amp; env</strong></td><td><code>.env</code> + <code>spider.toml</code></td><td><code>Env.matrix</code> loads <code>.env</code> (OS env wins); <code>spider.toml</code> is the package manifest (entry file, metadata)</td></tr>
   </table>
 
@@ -411,14 +418,18 @@
 ├── <span class="d">resources/views/</span>              <span class="n"># SpiderBD templates (.bd.html)</span>
 │   └── welcome.bd.html           <span class="n"># The page served at "/" on a fresh install</span>
 ├── <span class="d">routes/</span>
-│   ├── web.matrix                <span class="n"># Frontend routes — GET / → welcome page</span>
+│   ├── web.matrix                <span class="n"># Frontend routes — GET / → welcome · GET /info → raw spid3rinfo() dump</span>
 │   ├── api.matrix                <span class="n"># JSON REST routes (empty registrar)</span>
 │   └── queue.matrix              <span class="n"># Queue job handler registrations</span>
 ├── <span class="d">storage/</span>                      <span class="n"># Runtime artifacts (not web-served)</span>
 │   ├── <span class="d">backups/</span>                  <span class="n"># pre-strip snapshots (zip)</span>
 │   └── <span class="d">logs/</span>                     <span class="n"># app-*.log, mail-*.log, queue-*.log</span>
-├── <span class="d">tests/</span>                        <span class="n"># 9 framework suites (see Testing)</span>
+├── <span class="d">tests/</span>                        <span class="n"># 10 framework suites (see Testing)</span>
+├── <span class="d">.github/workflows/</span>            <span class="n"># CI: ci.yml — lint job + SQLite/MySQL/PostgreSQL test matrix</span>
 ├── .env.example                  <span class="n"># Every documented env var, commented</span>
+├── .dockerignore                 <span class="n"># Keeps .git/storage/.env out of the Docker build context</span>
+├── Dockerfile                    <span class="n"># Multi-stage image: toolchain compiled from source, slim runtime</span>
+├── docker-compose.yml            <span class="n"># App + MySQL 8.0 + PostgreSQL 16 (healthchecked, volume-backed)</span>
 ├── install.sh                    <span class="n"># One-click installer (language + project)</span>
 ├── magic                         <span class="n"># Magic CLI entrypoint (no extension)</span>
 ├── server.matrix                 <span class="n"># HTTP server entrypoint</span>
@@ -441,6 +452,11 @@
     <li>Windows, Linux, or macOS — no other runtime or package manager needed</li>
   </ul>
 
+  <div class="callout tip">
+    <div class="co-title">💡 One-click setup</div>
+    <p>The bundled <code>install.sh</code> installs the Spid3r toolchain and prepares the project in one step. It auto-detects the platform; on systems where the prebuilt installer cannot find a release binary it falls back to a core-only source build (<code>install.sh --source --core</code> — needs only Rust + a C compiler). The CI pipeline uses exactly this fallback, so it is always exercised.</p>
+  </div>
+
   <h3>2. Initialize the database</h3>
   <pre><code><span class="cmt"># Run outstanding migrations (users, sessions, jobs tables)</span>
 spid3r magic migrate
@@ -459,13 +475,13 @@ spid3r magic serve --dry-run  <span class="cmt"># validate boot without binding<
   <pre><code>spid3r run server.matrix 9000</code></pre>
 
   <div class="callout info">
-    <div class="co-title">ℹ️ A fresh install serves one page</div>
-    <p>Open <code>http://localhost:8000</code> and you'll see the <strong>welcome page</strong> (<code>resources/views/welcome.bd.html</code>, routed from <code>routes/web.matrix</code>). The application layer (<code>app/</code>, templates, routes) is empty and ready for your code — start with <code>spid3r magic make:model</code> / <code>make:controller</code> and add routes to <code>routes/web.matrix</code>.</p>
+    <div class="co-title">ℹ️ A fresh install serves two routes</div>
+    <p>Open <code>http://localhost:8000</code> and you'll see the <strong>welcome page</strong> (<code>resources/views/welcome.bd.html</code>). <code>http://localhost:8000/info</code> directly executes the language builtin <code>spid3rinfo()</code> and returns the raw runtime dump (version, system, features, config, environment) as plain text — a one-line route in <code>routes/web.matrix</code>. It is a <strong>development diagnostic</strong>: the raw dump is unfiltered, so remove the route before exposing the app publicly. The application layer (<code>app/</code>, templates, routes) is otherwise empty and ready for your code — start with <code>spid3r magic make:model</code> / <code>make:controller</code> and add routes to <code>routes/web.matrix</code>.</p>
   </div>
 
   <div class="callout tip">
     <div class="co-title">💡 Verify everything works</div>
-    <p>Run <code>spid3r magic test</code> — it executes all 9 framework suites and exits <code>0</code> only if everything passes (green on SQLite out of the box, and verified against MySQL 8.0, MariaDB 11 and PostgreSQL 16). <code>spid3r magic route:list</code> prints the registered route table. To verify against the bundled SQLite engine regardless of <code>.env</code>, use <code>SPID3R_DB_DRIVER=sqlite spid3r magic test</code>.</p>
+    <p>Run <code>spid3r magic test</code> — it executes all 10 framework suites and exits <code>0</code> only if everything passes (green on SQLite out of the box, and verified against MySQL 8.0, MariaDB 11 and PostgreSQL 16). <code>spid3r magic route:list</code> prints the registered route table. To verify against the bundled SQLite engine regardless of <code>.env</code>, use <code>SPID3R_DB_DRIVER=sqlite spid3r magic test</code>.</p>
   </div>
 
   <h3>4. Manifest (<code>spider.toml</code>)</h3>
@@ -477,6 +493,78 @@ entry = "server.matrix"
 [dependencies]
 <span class="cmt"># Zero external packages — the Spid3r stdlib provides HTTP/1.1,</span>
 <span class="cmt"># SQLite bindings, bcrypt, JSON, and thread synchronization.</span></code></pre>
+</section>
+
+<!-- ============ DOCKER ============ -->
+<section id="docker">
+  <h2>Docker</h2>
+  <p>The repository ships a production-style container setup: a <strong>multi-stage <code>Dockerfile</code></strong> and a <strong><code>docker-compose.yml</code></strong> stack with the app plus both server databases.</p>
+
+  <h3>Quick start</h3>
+  <pre><code>docker compose up --build -d
+<span class="cmt"># app → http://localhost:8080 (mapped from the container's port 8000)</span>
+docker compose down            <span class="cmt"># stop (add -v to wipe database volumes)</span></code></pre>
+
+  <h3>Services</h3>
+  <table>
+    <tr><th>Service</th><th>Image</th><th>Role</th></tr>
+    <tr><td><code>app</code></td><td>built from <code>Dockerfile</code></td><td>Spid3rWeb server on <code>0.0.0.0:8000</code> (mapped to host <code>8080</code>); runs <code>magic migrate</code> automatically on every boot before serving</td></tr>
+    <tr><td><code>mysql</code></td><td><code>mysql:8.0</code></td><td>Default app database (<code>SPID3R_DB_DRIVER=mysql</code>), started with <code>mysql_native_password</code> (the framework's MySQL client requirement), healthchecked, data on a named volume</td></tr>
+    <tr><td><code>postgres</code></td><td><code>postgres:16</code></td><td>Optional engine — switch by setting <code>SPID3R_DB_DRIVER=postgres</code> and the <code>SPID3R_PG_*</code> vars on the <code>app</code> service; healthchecked, data on a named volume</td></tr>
+  </table>
+
+  <h3>The image (multi-stage)</h3>
+  <table>
+    <tr><th>Stage</th><th>Base</th><th>What happens</th></tr>
+    <tr><td><code>builder</code></td><td><code>rust:bookworm</code></td><td>Compiles the Spid3r toolchain from source via the official installer's documented fallback: <code>install.sh --source --core</code> (<code>cargo install --locked --git … --no-default-features</code>) — no LLVM/WebKit needed. The exact same path CI uses, so it is always exercised</td></tr>
+    <tr><td><code>runtime</code></td><td><code>debian:bookworm-slim</code></td><td>Just the compiled <code>spid3r</code> binary + application code (<code>magic</code>, <code>server.matrix</code>, <code>app/ config/ database/ framework/ public/ resources/ routes/ tests/</code>), <code>.env</code> created from <code>.env.example</code>, <code>storage/</code> skeleton prepared</td></tr>
+  </table>
+
+  <div class="callout info">
+    <div class="co-title">ℹ️ Container networking</div>
+    <p>The server binds loopback by default; the compose file sets <code>SPID3R_HOST=0.0.0.0</code> on the app container (the framework's documented container mode — see <code>framework/Application.matrix</code> → <code>listen()</code>). Database hostnames are the compose service names (<code>mysql</code>, <code>postgres</code>), resolved by Docker's internal DNS. <code>.dockerignore</code> keeps <code>.git</code>, <code>storage/</code> and <code>.env</code> out of the build context so no real credentials can leak into the image.</p>
+  </div>
+
+  <div class="callout tip">
+    <div class="co-title">💡 Docker Desktop sandboxed builds</div>
+    <p>Recent Docker Desktop versions enable <em>sandboxed builds</em> (the <code>desktop-linux</code> builder), which demand an <code>fs.read</code> entitlement the CLI rejects. If <code>docker compose build</code> fails with <em>"additional privileges requested: pass --allow=fs.read=…"</em>, build through the classic default context instead and start the stack without rebuilding:</p>
+    <pre><code>docker --context=default buildx build --load -t spid3rweb-app .
+docker tag spid3rweb-app:latest spid3r_web-app:latest
+docker compose up -d --no-build</code></pre>
+    <p>Or disable sandboxed builds in Docker Desktop settings. If a host port is taken (e.g. 8080), change the mapping in <code>docker-compose.yml</code> (<code>"8090:8000"</code> etc.).</p>
+  </div>
+</section>
+
+<!-- ============ CI ============ -->
+<section id="ci">
+  <h2>Continuous Integration</h2>
+  <p><code>.github/workflows/ci.yml</code> runs on every push / pull request to <code>main</code> / <code>master</code> (plus manual <code>workflow_dispatch</code>). It follows least-privilege standards: a read-only <code>permissions</code> block, a <code>concurrency</code> group that cancels superseded runs on the same ref, <code>fail-fast: false</code> so one engine failing doesn't hide the others, pinned runner (<code>ubuntu-24.04</code>), pinned action majors, and matrix values passed to shells via environment variables (never direct <code>${{ }}</code> interpolation — injection-safe). No secrets are needed.</p>
+
+  <h3>Jobs</h3>
+  <table>
+    <tr><th>Job</th><th>What it does</th></tr>
+    <tr><td><code>lint</code></td><td><code>shellcheck -s sh install.sh</code> (the installer is POSIX <code>sh</code>) + <code>actionlint</code> (workflow syntax &amp; semantics) on this file</td></tr>
+    <tr><td><code>test (sqlite / mysql / postgres)</code></td><td>Full 10-suite run against a throwaway engine per matrix leg: <code>migrate → db:seed → route:list → serve --dry-run → magic test</code>. The two <em>live</em> suites execute their engine checks for real here</td></tr>
+  </table>
+
+  <h3>Service containers</h3>
+  <table>
+    <tr><th>Engine</th><th>Configuration notes</th></tr>
+    <tr><td>MySQL 8.0</td><td><code>MYSQL_DATABASE</code> must be set (otherwise migrate fails with "Unknown database"); a dedicated step creates the CI user with <code>mysql_native_password</code> because MySQL 8 defaults to <code>caching_sha2_password</code>, which the framework's MySQL client does not speak</td></tr>
+    <tr><td>PostgreSQL 16</td><td>Trust auth for the throwaway container (<code>POSTGRES_HOST_AUTH_METHOD=trust</code>); the app connects over <code>127.0.0.1</code> with mapped ports</td></tr>
+    <tr><td>SQLite</td><td>Zero config — <code>database/database.sqlite</code> is created by <code>migrate</code></td></tr>
+  </table>
+
+  <h3>Toolchain installation (two-path fallback)</h3>
+  <pre><code><span class="cmt"># 1) try the official prebuilt installer…</span>
+curl -fsSL https://raw.githubusercontent.com/needyamin/spid3r/main/install.sh | sh -s -- --no-modify-path
+<span class="cmt"># 2) …fall back to a core-only source build when no Linux release asset exists</span>
+curl -fsSL https://raw.githubusercontent.com/needyamin/spid3r/main/install.sh | sh -s -- --source --core --no-modify-path</code></pre>
+  <ul>
+    <li><strong>GITHUB_PATH gotcha:</strong> a <code>GITHUB_PATH</code> write only affects <em>later</em> steps — the version check lives in its own step (<code>spid3r --version</code>).</li>
+    <li><strong>Cargo cache:</strong> <code>actions/cache</code> keyed on the run id with a prefix restore-key, so the source-build fallback stays fast on repeat runs.</li>
+    <li><strong>Timeout:</strong> each test job has <code>timeout-minutes: 45</code> as a runaway guard.</li>
+  </ul>
 </section>
 
 <!-- ============ LIFECYCLE ============ -->
@@ -1440,16 +1528,17 @@ SPID3R_DB_DRIVER=mysql    SPID3R_MYSQL_* … spid3r magic test</code></pre>
     <tr><td><code>tests/test_query_builder.matrix</code></td><td>Fluent SQL, CRUD, transactions</td></tr>
     <tr><td><code>tests/test_drivers.matrix</code></td><td>Multi-DB: escaping, interpolation, injection resistance, dialect DDL, driver resolution</td></tr>
     <tr><td><code>tests/test_http_head.matrix</code></td><td>In-process HTTP lifecycle: route dispatch, <code>HEAD</code>→<code>GET</code> fallback (routes + static), 404/405 semantics, static path-traversal rejection (<code>../</code>, <code>%2e</code>, <code>%5c</code>, NUL, drive letters)</td></tr>
-    <tr><td><code>tests/test_multi_db_live.matrix</code></td><td>Live integration per engine (lifecycle, QueryBuilder, migrations) — <code>[SKIP]</code> when a server is unreachable</td></tr>
+    <tr><td><code>tests/test_multi_db_live.matrix</code></td><td>Live integration per engine (raw lifecycle incl. injection-resistance round-trip, QueryBuilder CRUD, migrations DDL) — <code>[SKIP]</code> when a server is unreachable</td></tr>
+    <tr><td><code>tests/test_systems_live.matrix</code></td><td>Live systems per engine: bcrypt auth <code>attempt()</code> against the real <code>users</code> table, session-row persistence + CSRF payload round-trip + TTL expiry + sliding expiration + logout cleanup, database cache store round-trips, queue push/pop/reserve-visibility, env-based services credential resolution — <code>[SKIP]</code> without a server driver</td></tr>
     <tr><td><code>tests/test_cache.matrix</code></td><td>Cache facade + drivers (get/put/remember, TTL, increment)</td></tr>
     <tr><td><code>tests/test_core_systems.matrix</code></td><td>Config repository, Log channels/levels/rotation, Storage round-trips + traversal rejections, Mail log driver, Queue push/pop/retry/discard + sync-vs-database handler semantics, session/auth config wiring</td></tr>
     <tr><td><code>tests/test_throttle.matrix</code></td><td>Rate limiting: fixed window, 429 HTML/JSON, per-path/method/identity keying, session-over-IP, window reset</td></tr>
   </table>
-  <p><code>magic test</code> runs <strong>9 suites</strong> and is recursion-guarded — suites that invoke <code>magic test</code> themselves get a no-op success instead of recursing forever.</p>
+  <p><code>magic test</code> runs <strong>10 suites</strong> and is recursion-guarded — suites that invoke <code>magic test</code> themselves get a no-op success instead of recursing forever.</p>
 
   <div class="callout tip">
     <div class="co-title">✅ Verified against all four engines</div>
-    <p>The full suite is <strong>9/9 green on SQLite, MySQL 8.0, MariaDB 11, and PostgreSQL 16</strong> (each verified with real server containers; MySQL needs <code>mysql_native_password</code>, PostgreSQL client supports md5/trust auth). The database cache driver creates its <code>cache</code> table with a dialect-aware key column (<code>VARCHAR(255)</code> on MySQL/MariaDB, <code>TEXT</code> elsewhere). One framework-level limitation remains: the schema builder does not quote reserved SQL identifiers (e.g. a column named <code>desc</code>) — avoid reserved words in column names until that is fixed.</p>
+    <p>The full suite is <strong>10/10 green on SQLite, MySQL 8.0, MariaDB 11, and PostgreSQL 16</strong> (each verified with real server containers; MySQL needs <code>mysql_native_password</code>, PostgreSQL client supports md5/trust auth). The two <em>live</em> suites run their engine checks for real in CI (MySQL/PostgreSQL service containers) and skip cleanly on machines without a server. The database cache driver creates its <code>cache</code> table with a dialect-aware key column (<code>VARCHAR(255)</code> on MySQL/MariaDB, <code>TEXT</code> elsewhere). One framework-level limitation remains: the schema builder does not quote reserved SQL identifiers (e.g. a column named <code>desc</code>) — avoid reserved words in column names until that is fixed.</p>
   </div>
 
   <div class="callout info">
