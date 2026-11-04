@@ -25,6 +25,22 @@ public class CartController extends Controller {
         return req.header("x-requested-with", "") == "XMLHttpRequest";
     }
 
+    // Render the cart page. One place builds the view data so the checkout
+    // error paths (validation, live-stock conflicts) stay one-liners and
+    // form input is always preserved.
+    fn render_cart(self, req, cart, token, error: string, customer_name: string, phone: string, address: string) {
+        return self.render(req, "store.cart", map(
+            "title", "Your Cart - Spid3r Bazaar",
+            "items", cart.items(token),
+            "total", cart.total(token),
+            "cart_count", cart.count(token),
+            "error", error,
+            "customer_name", customer_name,
+            "phone", phone,
+            "address", address
+        ));
+    }
+
     // POST /cart/add  (product_id, qty)
     public fn add(self, req) {
         let cart = new CartService();
@@ -129,16 +145,7 @@ public class CartController extends Controller {
             }
         }
 
-        return self.view("store.cart", self.shared(map(
-            "title", "Your Cart - Spid3r Bazaar",
-            "items", cart.items(token),
-            "total", cart.total(token),
-            "cart_count", cart.count(token),
-            "error", "",
-            "customer_name", customer_name,
-            "phone", "",
-            "address", ""
-        ), req));
+        return self.render_cart(req, cart, token, "", customer_name, "", "");
     }
 
     // POST /cart/update  (product_id, qty)
@@ -236,16 +243,7 @@ public class CartController extends Controller {
         ));
         if validator.fails() {
             // Re-render the cart with the error summary and preserve form data
-            return self.view("store.cart", self.shared(map(
-                "title", "Your Cart - Spid3r Bazaar",
-                "items", items,
-                "total", cart.total(token),
-                "cart_count", cart.count(token),
-                "error", validator.error_summary(" · "),
-                "customer_name", customer_name,
-                "phone", phone,
-                "address", address
-            ), req));
+            return self.render_cart(req, cart, token, validator.error_summary(" · "), customer_name, phone, address);
         }
 
         // Re-validate every line against LIVE stock before creating the
@@ -261,16 +259,7 @@ public class CartController extends Controller {
             }
         }
         if stock_errors.len() > 0 {
-            return self.view("store.cart", self.shared(map(
-                "title", "Your Cart - Spid3r Bazaar",
-                "items", items,
-                "total", cart.total(token),
-                "cart_count", cart.count(token),
-                "error", stock_errors.join(" · "),
-                "customer_name", customer_name,
-                "phone", phone,
-                "address", address
-            ), req));
+            return self.render_cart(req, cart, token, stock_errors.join(" · "), customer_name, phone, address);
         }
 
         // Snapshot the cart into the order; attach the customer account
@@ -323,26 +312,17 @@ public class CartController extends Controller {
             let msg = string(e);
             if msg.contains("stock_changed") {
                 let conflicted = msg.replace("stock_changed:", "");
-                return self.view("store.cart", self.shared(map(
-                    "title", "Your Cart - Spid3r Bazaar",
-                    "items", items,
-                    "total", cart.total(token),
-                    "cart_count", cart.count(token),
-                    "error", conflicted + " — stock changed while checking out. Please review your cart.",
-                    "customer_name", customer_name,
-                    "phone", phone,
-                    "address", address
-                ), req));
+                return self.render_cart(req, cart, token, conflicted + " — stock changed while checking out. Please review your cart.", customer_name, phone, address);
             }
             throw e;
         }
 
         cart.clear(token);
 
-        return self.view("store.success", self.shared(map(
+        return self.render(req, "store.success", map(
             "title", "Order Placed - Spid3r Bazaar",
             "order", order.to_map(),
             "cart_count", 0
-        ), req));
+        ));
     }
 }

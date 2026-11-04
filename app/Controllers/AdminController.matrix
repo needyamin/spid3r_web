@@ -79,7 +79,7 @@ public class AdminController extends Controller {
         // 8 most recent orders
         let recent = DB.table("orders").orderBy("id", "DESC").limit(8).get();
 
-        return self.view("admin.dashboard", self.shared(map(
+        return self.render(req, "admin.dashboard", map(
             "title", "Admin Dashboard - Spid3r Bazaar",
             "products_count", products_count,
             "orders_count", orders_count,
@@ -89,7 +89,7 @@ public class AdminController extends Controller {
             "low_stock", low_stock,
             "recent_orders", self.decorate_orders(recent),
             "cart_count", cart.count(cart.token(req))
-        ), req));
+        ));
     }
 
     // ------------------------------------------------------------------
@@ -99,11 +99,11 @@ public class AdminController extends Controller {
         let cart = new CartService();
         let rows = DB.table("products").orderBy("id", "ASC").get();
 
-        return self.view("admin.products", self.shared(map(
+        return self.render(req, "admin.products", map(
             "title", "Manage Products - Spid3r Bazaar",
             "products", rows,
             "cart_count", cart.count(cart.token(req))
-        ), req));
+        ));
     }
 
     // ------------------------------------------------------------------
@@ -126,14 +126,14 @@ public class AdminController extends Controller {
             "stock", ""
         );
 
-        return self.view("admin.product_form", self.shared(map(
+        return self.render(req, "admin.product_form", map(
             "title", "New Product - Spid3r Bazaar",
             "is_edit", false,
             "form_action", "/admin/products",
             "product", blank,
-            "form_error", req.query("error", ""),
+            "form_error", req.string("error"),
             "cart_count", cart.count(cart.token(req))
-        ), req));
+        ));
     }
 
     public fn store(self, req) {
@@ -144,7 +144,7 @@ public class AdminController extends Controller {
 
         let name = string(check["name"]);
         let slug = self.slugify(name);
-        if string(req.string("slug")).trim() != "" {
+        if req.string("slug").trim() != "" {
             slug = self.slugify(req.string("slug"));
         }
         slug = self.unique_slug(slug, 0);
@@ -178,14 +178,14 @@ public class AdminController extends Controller {
             return self.redirect("/admin/products");
         }
 
-        return self.view("admin.product_form", self.shared(map(
+        return self.render(req, "admin.product_form", map(
             "title", "Edit Product - Spid3r Bazaar",
             "is_edit", true,
             "form_action", "/admin/products/" + string(id),
             "product", row,
-            "form_error", req.query("error", ""),
+            "form_error", req.string("error"),
             "cart_count", cart.count(cart.token(req))
-        ), req));
+        ));
     }
 
     public fn update(self, req) {
@@ -202,7 +202,7 @@ public class AdminController extends Controller {
 
         // Slug: keep the existing one unless the operator supplies a new one.
         let slug = string(row["slug"]);
-        if string(req.string("slug")).trim() != "" {
+        if req.string("slug").trim() != "" {
             let wanted = self.slugify(req.string("slug"));
             if wanted != slug {
                 slug = self.unique_slug(wanted, id);
@@ -238,7 +238,7 @@ public class AdminController extends Controller {
     public fn orders(self, req) {
         let cart = new CartService();
 
-        let status = string(req.query("status", "")).trim().lower();
+        let status = req.string("status").trim().lower();
         let valid = false;
         for s in self.statuses() {
             if s == status {
@@ -271,12 +271,12 @@ public class AdminController extends Controller {
             tabs.push(map("value", s, "label", self.status_label(s), "is_active", active));
         }
 
-        return self.view("admin.orders", self.shared(map(
+        return self.render(req, "admin.orders", map(
             "title", "Manage Orders - Spid3r Bazaar",
             "orders", self.decorate_orders(rows),
             "tabs", tabs,
             "cart_count", cart.count(cart.token(req))
-        ), req));
+        ));
     }
 
     public fn order_detail(self, req) {
@@ -313,7 +313,7 @@ public class AdminController extends Controller {
             status_options.push(map("value", s, "label", self.status_label(s), "selected", selected));
         }
 
-        return self.view("admin.order_detail", self.shared(map(
+        return self.render(req, "admin.order_detail", map(
             "title", "Order #" + string(id) + " - Spid3r Bazaar",
             "order", row,
             "items", items,
@@ -321,15 +321,15 @@ public class AdminController extends Controller {
             "status_class", self.status_class(current),
             "status_label", self.status_label(current),
             "status_options", status_options,
-            "form_error", req.query("error", ""),
+            "form_error", req.string("error"),
             "cart_count", cart.count(cart.token(req))
-        ), req));
+        ));
     }
 
     // POST /admin/orders/:id/status  (whitelist-enforced)
     public fn update_status(self, req) {
         let id = req.int("id", 0);
-        let wanted = string(req.string("status")).trim().lower();
+        let wanted = req.string("status").trim().lower();
 
         let valid = false;
         for s in self.statuses() {
@@ -395,22 +395,22 @@ public class AdminController extends Controller {
 
         // Validation guarantees numeric-parseable input; normalize types
         // for the DB layer (money/stock are stored as integers).
-        let price = int(string(req.string("price")).trim());
-        let stock = int(string(req.string("stock")).trim());
+        let price = int(req.string("price").trim());
+        let stock = int(req.string("stock").trim());
         let old_price = null;
-        let old_raw = string(req.string("old_price", "")).trim();
+        let old_raw = req.string("old_price", "").trim();
         if old_raw != "" {
             old_price = int(old_raw);
         }
-        let emoji = string(req.string("emoji", "")).trim();
+        let emoji = req.string("emoji", "").trim();
         if emoji == "" {
             emoji = "📦";
         }
 
         return map(
-            "name", string(req.string("name")).trim(),
-            "category", string(req.string("category")).trim(),
-            "description", string(req.string("description", "")),
+            "name", req.string("name").trim(),
+            "category", req.string("category").trim(),
+            "description", req.string("description", ""),
             "emoji", emoji,
             "price", price,
             "old_price", old_price,

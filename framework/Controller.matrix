@@ -22,6 +22,24 @@ public class Controller {
         return view(view_name, data);
     }
 
+    // Preferred way to render a page: shared data (auth state, csrf token,
+    // admin flag) is merged automatically. Controllers just write:
+    //   return self.render(req, "store.index", map("title", "Hello"));
+    public fn render(self, req, view_name: string, data = null) {
+        if data == null {
+            data = map();
+        }
+        return self.view(view_name, self.shared(data, req));
+    }
+
+    // Raw body response with an explicit content type — for XML feeds,
+    // plain text, downloads. No header juggling in controllers.
+    public fn respond(self, body: string, content_type: string, status: int = 200) {
+        let res = response(body, status);
+        res.header("content-type", content_type);
+        return res;
+    }
+
     public fn redirect(self, url: string, status: int = 302) {
         return redirect(url, status);
     }
@@ -47,8 +65,8 @@ public class Controller {
     // Shared view data
     // Merges caller data with the auth-state variables the global store
     // layout renders in the navbar (is_auth, user_name) plus the CSRF
-    // token for form fields. Controllers use it as:
-    //   return self.view("store.index", self.shared(map(...), req));
+    // token for form fields. Prefer render(), which calls this for you:
+    //   return self.render(req, "store.index", map(...));
     // ------------------------------------------------------------------
     public fn shared(self, data = null, req = null) {
         if data == null {

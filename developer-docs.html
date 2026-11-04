@@ -728,7 +728,7 @@ Route.<span class="fn">get</span>("/products/{id}/reviews/{reviewId}", handler);
 <!-- ============ CONTROLLERS ============ -->
 <section id="controllers">
   <h2>Controllers</h2>
-  <p>Controllers live in <code>app/Controllers/</code> and group request handling logic. Every controller <strong>extends the base <code>Controller</code></strong> (from <code>framework/Controller.matrix</code>), which provides <code>self.view()</code>, <code>self.json()</code>, <code>self.redirect()</code>, <code>self.validate()</code>, and <code>self.shared()</code> — the last one merges <code>is_auth</code> and <code>user_name</code> (from the <code>Auth</code> facade) into your view data so the global layout renders the correct navbar state on every page. Instantiate controllers at the top of your route file and wrap them in closures:</p>
+  <p>Controllers live in <code>app/Controllers/</code> and group request handling logic. Every controller <strong>extends the base <code>Controller</code></strong> (from <code>framework/Controller.matrix</code>), which provides <code>self.render()</code>, <code>self.view()</code>, <code>self.json()</code>, <code>self.redirect()</code>, <code>self.respond()</code>, and <code>self.validate()</code>. <code>self.render(req, name, data)</code> is the preferred page renderer — it merges <code>is_auth</code>, <code>user_name</code>, <code>is_admin</code>, and the CSRF token into your view data automatically so the global layout renders the correct navbar state on every page. Instantiate controllers at the top of your route file and wrap them in closures:</p>
 
   <pre><code><span class="cmt">// app/Controllers/ProductController.matrix</span>
 <span class="kw">import</span> "framework/Controller";
@@ -757,9 +757,10 @@ Route.<span class="fn">get</span>("/products/{id}/reviews/{reviewId}", handler);
     <div class="co-title">ℹ️ Base Controller contract</div>
     <p>Extending <code>Controller</code> is the framework's MVC convention. It gives every controller:</p>
     <ul>
-      <li><code>self.view(name, data)</code> / <code>self.json(data, status)</code> / <code>self.redirect(url)</code> — response helpers</li>
+      <li><code>self.render(req, name, data)</code> — render a page with shared auth data merged automatically (preferred)</li>
+      <li><code>self.view(name, data)</code> / <code>self.json(data, status)</code> / <code>self.redirect(url)</code> / <code>self.respond(body, type)</code> — response helpers</li>
       <li><code>self.validate(req, rules)</code> — request validation</li>
-      <li><code>self.shared(data)</code> — merges auth state (<code>is_auth</code>, <code>user_name</code>) into view data; use it for any page rendered with the global layout</li>
+      <li><code>self.shared(data)</code> — merges auth state (<code>is_auth</code>, <code>user_name</code>) into view data; <code>self.render()</code> calls it for you, so you rarely need it directly</li>
     </ul>
   </div>
 

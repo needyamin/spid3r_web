@@ -43,8 +43,8 @@ public class StoreController extends Controller {
         let cart = new CartService();
         let cart_count = cart.count(cart.token(req));
 
-        let search = req.query("search", "");
-        let category = req.query("category", "");
+        let search = req.string("search");
+        let category = req.string("category");
 
         let q = DB.table("products");
         if search != "" {
@@ -71,7 +71,7 @@ public class StoreController extends Controller {
             ));
         }
 
-        return self.view("store.index", self.shared(map(
+        return self.render(req, "store.index", map(
             "title", "Spid3r Bazaar - Online Shopping",
             "meta_desc", "Shop electronics, fashion, home & kitchen and more at Spid3r Bazaar. Free delivery inside Dhaka, cash on delivery.",
             "products", self.decorate(rows),
@@ -79,7 +79,7 @@ public class StoreController extends Controller {
             "active_category", category,
             "search_term", search,
             "cart_count", cart_count
-        ), req));
+        ));
     }
 
     // GET /product/:id
@@ -111,13 +111,13 @@ public class StoreController extends Controller {
             .limit(4)
             .get();
 
-        return self.view("store.show", self.shared(map(
+        return self.render(req, "store.show", map(
             "title", product.get("name") + " - Spid3r Bazaar",
             "meta_desc", string(product.get("description")),
             "product", self.decorate([product.to_map()])[0],
             "related", self.decorate(related_rows),
             "cart_count", cart_count
-        ), req));
+        ));
     }
 
     // SEO-friendly category URL: /category/{slug} (e.g. /category/electronics)
@@ -156,7 +156,7 @@ public class StoreController extends Controller {
             ));
         }
 
-        return self.view("store.index", self.shared(map(
+        return self.render(req, "store.index", map(
             "title", category + " - Spid3r Bazaar",
             "meta_desc", "Shop " + category + " at Spid3r Bazaar. Cash on delivery, free delivery inside Dhaka.",
             "products", self.decorate(rows),
@@ -164,7 +164,7 @@ public class StoreController extends Controller {
             "active_category", category,
             "search_term", "",
             "cart_count", cart_count
-        ), req));
+        ));
     }
 
     // /sitemap.xml — crawlable index of home, catalog, categories, products
@@ -188,9 +188,7 @@ public class StoreController extends Controller {
         }
         xml = xml + "</urlset>";
 
-        let res = response(xml, 200);
-        res.header("content-type", "application/xml; charset=utf-8");
-        return res;
+        return self.respond(xml, "application/xml; charset=utf-8");
     }
 
     // /robots.txt — crawlable storefront, private areas excluded
@@ -207,8 +205,6 @@ public class StoreController extends Controller {
         txt = txt + "Disallow: /logout\n";
         txt = txt + "Sitemap: " + host + "/sitemap.xml\n";
 
-        let res = response(txt, 200);
-        res.header("content-type", "text/plain; charset=utf-8");
-        return res;
+        return self.respond(txt, "text/plain; charset=utf-8");
     }
 }

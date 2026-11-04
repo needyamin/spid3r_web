@@ -62,9 +62,9 @@ public class OrderController extends Controller {
             orders.push(self.decorate_order(o));
         }
 
-        return self.view("store.orders", self.shared(map(
+        return self.render(req, "store.orders", map(
             "title", "My Orders - Spid3r Bazaar",
             "orders", orders
-        ), req));
+        ));
     }
 }
