@@ -1,0 +1,66 @@
+# Local Docker environment for Spid3rWeb.
+#
+#   docker compose up --build -d
+#   open http://localhost:8080
+#
+# The app talks to MySQL by default. To switch engines, change
+# SPID3R_DB_DRIVER to "postgres" (or "sqlite" for zero external DB) and the
+# matching SPID3R_* connection vars.
+
+services:
+  app:
+    build: .
+    container_name: spid3rweb-app
+    ports:
+      - "8090:8000"
+    environment:
+      SPID3R_DB_DRIVER: mysql
+      SPID3R_MYSQL_HOST: mysql
+      SPID3R_MYSQL_PORT: "3306"
+      SPID3R_MYSQL_USER: spid3r
+      SPID3R_MYSQL_PASSWORD: spid3r
+      SPID3R_MYSQL_DATABASE: spid3r
+    depends_on:
+      mysql:
+        condition: service_healthy
+    restart: unless-stopped
+
+  mysql:
+    image: mysql:8.0
+    container_name: spid3rweb-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpass
+      MYSQL_DATABASE: spid3r
+      MYSQL_USER: spid3r
+      MYSQL_PASSWORD: spid3r
+    # The framework's MySQL client speaks mysql_native_password (MySQL 8
+    # defaults to caching_sha2_password), so create the app user explicitly.
+    command: --default-authentication-plugin=mysql_native_password
+    volumes:
+      - mysql-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-prootpass"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    restart: unless-stopped
+
+  postgres:
+    image: postgres:16
+    container_name: spid3rweb-postgres
+    environment:
+      POSTGRES_DB: spid3r
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    volumes:
+      - pg-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d spid3r"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    restart: unless-stopped
+
+volumes:
+  mysql-data:
+  pg-data:
