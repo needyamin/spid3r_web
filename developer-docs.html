@@ -209,6 +209,7 @@
   <div class="group">
     <div class="group-title">Introduction</div>
     <a href="#overview">Overview &amp; Features</a>
+    <a href="#stack">Tech Stack</a>
     <a href="#architecture">Architecture</a>
     <a href="#structure">Project Structure</a>
   </div>
@@ -269,12 +270,40 @@
     <div class="card"><div class="c-icon">🏗️</div><h4>MVC Architecture</h4><p>Controllers extend a base <code>Controller</code> with view/json/redirect/validate helpers and <code>shared()</code> auth-state injection for layouts.</p></div>
     <div class="card"><div class="c-icon">🗂️</div><h4>Active Record ORM</h4><p>Fluent query builder, automatic timestamps, mass-assignment protection via <code>fillable</code>, relationship accessors.</p></div>
     <div class="card"><div class="c-icon">🗄️</div><h4>Transactional Migrations</h4><p>Declarative <code>Schema.create(...)</code> and <code>Schema.table(...)</code> (ALTER TABLE), auto-discovered migration files, tracking table, batch rollback, and database seeders.</p></div>
-    <div class="card"><div class="c-icon">🧩</div><h4>SpiderBD Templates</h4><p><code>.bd.html</code> templates with layouts, sections, includes, conditionals, loops, and escaped/raw interpolation.</p></div>
+    <div class="card"><div class="c-icon">🧩</div><h4>SpiderBD Templates</h4><p><code>.bd.html</code> templates with layouts, sections, includes, freely nesting conditionals &amp; loops, and escaped/raw interpolation.</p></div>
     <div class="card"><div class="c-icon">🛣️</div><h4>Expressive Router</h4><p>Static &amp; parameterized routes (<code>:id</code>), route groups with prefix inheritance, 405 detection, route listing.</p></div>
     <div class="card"><div class="c-icon">🧅</div><h4>Middleware Pipeline</h4><p>Onion-architecture pipeline, global CORS &amp; logging, session auth guards, custom 404/500 error pages.</p></div>
     <div class="card"><div class="c-icon">🔐</div><h4>Built-in Auth</h4><p>Native bcrypt hashing, CSPRNG session tokens (<code>sess_…</code>), cookie or Bearer-token sessions.</p></div>
     <div class="card"><div class="c-icon">⚡</div><h4>Multi-Engine Database</h4><p><strong>SQLite</strong>, <strong>PostgreSQL</strong>, <strong>MySQL</strong>, and <strong>MariaDB</strong> behind one API — selected via <code>SPID3R_DB_DRIVER</code> with dialect-aware DDL and last-id handling.</p></div>
+    <div class="card"><div class="c-icon">🛡️</div><h4>Admin Panel</h4><p>Role-gated (<code>users.is_admin</code>) dashboard: revenue/order stats, product CRUD, order status management — CSRF-protected forms.</p></div>
+    <div class="card"><div class="c-icon">🔍</div><h4>SEO-Friendly URLs</h4><p>Canonical <code>/product/{slug}</code> &amp; <code>/category/{slug}</code> routes, auto-generated <code>/sitemap.xml</code> + <code>/robots.txt</code>, per-page meta descriptions.</p></div>
     <div class="card"><div class="c-icon">🪄</div><h4>Magic CLI</h4><p><code>spid3r magic serve / migrate / make:*</code> — scaffolding, migrations, route inspection, test runner.</p></div>
+  </div>
+</section>
+
+<!-- ============ TECH STACK ============ -->
+<section id="stack">
+  <h2>Tech Stack</h2>
+  <p>Everything Spid3rWeb is built on and runs with — <strong>zero external dependencies</strong>: every layer below ships with the Spid3r standard library.</p>
+
+  <table>
+    <tr><th>Layer</th><th>Technology</th><th>How it works</th></tr>
+    <tr><td><strong>Language</strong></td><td>Spid3r (Rust-implemented)</td><td>All framework and application code is <code>.matrix</code> source compiled and executed by the Spid3r VM; <code>spid3r magic …</code> runs the CLI entrypoints (<code>magic</code>, <code>server.matrix</code>)</td></tr>
+    <tr><td><strong>Runtime</strong></td><td>Spid3r VM + AOT compiler</td><td>Interpreter for dev (<code>spid3r run</code>), optional ahead-of-time compilation to a native binary; async scheduler hosts the HTTP listener and per-connection handlers</td></tr>
+    <tr><td><strong>HTTP server</strong></td><td>Spid3r stdlib <code>http</code></td><td><code>Application.listen(port)</code> binds the listener; each connection builds a <code>Request</code>, runs the middleware pipeline, dispatches the router, writes a <code>Response</code></td></tr>
+    <tr><td><strong>Databases</strong></td><td>SQLite (default) · PostgreSQL · MySQL · MariaDB</td><td><code>DatabaseManager</code> resolves the driver from <code>SPID3R_DB_DRIVER</code> (or <code>.env</code>); <code>Connection.matrix</code> adapts dialects (DDL, last-insert-id, pragmas); app code is driver-agnostic</td></tr>
+    <tr><td><strong>Templating</strong></td><td>SpiderBD (<code>.bd.html</code>)</td><td>Layouts/sections/yields/includes + a single nesting-aware directive pass for <code>@if</code>/<code>@foreach</code>; escaped <code>{{ var }}</code> and raw <code>{!! var !!}</code> interpolation with dot-path resolution</td></tr>
+    <tr><td><strong>Frontend</strong></td><td>Bootstrap 5.3 (CSS) + vanilla JS</td><td>Storefront/admin UI is server-rendered HTML; the only JavaScript is a small <code>fetch</code> layer for no-reload cart mutations and toast alerts — no SPA framework, no build step</td></tr>
+    <tr><td><strong>Auth &amp; crypto</strong></td><td>Spid3r stdlib <code>bcrypt</code> + <code>random_bytes</code></td><td>Passwords hashed with bcrypt; sessions use 192-bit CSPRNG tokens stored server-side in a <code>sessions</code> table (cookie or Bearer transport)</td></tr>
+    <tr><td><strong>Cache</strong></td><td>Cache facade</td><td>Memory / file (<code>storage/framework/cache</code>) / database drivers behind one API; powers cart state, login rate-limiting</td></tr>
+    <tr><td><strong>CLI tooling</strong></td><td>Magic (<code>ConsoleKernel</code>)</td><td>serve · migrate/rollback/status · db:seed · make:controller/model/migration · route:list · test — migrations auto-discovered from <code>database/migrations/</code></td></tr>
+    <tr><td><strong>Testing</strong></td><td>In-language suites + 4-tier E2E</td><td>Unit suites run in-process; opaque-box E2E boots a real <code>Application</code> and issues HTTP requests (<code>handle_request</code>); <code>magic test</code> runs everything with a recursion guard</td></tr>
+    <tr><td><strong>Config &amp; env</strong></td><td><code>.env</code> + <code>spider.toml</code></td><td><code>Env.matrix</code> loads <code>.env</code> (OS env wins); <code>spider.toml</code> is the package manifest (entry file, metadata)</td></tr>
+  </table>
+
+  <div class="callout info">
+    <div class="co-title">ℹ️ What is NOT in the stack</div>
+    <p>No Node.js, no Composer, no bundler, no external packages — the framework, ORM, template engine, migrations, auth, cache, CLI and tests are all Spid3r source in this repository.</p>
   </div>
 </section>
 
@@ -321,9 +350,10 @@
 │   │   ├── AuthController.matrix
 │   │   ├── CartController.matrix
 │   │   ├── OrderController.matrix    <span class="n"># "My Orders" history</span>
-│   │   └── StoreController.matrix
-│   ├── <span class="d">Support/</span>                  <span class="n"># App services — CartService.matrix</span>
-│   ├── <span class="d">Middleware/</span>               <span class="n"># App-specific middleware</span>
+│   │   ├── StoreController.matrix    <span class="n"># storefront + SEO routes (sitemap/robots)</span>
+│   │   └── AdminController.matrix    <span class="n"># admin dashboard, product CRUD, orders</span>
+│   ├── <span class="d">Support/</span>                  <span class="n"># CartService.matrix, Str.matrix (slugs)</span>
+│   ├── <span class="d">Middleware/</span>               <span class="n"># AdminMiddleware.matrix (role gate)</span>
 │   └── <span class="d">Models/</span>                   <span class="n"># Active Record models</span>
 │       ├── User.matrix
 │       ├── Product.matrix
@@ -333,7 +363,7 @@
 │   └── database.matrix           <span class="n"># SQLite connection &amp; pragmas</span>
 ├── <span class="d">database/</span>
 │   ├── database.sqlite           <span class="n"># SQLite storage file</span>
-│   ├── <span class="d">migrations/</span>              <span class="n"># 001_…, 003_…, 004_…, 005_…, 006_…</span>
+│   ├── <span class="d">migrations/</span>              <span class="n"># 001_… through 007_… (auto-discovered)</span>
 │   │   └── registry.matrix         <span class="n"># AUTO-GENERATED auto-discovery manifest</span>
 │   └── <span class="d">seeders/</span>                 <span class="n"># DatabaseSeeder.matrix</span>
 ├── <span class="d">framework/</span>                    <span class="n"># Spid3rWeb core (do not edit casually)</span>
@@ -341,13 +371,15 @@
 │   ├── Response.matrix · Middleware.matrix · Controller.matrix
 │   ├── <span class="d">Auth/</span>  <span class="n">Auth.matrix, Hash.matrix</span>
 │   ├── <span class="d">Console/</span>  <span class="n">ConsoleKernel.matrix</span>
-│   ├── <span class="d">Database/</span>  <span class="n">DB, Model, Schema, Migration</span>
+│   ├── <span class="d">Database/</span>  <span class="n">DB, Connection, Model, Schema, Migration</span>
+│   ├── <span class="d">Cache/</span>  <span class="n">Cache.matrix (facade), CacheStore.matrix (drivers)</span>
 │   └── <span class="d">View/</span>  <span class="n">BD.matrix</span>
 ├── <span class="d">public/</span>                       <span class="n"># Static assets (path-traversal protected)</span>
 │   ├── <span class="d">css/</span> store.css
 │   └── <span class="d">js/</span> app.js
 ├── <span class="d">resources/views/</span>              <span class="n"># SpiderBD templates (.bd.html)</span>
 │   ├── <span class="d">layouts/</span>  <span class="n">store.bd.html</span>
+│   ├── <span class="d">admin/</span>   <span class="n">dashboard, products, product_form, orders, order_detail</span>
 │   ├── <span class="d">auth/</span>    <span class="n">login, register</span>
 │   └── <span class="d">store/</span>   <span class="n">index, show, cart, orders, success</span>
 ├── <span class="d">routes/</span>
@@ -1074,10 +1106,10 @@ Schema.<span class="fn">table</span>("orders", table => {
     <span class="step">@section parse</span><span class="arrow">→</span>
     <span class="step">@yield fill</span><span class="arrow">→</span>
     <span class="step">@include expand</span><span class="arrow">→</span>
-    <span class="step">@if / @else</span><span class="arrow">→</span>
-    <span class="step">@foreach</span><span class="arrow">→</span>
+    <span class="step">unified directive pass (@if + @foreach, nesting-aware)</span><span class="arrow">→</span>
     <span class="step">{{ var }} interpolate</span>
   </div>
+  <p>The directive pass is a single recursive walker: conditionals and loops may nest freely, each loop iteration re-runs the walker with the loop variable bound (so nested <code>@if</code> conditions and interpolation see it), conditions resolve dot paths, and stray <code>@else</code>/<code>@endif</code>/<code>@endforeach</code> are dropped instead of leaking into the page.</p>
 
   <h3>Directives</h3>
   <table>
@@ -1087,8 +1119,8 @@ Schema.<span class="fn">table</span>("orders", table => {
     <tr><td><code>@section('content') … @endsection</code></td><td>Block section</td></tr>
     <tr><td><code>@yield('content')</code> / <code>@yield('title', 'default')</code></td><td>Layout placeholder filled by child sections</td></tr>
     <tr><td><code>@include('partials.nav')</code></td><td>Inline a partial template</td></tr>
-    <tr><td><code>@if cond</code> / <code>@else</code> / <code>@endif</code></td><td>Conditional blocks evaluated against template data</td></tr>
-    <tr><td><code>@foreach(item in items)</code> … <code>@endforeach</code></td><td>Loop over lists</td></tr>
+    <tr><td><code>@if cond</code> / <code>@else</code> / <code>@endif</code></td><td>Conditional blocks — truthiness only (no <code>==</code>; precompute comparisons controller-side), dot-path aware, freely nestable</td></tr>
+    <tr><td><code>@foreach(item in items)</code> … <code>@endforeach</code></td><td>Loop over lists — nestable; the loop variable is visible to nested directives and interpolation</td></tr>
     <tr><td><code>{{ $var }}</code> / <code>{{ $product.name }}</code></td><td>Escaped output (<code>html_escape</code>: <code>&amp; &lt; &gt; " '</code>)</td></tr>
     <tr><td><code>{!! $raw !!}</code></td><td><strong>Unescaped</strong> raw output — only for trusted HTML</td></tr>
   </table>
@@ -1113,7 +1145,7 @@ Schema.<span class="fn">table</span>("orders", table => {
   @<span class="fn">foreach</span>(product in products)
     &lt;h3&gt;{{ $product.name }}&lt;/h3&gt;
     &lt;p&gt;৳{{ $product.price }}&lt;/p&gt;
-    &lt;a href="/product/{{ $product.id }}"&gt;View →&lt;/a&gt;
+    &lt;a href="/product/{{ $product.slug }}"&gt;View →&lt;/a&gt;
   @<span class="fn">endforeach</span>
 @<span class="fn">endsection</span></code></pre>
 </section>
@@ -1283,7 +1315,11 @@ SPID3R_DB_DRIVER=mysql    SPID3R_MYSQL_* … spid3r magic test</code></pre>
     <tr><td><code>tests/test_drivers.matrix</code></td><td>Multi-DB: escaping, interpolation, injection resistance, dialect DDL, driver resolution</td></tr>
     <tr><td><code>tests/test_multi_db_live.matrix</code></td><td>Live integration per engine (lifecycle, QueryBuilder, migrations) — <code>[SKIP]</code> when a server is unreachable</td></tr>
     <tr><td><code>tests/test_bd_adversarial.matrix</code></td><td>Template engine edge cases</td></tr>
+    <tr><td><code>tests/test_cache.matrix</code></td><td>Cache facade + drivers (get/put/remember, TTL, increment)</td></tr>
+    <tr><td><code>tests/test_ecommerce.matrix</code></td><td>Storefront: catalog, cart, checkout, stock, SEO URLs</td></tr>
+    <tr><td><code>tests/test_admin.matrix</code></td><td>Admin gate (guest/403/admin), product CRUD, order status whitelist, CSRF</td></tr>
   </table>
+  <p><code>magic test</code> runs <strong>19 suites</strong> (11 unit/live + 8 E2E tiers) and is recursion-guarded — suites that invoke <code>magic test</code> themselves get a no-op success instead of recursing forever.</p>
 
   <h3>E2E track (<code>tests/e2e/</code>)</h3>
   <p>Independent opaque-box tests authored to verify behavior without reading framework internals (192 tests across 8 suites):</p>
