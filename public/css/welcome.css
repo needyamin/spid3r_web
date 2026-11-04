@@ -123,24 +123,3 @@ code {
     .welcome { padding-top: 5rem; }
     .next-steps, .links { padding: 2rem; }
 }
-
-/* hero CTA → /info */
-.hero-cta {
-    display: inline-block;
-    margin-top: 1.25rem;
-    padding: 0.65rem 1.4rem;
-    min-height: 44px;
-    line-height: 1.9;
-    border: 1px solid var(--accent-strong);
-    border-radius: 999px;
-    color: var(--accent);
-    text-decoration: none;
-    font-size: 0.92rem;
-    transition: background 0.15s ease, color 0.15s ease;
-}
-
-.hero-cta:hover,
-.hero-cta:focus-visible {
-    background: var(--accent);
-    color: var(--bg);
-}
