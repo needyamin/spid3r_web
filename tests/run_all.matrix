@@ -101,6 +101,7 @@ fn main() {
         "tests/test_http_lifecycle.matrix",
         "tests/test_drivers.matrix",
         "tests/test_cache.matrix",
+        "tests/test_throttle.matrix",
         "tests/test_ecommerce.matrix",
         "tests/test_admin.matrix",
         "tests/test_multi_db_live.matrix",

@@ -35,28 +35,34 @@ public fn register_web_routes() {
     Route.post("/cart/update", fn(req) { return cart_ctrl.update(req); }).name("cart.update");
     Route.post("/cart/remove", fn(req) { return cart_ctrl.remove(req); }).name("cart.remove");
     Route.get("/checkout", fn(req) { return redirect("/cart"); }).name("cart.checkout.redirect");
-    Route.post("/checkout", fn(req) { return cart_ctrl.checkout(req); }).name("cart.checkout");
+    // Rate-limited: 20 orders / minute / client blunts order-flooding abuse.
+    Route.post("/checkout", fn(req) { return cart_ctrl.checkout(req); }).name("cart.checkout").middleware("throttle:20,60");
 
     // Customer order history (requires login — named auth middleware)
     Route.get("/orders", fn(req) { return order_ctrl.index(req); }).name("orders.index").middleware("auth");
 
-    // Admin panel (requires the admin role — named admin middleware).
+    // Admin panel (requires the admin role) — one group applies the
+    // prefix + middleware to every route instead of repeating both.
     // The "admin" alias is registered in server.matrix at boot.
-    Route.get("/admin", fn(req) { return admin_ctrl.dashboard(req); }).name("admin.dashboard").middleware("admin");
-    Route.get("/admin/products", fn(req) { return admin_ctrl.products(req); }).name("admin.products").middleware("admin");
-    Route.get("/admin/products/create", fn(req) { return admin_ctrl.create_form(req); }).name("admin.products.create").middleware("admin");
-    Route.post("/admin/products", fn(req) { return admin_ctrl.store(req); }).name("admin.products.store").middleware("admin");
-    Route.get("/admin/products/:id/edit", fn(req) { return admin_ctrl.edit_form(req); }).name("admin.products.edit").middleware("admin");
-    Route.post("/admin/products/:id", fn(req) { return admin_ctrl.update(req); }).name("admin.products.update").middleware("admin");
-    Route.post("/admin/products/:id/delete", fn(req) { return admin_ctrl.destroy(req); }).name("admin.products.destroy").middleware("admin");
-    Route.get("/admin/orders", fn(req) { return admin_ctrl.orders(req); }).name("admin.orders").middleware("admin");
-    Route.get("/admin/orders/:id", fn(req) { return admin_ctrl.order_detail(req); }).name("admin.orders.show").middleware("admin");
-    Route.post("/admin/orders/:id/status", fn(req) { return admin_ctrl.update_status(req); }).name("admin.orders.status").middleware("admin");
+    Route.group(map("prefix", "/admin", "middleware", "admin"), fn() {
+        Route.get("", fn(req) { return admin_ctrl.dashboard(req); }).name("admin.dashboard");
+        Route.get("/products", fn(req) { return admin_ctrl.products(req); }).name("admin.products");
+        Route.get("/products/create", fn(req) { return admin_ctrl.create_form(req); }).name("admin.products.create");
+        Route.post("/products", fn(req) { return admin_ctrl.store(req); }).name("admin.products.store");
+        Route.get("/products/:id/edit", fn(req) { return admin_ctrl.edit_form(req); }).name("admin.products.edit");
+        Route.post("/products/:id", fn(req) { return admin_ctrl.update(req); }).name("admin.products.update");
+        Route.post("/products/:id/delete", fn(req) { return admin_ctrl.destroy(req); }).name("admin.products.destroy");
+        Route.get("/orders", fn(req) { return admin_ctrl.orders(req); }).name("admin.orders");
+        Route.get("/orders/:id", fn(req) { return admin_ctrl.order_detail(req); }).name("admin.orders.show");
+        Route.post("/orders/:id/status", fn(req) { return admin_ctrl.update_status(req); }).name("admin.orders.status");
+    });
 
-    // User Authentication
+    // User Authentication — login/register are rate-limited (10 attempts /
+    // 60s per client) as a backstop to the per-email lockout in the
+    // controller; this blunts distributed password spraying from one IP.
     Route.get("/login", fn(req) { return auth_ctrl.showLogin(req); }).name("login");
-    Route.post("/login", fn(req) { return auth_ctrl.login(req); }).name("login.submit");
+    Route.post("/login", fn(req) { return auth_ctrl.login(req); }).name("login.submit").middleware("throttle:10,60");
     Route.get("/register", fn(req) { return auth_ctrl.showRegister(req); }).name("register");
-    Route.post("/register", fn(req) { return auth_ctrl.register(req); }).name("register.submit");
+    Route.post("/register", fn(req) { return auth_ctrl.register(req); }).name("register.submit").middleware("throttle:10,60");
     Route.post("/logout", fn(req) { return auth_ctrl.logout(req); }).name("logout");
 }

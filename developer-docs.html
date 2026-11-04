@@ -272,7 +272,7 @@
     <div class="card"><div class="c-icon">🗄️</div><h4>Transactional Migrations</h4><p>Declarative <code>Schema.create(...)</code> and <code>Schema.table(...)</code> (ALTER TABLE), auto-discovered migration files, tracking table, batch rollback, and database seeders.</p></div>
     <div class="card"><div class="c-icon">🧩</div><h4>SpiderBD Templates</h4><p><code>.bd.html</code> templates with layouts, sections, includes, freely nesting conditionals &amp; loops, and escaped/raw interpolation.</p></div>
     <div class="card"><div class="c-icon">🛣️</div><h4>Expressive Router</h4><p>Static &amp; parameterized routes (<code>:id</code>), route groups with prefix inheritance, 405 detection, route listing.</p></div>
-    <div class="card"><div class="c-icon">🧅</div><h4>Middleware Pipeline</h4><p>Onion-architecture pipeline, global CORS &amp; logging, session auth guards, custom 404/500 error pages.</p></div>
+    <div class="card"><div class="c-icon">🧅</div><h4>Middleware Pipeline</h4><p>Onion-architecture pipeline, global CORS &amp; logging, session auth guards, role gates, cache-backed rate limiting (<code>throttle</code>), custom 404/500 error pages.</p></div>
     <div class="card"><div class="c-icon">🔐</div><h4>Built-in Auth</h4><p>Native bcrypt hashing, CSPRNG session tokens (<code>sess_…</code>), cookie or Bearer-token sessions.</p></div>
     <div class="card"><div class="c-icon">⚡</div><h4>Multi-Engine Database</h4><p><strong>SQLite</strong>, <strong>PostgreSQL</strong>, <strong>MySQL</strong>, and <strong>MariaDB</strong> behind one API — selected via <code>SPID3R_DB_DRIVER</code> with dialect-aware DDL and last-id handling.</p></div>
     <div class="card"><div class="c-icon">🛡️</div><h4>Admin Panel</h4><p>Role-gated (<code>users.is_admin</code>) dashboard: revenue/order stats, product CRUD, order status management — CSRF-protected forms.</p></div>
@@ -348,7 +348,7 @@
     <tr><td><code>framework/Router.matrix</code></td><td><code>Route</code> singleton, <code>RouteEntry</code>, groups, parameter matching, 405 detection, controller dispatch</td></tr>
     <tr><td><code>framework/Request.matrix</code></td><td>Request wrapper (query/form/JSON parsing, session extraction) + <code>Validator</code> engine</td></tr>
     <tr><td><code>framework/Response.matrix</code></td><td>Response builder + global helpers (<code>response</code>, <code>json</code>, <code>html</code>, <code>redirect</code>)</td></tr>
-    <tr><td><code>framework/Middleware.matrix</code></td><td><code>Pipeline</code> class + built-in <code>CorsMiddleware</code>, <code>LoggerMiddleware</code>, <code>AuthMiddleware</code></td></tr>
+    <tr><td><code>framework/Middleware.matrix</code></td><td><code>Pipeline</code> class + built-in <code>CorsMiddleware</code>, <code>LoggerMiddleware</code>, <code>AuthMiddleware</code>, <code>ThrottleMiddleware</code> (rate limiting)</td></tr>
     <tr><td><code>framework/Database/DB.matrix</code></td><td>Global <code>DB</code> facade (loads <code>.env</code>, exposes the <code>DatabaseManager</code> singleton)</td></tr>
     <tr><td><code>framework/Database/DatabaseManager.matrix</code></td><td>Driver resolution (sqlite/postgres/mysql/mariadb), connections, transactions, <code>DB.table()</code> factory</td></tr>
     <tr><td><code>framework/Database/QueryBuilder.matrix</code></td><td>Fluent query builder: wheres/joins/IN/NULL/groups, pagination, <code>sql_escape_like</code></td></tr>
@@ -484,9 +484,22 @@ entry = "server.matrix"
     <li><strong>Static files</strong> — for <code>GET</code> requests under <code>/css/</code>, <code>/js/</code>, <code>/assets/</code>, the kernel serves from <code>public/</code> with correct <code>content-type</code> headers. Paths containing <code>..</code>, backslashes, NUL bytes, or their percent-encoded forms are rejected (path-traversal defense).</li>
     <li><strong>Global middleware</strong> — the <code>Pipeline</code> runs <code>global_middleware</code> (CORS by default). A middleware may short-circuit by returning a <code>Response</code>; returning <code>null</code> passes through.</li>
     <li><strong>Routing</strong> — <code>Router.match_route()</code> resolves method + path. If the path matches another verb, a <strong>405 Method Not Allowed</strong> is returned with an <code>Allow</code> header. Otherwise a themed <strong>404</strong> page (or JSON for <code>/api/*</code>). <code>/favicon.ico</code> returns <code>204</code>.</li>
-    <li><strong>Route middleware</strong> — middleware names declared on the route/group (<code>auth</code>, <code>cors</code>, <code>logger</code>) are resolved to instances and run before dispatch.</li>
-    <li><strong>Dispatch</strong> — closures are invoked directly; <code>"Controller@action"</code> strings resolve via <code>call_action()</code>. Unhandled exceptions are caught and rendered as a themed <strong>500</strong> page (JSON for <code>/api/*</code>).</li>
+    <li><strong>Route middleware</strong> — middleware names declared on the route/group (<code>auth</code>, <code>admin</code>, <code>cors</code>, <code>logger</code>, <code>throttle:attempts,seconds</code>) are resolved to instances and run before dispatch.</li>
+    <li><strong>Dispatch</strong> — route handlers are closures (Spid3r has no runtime reflection, so method references can't be passed by name); unhandled exceptions are caught and rendered as a themed <strong>500</strong> page (JSON for <code>/api/*</code>).</li>
   </ol>
+
+  <h3>Rate limiting — the <code>throttle</code> middleware</h3>
+  <p><code>ThrottleMiddleware</code> (registered as <code>throttle</code>) implements cache-backed, fixed-window rate limiting per client. Attach it with <code>.middleware("throttle:max,seconds")</code>:</p>
+  <pre><code><span class="cmt">// at most 10 login attempts per 60 seconds per client</span>
+Route.<span class="fn">post</span>(<span class="str">"/login"</span>, fn(req) { <span class="kw">return</span> auth_ctrl.login(req); }).<span class="fn">middleware</span>(<span class="str">"throttle:10,60"</span>);</code></pre>
+  <table>
+    <tr><th>Behavior</th><th>Detail</th></tr>
+    <tr><td>Client identity</td><td>Session token when present (stable per logged-in client), otherwise client IP (<code>X-Forwarded-For</code> honored only with <code>SPID3R_TRUST_PROXY=1</code>)</td></tr>
+    <tr><td>Counter key</td><td><code>throttle:{identity}:{method}:{path}</code> — limits are per client <em>and</em> per route</td></tr>
+    <tr><td>Exceeding the limit</td><td>HTTP <strong>429</strong> — JSON body for <code>/api/*</code>, themed HTML page otherwise, plus a <code>retry-after</code> header</td></tr>
+    <tr><td>Storage</td><td>The configured <code>Cache</code> store; the memory driver resets counters on process restart (the file/database driver survives restarts)</td></tr>
+    <tr><td>Applied by default</td><td><code>POST /login</code> &amp; <code>POST /register</code> (10/60s, backstop to the per-email lockout), <code>POST /checkout</code> (20/60s), API auth endpoints (30/60s)</td></tr>
+  </table>
 
   <div class="callout info">
     <div class="co-title">ℹ️ Server binding</div>
@@ -1312,6 +1325,8 @@ Cache.<span class="fn">store</span>("file").<span class="fn">put</span>("key", v
     <tr><td>Cookie hardening</td><td><code>HttpOnly</code> + <code>SameSite=Lax</code> on all framework cookies</td></tr>
     <tr><td>Mass assignment</td><td><code>fillable</code> whitelist on every model</td></tr>
     <tr><td>Method safety</td><td>405 with <code>Allow</code> header when a path exists under another verb</td></tr>
+    <tr><td>Rate limiting</td><td><code>throttle:max,seconds</code> middleware — cache-backed fixed window per client (session token or IP), 429 + <code>retry-after</code>; on by default for login/register/checkout and API auth endpoints</td></tr>
+    <tr><td>Brute-force login</td><td>Per-email lockout: 5 failed attempts → 10-minute lock (cache-backed), independent of the throttle backstop</td></tr>
     <tr><td>Error leakage</td><td>500 pages show the exception only; JSON API errors under <code>/api/</code> are structured; set <code>debug=false</code> in production config</td></tr>
   </table>
 </section>
@@ -1343,8 +1358,9 @@ SPID3R_DB_DRIVER=mysql    SPID3R_MYSQL_* … spid3r magic test</code></pre>
     <tr><td><code>tests/test_cache.matrix</code></td><td>Cache facade + drivers (get/put/remember, TTL, increment)</td></tr>
     <tr><td><code>tests/test_ecommerce.matrix</code></td><td>Storefront: catalog, cart, checkout, stock, SEO URLs</td></tr>
     <tr><td><code>tests/test_admin.matrix</code></td><td>Admin gate (guest/403/admin), product CRUD, order status whitelist, CSRF</td></tr>
+    <tr><td><code>tests/test_throttle.matrix</code></td><td>Rate limiting: fixed window, 429 HTML/JSON, per-path/method/identity keying, session-over-IP, window reset</td></tr>
   </table>
-  <p><code>magic test</code> runs <strong>19 suites</strong> (11 unit/live + 8 E2E tiers) and is recursion-guarded — suites that invoke <code>magic test</code> themselves get a no-op success instead of recursing forever.</p>
+  <p><code>magic test</code> runs <strong>20 suites</strong> (12 unit/live + 8 E2E tiers) and is recursion-guarded — suites that invoke <code>magic test</code> themselves get a no-op success instead of recursing forever.</p>
 
   <h3>E2E track (<code>tests/e2e/</code>)</h3>
   <p>Independent opaque-box tests authored to verify behavior without reading framework internals (192 tests across 8 suites):</p>
