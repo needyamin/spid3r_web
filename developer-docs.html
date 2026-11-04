@@ -290,7 +290,7 @@
     <tr><th>Layer</th><th>Technology</th><th>How it works</th></tr>
     <tr><td><strong>Language</strong></td><td>Spid3r (Rust-implemented)</td><td>All framework and application code is <code>.matrix</code> source compiled and executed by the Spid3r VM; <code>spid3r magic …</code> runs the CLI entrypoints (<code>magic</code>, <code>server.matrix</code>)</td></tr>
     <tr><td><strong>Runtime</strong></td><td>Spid3r VM + AOT compiler</td><td>Interpreter for dev (<code>spid3r run</code>), optional ahead-of-time compilation to a native binary; async scheduler hosts the HTTP listener and per-connection handlers</td></tr>
-    <tr><td><strong>HTTP server</strong></td><td>Spid3r stdlib <code>http</code></td><td><code>Application.listen(port)</code> binds the listener; each connection builds a <code>Request</code>, runs the middleware pipeline, dispatches the router, writes a <code>Response</code></td></tr>
+    <tr><td><strong>Web server</strong></td><td>Built-in Spid3r stdlib HTTP/TCP server — <strong>not Apache or Nginx</strong></td><td><code>Application.listen(port)</code> (<code>tcp_listen</code> + <code>serve_listener</code>) binds a socket and serves every route, API endpoint and static file from the same process — no Apache/Nginx/PHP-FPM needed. Each connection builds a <code>Request</code>, runs the middleware pipeline, dispatches the router, writes a <code>Response</code>. See <em>Server &amp; deployment</em> below.</td></tr>
     <tr><td><strong>Databases</strong></td><td>SQLite (default) · PostgreSQL · MySQL · MariaDB</td><td><code>DatabaseManager</code> resolves the driver from <code>SPID3R_DB_DRIVER</code> (or <code>.env</code>); <code>Connection.matrix</code> adapts dialects (DDL, last-insert-id, pragmas); app code is driver-agnostic</td></tr>
     <tr><td><strong>Templating</strong></td><td>SpiderBD (<code>.bd.html</code>)</td><td>Layouts/sections/yields/includes + a single nesting-aware directive pass for <code>@if</code>/<code>@foreach</code>; escaped <code>{{ var }}</code> and raw <code>{!! var !!}</code> interpolation with dot-path resolution</td></tr>
     <tr><td><strong>Frontend</strong></td><td>Bootstrap 5.3 (CSS) + vanilla JS</td><td>Storefront/admin UI is server-rendered HTML; the only JavaScript is a small <code>fetch</code> layer for no-reload cart mutations and toast alerts — no SPA framework, no build step</td></tr>
@@ -304,6 +304,25 @@
   <div class="callout info">
     <div class="co-title">ℹ️ What is NOT in the stack</div>
     <p>No Node.js, no Composer, no bundler, no external packages — the framework, ORM, template engine, migrations, auth, cache, CLI and tests are all Spid3r source in this repository.</p>
+  </div>
+
+  <h3>Server &amp; deployment details</h3>
+  <p>Spid3rWeb ships its <strong>own application server</strong> — the <code>spid3r</code> process itself is the web server. It does not run under Apache, Nginx, PHP-FPM, or any CGI/FastCGI host.</p>
+
+  <table>
+    <tr><th>Aspect</th><th>Details</th></tr>
+    <tr><td><strong>Server type</strong></td><td>Single-process, concurrent application server built on Spid3r stdlib sockets (<code>tcp_listen</code> + <code>serve_listener</code>). Serves dynamic routes, the JSON API and static files (<code>public/</code>, path-traversal protected) from one listener.</td></tr>
+    <tr><td><strong>Bind address &amp; port</strong></td><td>Default <code>http://127.0.0.1:8000</code> (loopback — safe for dev). Override with <code>spid3r magic serve --port N</code>, <code>spid3r run server.matrix N</code>, or <code>SPID3R_HOST=0.0.0.0</code> to accept external traffic (required behind a reverse proxy or in a container).</td></tr>
+    <tr><td><strong>Concurrency</strong></td><td>One OS process; each accepted connection is handled by the async scheduler and runs the full request pipeline. The memory cache driver is per-process (restarts clear it — use the file or database driver to persist across restarts).</td></tr>
+    <tr><td><strong>TLS / HTTPS</strong></td><td>Not built into the listener. Terminate TLS at a reverse proxy (Nginx, Caddy, a cloud load balancer) that forwards plain HTTP to <code>SPID3R_HOST=0.0.0.0</code>. Once HTTPS is in front, enable the <code>Secure</code> cookie flag in <code>Response.cookie</code>.</td></tr>
+    <tr><td><strong>Security headers</strong></td><td>Added by the application itself (no web-server config needed): <code>X-Content-Type-Options: nosniff</code>, <code>X-Frame-Options: SAMEORIGIN</code>, <code>Referrer-Policy</code>, <code>Vary: Origin</code>; cross-origin POSTs are rejected by an Origin check plus session CSRF tokens.</td></tr>
+    <tr><td><strong>Apache / Nginx role</strong></td><td><em>Optional.</em> Nothing in the stack requires them. Use Nginx/Caddy only as a front proxy for TLS, gzip/brotli, rate limiting or multiple app instances — proxy <code>/</code> to <code>http://127.0.0.1:8000</code> and it works unchanged.</td></tr>
+    <tr><td><strong>Running in production</strong></td><td><code>spid3r magic serve --port 8000</code> (or the AOT-compiled binary), launched under a service manager (systemd, Docker <code>CMD</code>, etc.) with <code>SPID3R_HOST=0.0.0.0</code>, <code>APP_ENV=production</code> and the database configured via <code>.env</code>. Run <code>spid3r magic migrate</code> on deploy.</td></tr>
+  </table>
+
+  <div class="callout tip">
+    <div class="co-title">💡 Minimal production topology</div>
+    <p><code>Internet → Nginx/Caddy (TLS 443) → Spid3rWeb :8000 (0.0.0.0)</code> — or with no proxy at all: <code>Internet → Spid3rWeb :8000</code> over plain HTTP when TLS is handled elsewhere. The app behaves identically in both cases.</p>
   </div>
 </section>
 
