@@ -11,6 +11,7 @@
 //   SPID3R_MYSQL_HOST/PORT/USER/PASSWORD/DATABASE
 
 import "framework/Database/DB";
+import "framework/Database/DatabaseManager";
 import "framework/Database/Connection";
 
 let passed_count = 0;

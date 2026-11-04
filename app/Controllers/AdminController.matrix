@@ -376,67 +376,41 @@ public class AdminController extends Controller {
         return out;
     }
 
-    // Validate + normalize product form input. Returns a map of clean
-    // fields, or a map with only "error" set.
-    fn validate_product_input(self, req, except_id) {
-        let name = string(req.string("name")).trim();
-        let category = string(req.string("category")).trim();
-        let description = string(req.string("description", ""));
-        let emoji = string(req.string("emoji", "")).trim();
-        let price_raw = string(req.string("price", "")).trim();
-        let old_raw = string(req.string("old_price", "")).trim();
-        let stock_raw = string(req.string("stock", "")).trim();
-
-        if name == "" {
-            return map("error", "Product name is required.");
-        }
-        if category == "" {
-            return map("error", "Category is required.");
-        }
-        if price_raw == "" {
-            return map("error", "Price is required.");
+    // Validate + normalize product form input using the framework's
+    // request Validator (declarative rules instead of hand-rolled checks).
+    // Returns a map of clean fields, or a map with only "error" set.
+    fn validate_product_input(self, req, _except_id) {
+        let v = req.validate(map(
+            "name", "required|max:255",
+            "category", "required|max:100",
+            "description", "nullable|max:2000",
+            "price", "required|integer|min_value:1",
+            "stock", "required|integer|min_value:0",
+            "old_price", "nullable|integer|min_value:0",
+            "emoji", "nullable"
+        ));
+        if v.fails() {
+            return map("error", v.error_summary(" "));
         }
 
-        let price = 0;
-        try {
-            price = int(price_raw);
-        } catch (_e) {
-            return map("error", "Price must be a whole number.");
-        }
-        if price < 1 {
-            return map("error", "Price must be at least 1.");
-        }
-
-        let stock = 0;
-        try {
-            stock = int(stock_raw);
-        } catch (_e) {
-            return map("error", "Stock must be a whole number.");
-        }
-        if stock < 0 {
-            return map("error", "Stock cannot be negative.");
-        }
-
+        // Validation guarantees numeric-parseable input; normalize types
+        // for the DB layer (money/stock are stored as integers).
+        let price = int(string(req.string("price")).trim());
+        let stock = int(string(req.string("stock")).trim());
         let old_price = null;
+        let old_raw = string(req.string("old_price", "")).trim();
         if old_raw != "" {
-            try {
-                old_price = int(old_raw);
-            } catch (_e) {
-                return map("error", "Old price must be a whole number.");
-            }
-            if int(old_price) < 0 {
-                return map("error", "Old price cannot be negative.");
-            }
+            old_price = int(old_raw);
         }
-
+        let emoji = string(req.string("emoji", "")).trim();
         if emoji == "" {
             emoji = "📦";
         }
 
         return map(
-            "name", name,
-            "category", category,
-            "description", description,
+            "name", string(req.string("name")).trim(),
+            "category", string(req.string("category")).trim(),
+            "description", string(req.string("description", "")),
             "emoji", emoji,
             "price", price,
             "old_price", old_price,

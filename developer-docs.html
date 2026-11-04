@@ -343,12 +343,15 @@
   <h3>Source Files</h3>
   <table>
     <tr><th>File</th><th>Responsibility</th></tr>
-    <tr><td><code>framework/Application.matrix</code></td><td>Application kernel: HTTP server bridge, static file serving, 404/500 rendering, middleware orchestration</td></tr>
+    <tr><td><code>framework/Application.matrix</code></td><td>Application kernel: HTTP server bridge, static file serving, middleware orchestration</td></tr>
+    <tr><td><code>framework/ErrorRenderer.matrix</code></td><td>404/500 error rendering (JSON for <code>/api/*</code>, themed HTML pages otherwise)</td></tr>
     <tr><td><code>framework/Router.matrix</code></td><td><code>Route</code> singleton, <code>RouteEntry</code>, groups, parameter matching, 405 detection, controller dispatch</td></tr>
     <tr><td><code>framework/Request.matrix</code></td><td>Request wrapper (query/form/JSON parsing, session extraction) + <code>Validator</code> engine</td></tr>
     <tr><td><code>framework/Response.matrix</code></td><td>Response builder + global helpers (<code>response</code>, <code>json</code>, <code>html</code>, <code>redirect</code>)</td></tr>
     <tr><td><code>framework/Middleware.matrix</code></td><td><code>Pipeline</code> class + built-in <code>CorsMiddleware</code>, <code>LoggerMiddleware</code>, <code>AuthMiddleware</code></td></tr>
-    <tr><td><code>framework/Database/DB.matrix</code></td><td><code>QueryBuilder</code>, <code>DatabaseManager</code> (driver resolution), global <code>DB</code> facade</td></tr>
+    <tr><td><code>framework/Database/DB.matrix</code></td><td>Global <code>DB</code> facade (loads <code>.env</code>, exposes the <code>DatabaseManager</code> singleton)</td></tr>
+    <tr><td><code>framework/Database/DatabaseManager.matrix</code></td><td>Driver resolution (sqlite/postgres/mysql/mariadb), connections, transactions, <code>DB.table()</code> factory</td></tr>
+    <tr><td><code>framework/Database/QueryBuilder.matrix</code></td><td>Fluent query builder: wheres/joins/IN/NULL/groups, pagination, <code>sql_escape_like</code></td></tr>
     <tr><td><code>framework/Database/Connection.matrix</code></td><td>Driver connections: <code>SqliteConnection</code>, <code>PgConnection</code>, <code>MySqlConnection</code> + value escaping / interpolation</td></tr>
     <tr><td><code>framework/Database/Model.matrix</code></td><td>Active Record base class: persistence, timestamps, fillable</td></tr>
     <tr><td><code>framework/Database/Schema.matrix</code></td><td><code>Blueprint</code> + <code>SchemaBuilder</code> DDL compiler, global <code>Schema</code> facade</td></tr>
@@ -356,7 +359,8 @@
     <tr><td><code>framework/View/BD.matrix</code></td><td>SpiderBD template compiler + global <code>view()</code> helper</td></tr>
     <tr><td><code>framework/Auth/Auth.matrix</code></td><td><code>AuthManager</code> singleton: attempt, login, sessions, guards</td></tr>
     <tr><td><code>framework/Auth/Hash.matrix</code></td><td>Bcrypt hashing facade</td></tr>
-    <tr><td><code>framework/Console/ConsoleKernel.matrix</code></td><td>Magic CLI command engine</td></tr>
+    <tr><td><code>framework/Console/ConsoleKernel.matrix</code></td><td>Magic CLI command engine (dispatch, migrations, generators)</td></tr>
+    <tr><td><code>framework/Console/TestRunner.matrix</code></td><td>Test suite runner (<code>magic test</code>): spawns each suite, <code>--filter</code>/<code>--engine</code> options</td></tr>
   </table>
 </section>
 
@@ -387,10 +391,10 @@
 │   └── <span class="d">seeders/</span>                 <span class="n"># DatabaseSeeder.matrix</span>
 ├── <span class="d">framework/</span>                    <span class="n"># Spid3rWeb core (do not edit casually)</span>
 │   ├── Application.matrix · Router.matrix · Request.matrix
-│   ├── Response.matrix · Middleware.matrix · Controller.matrix
+│   ├── Response.matrix · Middleware.matrix · Controller.matrix · ErrorRenderer.matrix
 │   ├── <span class="d">Auth/</span>  <span class="n">Auth.matrix, Hash.matrix</span>
-│   ├── <span class="d">Console/</span>  <span class="n">ConsoleKernel.matrix</span>
-│   ├── <span class="d">Database/</span>  <span class="n">DB, Connection, Model, Schema, Migration</span>
+│   ├── <span class="d">Console/</span>  <span class="n">ConsoleKernel.matrix, TestRunner.matrix</span>
+│   ├── <span class="d">Database/</span>  <span class="n">DB, DatabaseManager, QueryBuilder, Connection, Model, Schema, Migration</span>
 │   ├── <span class="d">Cache/</span>  <span class="n">Cache.matrix (facade), CacheStore.matrix (drivers)</span>
 │   └── <span class="d">View/</span>  <span class="n">BD.matrix</span>
 ├── <span class="d">public/</span>                       <span class="n"># Static assets (path-traversal protected)</span>
@@ -824,6 +828,7 @@ Route.<span class="fn">get</span>("/products/{id}/reviews/{reviewId}", handler);
     <tr><th>Rule</th><th>Meaning</th></tr>
     <tr><td><code>required</code></td><td>Must be present and non-empty (string, list, or null check)</td></tr>
     <tr><td><code>min:N</code> / <code>max:N</code></td><td>String length bounds</td></tr>
+    <tr><td><code>min_value:N</code> / <code>max_value:N</code></td><td>Numeric value bounds (empty values skipped; pair with <code>integer</code>/<code>numeric</code> for type checking)</td></tr>
     <tr><td><code>email</code></td><td>Rigorous RFC-style check: single <code>@</code>, length limits, valid user/domain chars, no leading/trailing dots, real TLD (non-numeric, ≥2 chars)</td></tr>
     <tr><td><code>numeric</code> / <code>integer</code> (<code>int</code>)</td><td>Must parse as float / int</td></tr>
     <tr><td><code>confirmed</code></td><td>Must equal <code>&lt;field&gt;_confirmation</code> input</td></tr>

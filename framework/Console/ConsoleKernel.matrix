@@ -6,6 +6,7 @@ import "framework/Application";
 import "framework/Database/DB";
 import "framework/Database/Schema";
 import "framework/Database/Migration";
+import "TestRunner";
 
 public class ConsoleKernel {
     public let migrations_list;
@@ -131,69 +132,6 @@ public class ConsoleKernel {
         return 0;
     }
 
-    fn resolve_spid3r_binary(self) -> string {
-        let cur = exe_path();
-        if cur.is_ok() {
-            let p = cur.unwrap();
-            if file_exists(p) {
-                return p;
-            }
-        }
-
-        let env_keys = list(
-            "SPID3R_BIN",
-            "SPID3R_EXE",
-            "CARGO_BIN_EXE_spid3r",
-            "CARGO_BIN_EXE_spidr"
-        );
-        for k in env_keys {
-            let v = env(k);
-            if v.is_some() {
-                let p = v.unwrap();
-                if file_exists(p) {
-                    return p;
-                }
-            }
-        }
-
-        let candidates = list(
-            "target/debug/spid3r.exe",
-            "target/debug/spid3r",
-            "../../target/debug/spid3r.exe",
-            "../../target/debug/spid3r",
-            "target/release/spid3r.exe",
-            "target/release/spid3r",
-            "../../target/release/spid3r.exe",
-            "../../target/release/spid3r"
-        );
-        for c in candidates {
-            if file_exists(c) {
-                return c;
-            }
-        }
-
-        return "spid3r";
-    }
-
-    fn cleanup_db_artifacts(self) {
-        let root = self.resolve_root();
-        let candidates = list(
-            root + "database/database.sqlite",
-            "database/database.sqlite",
-            "examples/spid3r_web/database/database.sqlite"
-        );
-        for p in candidates {
-            let shm_file = p + "-shm";
-            let wal_file = p + "-wal";
-            if file_exists(shm_file) {
-                file_delete(shm_file);
-            }
-            if file_exists(wal_file) {
-                file_delete(wal_file);
-            }
-        }
-    }
-
     fn command_test(self, cli_args = null) -> int {
         // Recursion guard: some registered suites (e.g. e2e tier2 CLI
         // boundaries) invoke `magic test` themselves to verify the command
@@ -204,129 +142,8 @@ public class ConsoleKernel {
         }
         env_set("SPID3R_MAGIC_TEST_GUARD", "1");
 
-        let root = self.resolve_root();
-        if root != "" {
-            env_set("SPID3R_PATH", root);
-        } else {
-            env_set("SPID3R_PATH", ".");
-        }
-
-        let spid3r_bin = self.resolve_spid3r_binary();
-
-        let filter_substr = "";
-        let engine_override = "";
-        if cli_args != null {
-            let i = 1;
-            while i < cli_args.len() {
-                let arg = cli_args[i];
-                if arg.starts_with("--filter=") {
-                    filter_substr = arg.replace("--filter=", "");
-                } elif arg == "--filter" and i + 1 < cli_args.len() {
-                    i = i + 1;
-                    filter_substr = cli_args[i];
-                } elif arg.starts_with("--engine=") {
-                    engine_override = arg.replace("--engine=", "");
-                } elif arg == "--engine" and i + 1 < cli_args.len() {
-                    i = i + 1;
-                    engine_override = cli_args[i];
-                }
-                i = i + 1;
-            }
-        }
-
-        println("==================================================================");
-        println("            Spid3rWeb Complete Test Suite Execution               ");
-        println("==================================================================");
-
-        let test_suites = list(
-            "tests/test_router.matrix",
-            "tests/test_validator.matrix",
-            "tests/test_query_builder.matrix",
-            "tests/test_model.matrix",
-            "tests/test_bd.matrix",
-            "tests/test_bd_adversarial.matrix",
-            "tests/test_http_lifecycle.matrix",
-            "tests/test_drivers.matrix",
-            "tests/test_cache.matrix",
-            "tests/test_ecommerce.matrix",
-            "tests/test_admin.matrix",
-            "tests/test_multi_db_live.matrix",
-            // e2e/tier1_features_cli is intentionally excluded here: it
-            // invokes `magic test` itself (in-process and via subprocess),
-            // which would recurse forever. Run it via the e2e orchestrator:
-            // spid3r run tests/e2e/run_e2e.matrix
-            "tests/e2e/tier1_features_orm.matrix",
-            "tests/e2e/tier1_features_http.matrix",
-            "tests/e2e/tier1_features_advanced.matrix",
-            "tests/e2e/tier2_boundaries_part1.matrix",
-            "tests/e2e/tier2_boundaries_part2.matrix",
-            "tests/e2e/tier3_cross_feature.matrix",
-            "tests/e2e/tier4_real_world.matrix"
-        );
-
-        let total_run = 0;
-        let passed = 0;
-
-        for suite in test_suites {
-            if filter_substr != "" and not suite.contains(filter_substr) {
-                continue;
-            }
-
-            let test_path = suite;
-            let candidates = list(
-                suite,
-                root + suite,
-                "examples/spid3r_web/" + suite
-            );
-            for c in candidates {
-                if file_exists(c) {
-                    test_path = c;
-                    break;
-                }
-            }
-
-            println("------------------------------------------------------------------");
-            println("Running: " + suite);
-            println("------------------------------------------------------------------");
-
-            let run_args = list("run");
-            if engine_override != "" {
-                run_args.push("--engine");
-                run_args.push(engine_override);
-            }
-            run_args.push(test_path);
-
-            let res = exec_capture(spid3r_bin, run_args, null);
-            total_run = total_run + 1;
-
-            if res.is_ok() {
-                let out = res.unwrap();
-                print(out["stdout"]);
-                if out["stderr"] != "" {
-                    print(out["stderr"]);
-                }
-                if out["code"] == 0 {
-                    passed = passed + 1;
-                } else {
-                    println("[FAILED]: " + suite + " (exit code " + string(out["code"]) + ")");
-                }
-            } else {
-                println("[EXEC ERROR] " + res.unwrap_err());
-                println("[FAILED]: " + suite);
-            }
-        }
-
-        DB.close();
-        self.cleanup_db_artifacts();
-
-        println("==================================================================");
-        println("Test Summary: " + string(passed) + "/" + string(total_run) + " test suites passed.");
-        println("==================================================================");
-
-        if total_run == 0 or passed < total_run {
-            return 1;
-        }
-        return 0;
+        let runner = new TestRunner(self.resolve_root());
+        return runner.run(cli_args);
     }
 
     fn command_route_list(self) -> int {

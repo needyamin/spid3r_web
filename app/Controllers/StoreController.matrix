@@ -5,6 +5,7 @@ import "framework/Controller";
 import "framework/Response";
 import "framework/View/BD";
 import "framework/Database/DB";
+import "framework/Database/QueryBuilder";
 import "app/Models/Product";
 import "app/Support/CartService";
 import "app/Support/Str";

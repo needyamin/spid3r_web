@@ -498,6 +498,36 @@ public class Request {
                             validator.add_error(field, "The " + field + " must not exceed " + rule_arg + " characters.");
                         }
                     }
+                } elif rule_name == "min_value" {
+                    // Numeric lower bound (min is string-length). Skips empty
+                    // values like every non-required rule; pairs with the
+                    // "integer"/"numeric" rules which catch non-numeric input.
+                    if val_str != "" {
+                        let num = 0.0;
+                        try {
+                            num = float(val_str);
+                        } catch (_e) {
+                            validator.add_error(field, "The " + field + " must be a number.");
+                            num = null;
+                        }
+                        if num != null and num < float(rule_arg) {
+                            validator.add_error(field, "The " + field + " must be at least " + rule_arg + ".");
+                        }
+                    }
+                } elif rule_name == "max_value" {
+                    // Numeric upper bound (max is string-length).
+                    if val_str != "" {
+                        let num = 0.0;
+                        try {
+                            num = float(val_str);
+                        } catch (_e) {
+                            validator.add_error(field, "The " + field + " must be a number.");
+                            num = null;
+                        }
+                        if num != null and num > float(rule_arg) {
+                            validator.add_error(field, "The " + field + " must not be greater than " + rule_arg + ".");
+                        }
+                    }
                 } elif rule_name == "numeric" {
                     if val_str != "" {
                         try {

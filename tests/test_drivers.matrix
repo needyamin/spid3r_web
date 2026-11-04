@@ -3,6 +3,7 @@
 // dialect DDL compilation, driver resolution). No live server required.
 
 import "framework/Database/DB";
+import "framework/Database/DatabaseManager";
 import "framework/Database/Schema";
 import "framework/Database/Connection";
 import "framework/Env";
