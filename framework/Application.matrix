@@ -69,12 +69,14 @@ public class Application {
     // Static Asset Delivery
     // ------------------------------------------------------------------------
     // Reject anything that could escape the public/ directory: parent
-    // segments, backslashes, NUL bytes and their percent-encoded forms.
+    // segments, backslashes, colons (NTFS alternate data streams, Windows
+    // drive letters), NUL bytes and their percent-encoded forms.
     fn is_unsafe_path(self, path: string) -> bool {
         let lower = path.lower();
         return path.contains("..") or path.contains("\\") or path.contains(chr(0))
+            or path.contains(":")
             or lower.contains("%2e") or lower.contains("%2f") or lower.contains("%5c")
-            or lower.contains("%00");
+            or lower.contains("%00") or lower.contains("%3a");
     }
 
     fn content_type_for(self, path: string) -> string {
@@ -179,8 +181,10 @@ public class Application {
             }
         }
 
-        // 1. Static file check (e.g. /css/store.css, /js/app.js)
-        if req.method == "GET" and self.is_static_prefix(req.path) {
+        // 1. Static file check (e.g. /css/welcome.css) — HEAD falls back
+        //     to the same handler as GET (body handling is the server's
+        //     concern); matches the Router's HEAD→GET route fallback.
+        if (req.method == "GET" or req.method == "HEAD") and self.is_static_prefix(req.path) {
             let static_res = self.try_serve_static(req.path);
             if static_res != null {
                 return static_res.to_http();

@@ -3,6 +3,7 @@
 
 import "http";
 import "framework/Env";
+import "framework/Config/Config";
 
 public class Response {
     public let status_code;
@@ -58,8 +59,8 @@ public class Response {
         if not self.is_header_safe(name) or not self.is_header_safe(value) {
             throw "Response.cookie: illegal character (CR/LF/NUL) in cookie name or value";
         }
-        // Secure flag: explicit argument wins; otherwise SPID3R_COOKIE_SECURE=1
-        // (or a production APP_ENV) enables it for HTTPS deployments.
+        // Secure flag: explicit argument wins; then SPID3R_COOKIE_SECURE=1;
+        // then config/session.matrix "secure"; then a production APP_ENV.
         let secure_flag = false;
         if secure != null {
             secure_flag = secure == true or secure == 1 or string(secure) == "1" or string(secure) == "true";
@@ -68,13 +69,25 @@ public class Response {
             if env_secure.is_some() and string(env_secure.unwrap()).trim() == "1" {
                 secure_flag = true;
             } else {
-                let app_env = env("APP_ENV");
-                if app_env.is_some() and string(app_env.unwrap()).trim().lower() == "production" {
+                let cfg_secure = Config.get("session.secure", false);
+                if cfg_secure == true {
                     secure_flag = true;
+                } else {
+                    let app_env = env("APP_ENV");
+                    if app_env.is_some() and string(app_env.unwrap()).trim().lower() == "production" {
+                        secure_flag = true;
+                    }
                 }
             }
         }
-        let cookie_str = name + "=" + value + "; Path=" + path + "; Max-Age=" + string(max_age) + "; HttpOnly; SameSite=Lax";
+        // HttpOnly / SameSite come from config/session.matrix (defaults keep
+        // the historical "HttpOnly; SameSite=Lax" behavior).
+        let cookie_str = name + "=" + value + "; Path=" + path + "; Max-Age=" + string(max_age);
+        let httponly = Config.get("session.httponly", true);
+        if httponly == true {
+            cookie_str = cookie_str + "; HttpOnly";
+        }
+        cookie_str = cookie_str + "; SameSite=" + string(Config.get("session.same_site", "Lax"));
         if secure_flag {
             cookie_str = cookie_str + "; Secure";
         }

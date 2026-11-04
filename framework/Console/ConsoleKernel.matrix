@@ -6,6 +6,7 @@ import "framework/Application";
 import "framework/Database/DB";
 import "framework/Database/Schema";
 import "framework/Database/Migration";
+import "framework/Queue/Queue";
 import "TestRunner";
 
 public class ConsoleKernel {
@@ -82,6 +83,8 @@ public class ConsoleKernel {
                 make_mig = true;
             }
             return self.command_make_model(cli_args[1], make_mig);
+        } elif command == "queue:work" {
+            return self.command_queue_work(cli_args);
         } elif command == "make:migration" {
             if cli_args.len() < 2 {
                 println("Error: Not enough arguments (missing migration name). Usage: make:migration <name>");
@@ -109,6 +112,7 @@ public class ConsoleKernel {
         println("  migrate:rollback          Rollback the last database migration batch");
         println("  migrate:status            Show the status of each migration");
         println("  db:seed                   Seed the database with records");
+        println("  queue:work [--once]       Process queued jobs (--once = drain and exit)");
         println("  make:controller <Name>    Create a new controller class");
         println("  make:model <Name> [-m]    Create a new Active Record model (optional migration)");
         println("  make:migration <name>     Create a new database migration file");
@@ -169,6 +173,45 @@ public class ConsoleKernel {
             println("| " + m_pad + " | " + path_pad + " | " + a_pad + " |");
         }
         println("+--------+------------------------------------+--------------------------------+\n");
+        return 0;
+    }
+
+    // Drain queued jobs. Options: --once (a single job), --queue=NAME.
+    // The runtime has no sleep primitive, so the worker is a "drain and
+    // exit" design: it processes until the queue is empty and returns.
+    // Schedule it (cron / Task Scheduler) for continuous processing.
+    fn command_queue_work(self, cli_args) -> int {
+        let once = false;
+        let queue = "";
+        let i = 0;
+        while i < cli_args.len() {
+            let a = string(cli_args[i]);
+            if a == "--once" {
+                once = true;
+            } elif a.starts_with("--queue=") {
+                queue = a.slice(8, a.len());
+            }
+            i = i + 1;
+        }
+
+        let label = queue;
+        if label == "" {
+            label = "default";
+        }
+        let pending = Queue.size(queue);
+        println("[Queue] worker on queue '" + label + "' — " + string(pending) + " job(s) pending");
+
+        let processed = 0;
+        if once {
+            if Queue.run_next(queue) {
+                processed = processed + 1;
+            }
+        } else {
+            processed = Queue.work(0, queue);
+        }
+
+        println("[Queue] processed " + string(processed) + " job(s) — done");
+        DB.close();
         return 0;
     }
 
@@ -376,12 +419,63 @@ public fn register_all_migrations(kernel) {
         return "";
     }
 
+    // Ensure every directory level of a target file path exists.
+    // write_file does not create parent dirs — on a fresh installation
+    // app/Controllers and app/Models may not exist yet.
+    fn ensure_parent_dir(self, file_path: string) -> string {
+        let parts = string(file_path).split("/");
+        if parts.len() < 2 {
+            return file_path;
+        }
+        let dir = parts[0];
+        if not file_exists(dir) {
+            dir_create(dir);
+        }
+        let i = 1;
+        while i < parts.len() - 1 {
+            dir = dir + "/" + parts[i];
+            if not file_exists(dir) {
+                dir_create(dir);
+            }
+            i = i + 1;
+        }
+        return file_path;
+    }
+
+    // Scaffolding names become class names AND file paths. Reject anything
+    // that is not a plain Spid3r identifier so `make:model ../../evil` or
+    // names with separators cannot write outside the target directory.
+    fn valid_scaffold_name(self, name: string) -> bool {
+        let s = string(name);
+        if s.len() == 0 {
+            return false;
+        }
+        let allowed = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_";
+        let i = 0;
+        while i < s.len() {
+            if not allowed.contains(s.slice(i, i + 1)) {
+                return false;
+            }
+            i = i + 1;
+        }
+        let first = s.slice(0, 1);
+        if string("0123456789").contains(first) {
+            return false;
+        }
+        return true;
+    }
+
     fn command_make_controller(self, name: string) -> int {
+        if not self.valid_scaffold_name(name) {
+            println("[Magic Error] Invalid controller name '" + string(name) + "' — use letters, digits and underscores only (e.g. PostController).");
+            return 1;
+        }
         let clean_name = name;
         if not clean_name.ends_with("Controller") {
             clean_name = clean_name + "Controller";
         }
         let file_path = self.resolve_root() + "app/Controllers/" + clean_name + ".matrix";
+        let _ = self.ensure_parent_dir(file_path);
         let base_view = clean_name.slice(0, clean_name.len() - 10).lower();
 
         let content = "// app/Controllers/" + clean_name + ".matrix
@@ -417,7 +511,12 @@ public class " + clean_name + " extends Controller {
     }
 
     fn command_make_model(self, name: string, with_migration: bool) -> int {
+        if not self.valid_scaffold_name(name) {
+            println("[Magic Error] Invalid model name '" + string(name) + "' — use letters, digits and underscores only (e.g. Post).");
+            return 1;
+        }
         let file_path = self.resolve_root() + "app/Models/" + name + ".matrix";
+        let _ = self.ensure_parent_dir(file_path);
         let table_name = string(name).lower() + "s";
 
         let content = "// app/Models/" + name + ".matrix
@@ -475,6 +574,23 @@ public let " + name + "Model = " + name + ";
     }
 
     fn command_make_migration(self, name: string) -> int {
+        // Migration names become snake_case file names AND class names —
+        // restrict to lowercase words so nothing can escape the
+        // database/migrations/ directory or produce an invalid class name.
+        let allowed = "abcdefghijklmnopqrstuvwxyz0123456789_";
+        let sn = string(name);
+        let name_ok = sn.len() > 0;
+        let i = 0;
+        while i < sn.len() {
+            if not allowed.contains(sn.slice(i, i + 1)) {
+                name_ok = false;
+            }
+            i = i + 1;
+        }
+        if not name_ok {
+            println("[Magic Error] Invalid migration name '" + sn + "' — use lowercase words separated by underscores (e.g. create_posts_table).");
+            return 1;
+        }
         let ts = string(unix_time());
         let file_name = ts + "_" + name + ".matrix";
         let file_path = self.resolve_root() + "database/migrations/" + file_name;

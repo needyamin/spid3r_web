@@ -3,6 +3,7 @@
 
 import "framework/Database/DB";
 import "framework/Auth/Hash";
+import "framework/Config/Config";
 
 public class AuthManager {
     public let current_user;
@@ -20,7 +21,9 @@ public class AuthManager {
 
     public fn attempt(self, email: string, password: string) -> bool {
         let clean = string(email).trim().lower();
-        let users = DB.table("users").where("email", "=", clean).limit(1).get();
+        let table = string(Config.get("auth.guards.session.table", "users"));
+        let username_col = string(Config.get("auth.guards.session.username_column", "email"));
+        let users = DB.table(table).where(username_col, "=", clean).limit(1).get();
         if users.len() == 0 {
             return false;
         }
@@ -54,7 +57,7 @@ public class AuthManager {
         // column carries the CSRF token so authenticate_token() can verify
         // form submissions against it.
         try {
-            DB.statement("INSERT INTO sessions (token, user_id, payload, last_activity) VALUES (?, ?, ?, ?)",
+            DB.statement("INSERT INTO " + self.sessions_table() + " (token, user_id, payload, last_activity) VALUES (?, ?, ?, ?)",
                 list(self.current_token, user["id"], self.csrf_token, unix_time()));
         } catch (_e) {
             // sessions table optional
@@ -64,9 +67,10 @@ public class AuthManager {
     public fn authenticate_token(self, token: string) -> bool {
         if token == "" { return false; }
         try {
-            // Server-side session TTL: 24h of inactivity expires a session.
-            let cutoff = unix_time() - 86400;
-            let rows = DB.select("SELECT u.*, s.payload AS session_payload FROM users u JOIN sessions s ON u.id = s.user_id WHERE s.token = ? AND s.last_activity >= ?", list(token, cutoff));
+            // Server-side session TTL: session.lifetime seconds of inactivity
+            // expires a session (config/session.matrix).
+            let cutoff = unix_time() - self.session_lifetime();
+            let rows = DB.select("SELECT u.*, s.payload AS session_payload FROM users u JOIN " + self.sessions_table() + " s ON u.id = s.user_id WHERE s.token = ? AND s.last_activity >= ?", list(token, cutoff));
             if rows.len() > 0 {
                 let user_row = rows[0];
                 let session_payload = "";
@@ -87,14 +91,14 @@ public class AuthManager {
                 }
                 // Sliding expiration: touch last_activity on use
                 try {
-                    DB.statement("UPDATE sessions SET last_activity = ? WHERE token = ?", list(unix_time(), token));
+                    DB.statement("UPDATE " + self.sessions_table() + " SET last_activity = ? WHERE token = ?", list(unix_time(), token));
                 } catch (_e2) {}
                 return true;
             }
             // Expired or unknown token — clean it up so dead sessions
             // don't accumulate forever.
             try {
-                DB.statement("DELETE FROM sessions WHERE token = ?", list(token));
+                DB.statement("DELETE FROM " + self.sessions_table() + " WHERE token = ?", list(token));
             } catch (_e3) {}
         } catch (_e) {
             // fallback
@@ -105,12 +109,39 @@ public class AuthManager {
     public fn logout(self) {
         if self.current_token != "" {
             try {
-                DB.statement("DELETE FROM sessions WHERE token = ?", list(self.current_token));
+                DB.statement("DELETE FROM " + self.sessions_table() + " WHERE token = ?", list(self.current_token));
             } catch (_e) {}
         }
         self.current_user = null;
         self.current_token = "";
         self.csrf_token = "";
+    }
+
+    // Config-driven knobs (config/auth.matrix + config/session.matrix)
+    // SQL-identifier safety: config-sourced table names are interpolated
+    // into raw SQL, so they are validated against [A-Za-z0-9_] before use.
+    fn safe_identifier(self, name: string, fallback: string) -> string {
+        let allowed = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_";
+        let s = string(name).trim();
+        if s.len() == 0 {
+            return fallback;
+        }
+        let i = 0;
+        while i < s.len() {
+            if not allowed.contains(s.slice(i, i + 1)) {
+                throw "auth: invalid identifier '" + s + "' (allowed: A-Z a-z 0-9 _)";
+            }
+            i = i + 1;
+        }
+        return s;
+    }
+
+    fn sessions_table(self) -> string {
+        return self.safe_identifier(string(Config.get("session.table", "sessions")), "sessions");
+    }
+
+    fn session_lifetime(self) -> int {
+        return int(Config.get("session.lifetime", 86400));
     }
 
     public fn clear(self) {

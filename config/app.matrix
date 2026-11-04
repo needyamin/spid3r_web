@@ -7,5 +7,11 @@ public let config_app = map(
     "debug", true,
     "url", "http://localhost:8000",
     "timezone", "UTC",
-    "locale", "en"
+    "locale", "en",
+    // Application key used for signed values (set SPID3R_APP_KEY in .env
+    // for anything beyond development).
+    "key_env", "SPID3R_APP_KEY",
+    "key", "",
+    // Toggle for the built-in maintenance placeholder (reserved)
+    "maintenance", false
 );

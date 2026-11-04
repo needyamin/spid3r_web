@@ -4,7 +4,7 @@
 import "framework/Application";
 import "routes/web";
 import "routes/api";
-import "app/Middleware/AdminMiddleware";
+import "routes/queue";
 
 fn main() {
     println("==================================================================");
@@ -14,12 +14,11 @@ fn main() {
     // 1. Initialize Application Kernel
     let app = new Application();
 
-    // 1b. Named middleware aliases (route-level guards)
-    app.middleware("admin", fn(_args) { return new AdminMiddleware(); });
-
-    // 2. Register Web and API Routes
+    // 2. Register Web and API Routes (plus queue job handlers so
+    //    Queue.push with the sync driver resolves handlers in-process)
     register_web_routes();
     register_api_routes();
+    register_queue_jobs();
 
     // 3. Port Configuration (default 8000)
     let port = 8000;

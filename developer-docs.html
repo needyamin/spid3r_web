@@ -239,15 +239,16 @@
   <div class="group">
     <div class="group-title">Frontend</div>
     <a href="#views">SpiderBD Templates</a>
+    <a href="#frontend-ui">Frontend Assets &amp; Responsive CSS</a>
   </div>
   <div class="group">
     <div class="group-title">Performance</div>
     <a href="#cache">Caching System</a>
+    <a href="#core-systems">Core Systems (Config · Log · Storage · Mail · Queue)</a>
   </div>
   <div class="group">
     <div class="group-title">Security</div>
     <a href="#auth">Authentication &amp; Hashing</a>
-    <a href="#admin">Admin Panel</a>
     <a href="#security">Security Hardening</a>
   </div>
   <div class="group">
@@ -275,8 +276,8 @@
     <div class="card"><div class="c-icon">🧅</div><h4>Middleware Pipeline</h4><p>Onion-architecture pipeline, global CORS &amp; logging, session auth guards, role gates, cache-backed rate limiting (<code>throttle</code>), custom 404/500 error pages.</p></div>
     <div class="card"><div class="c-icon">🔐</div><h4>Built-in Auth</h4><p>Native bcrypt hashing, CSPRNG session tokens (<code>sess_…</code>), cookie or Bearer-token sessions.</p></div>
     <div class="card"><div class="c-icon">⚡</div><h4>Multi-Engine Database</h4><p><strong>SQLite</strong>, <strong>PostgreSQL</strong>, <strong>MySQL</strong>, and <strong>MariaDB</strong> behind one API — selected via <code>SPID3R_DB_DRIVER</code> with dialect-aware DDL and last-id handling.</p></div>
-    <div class="card"><div class="c-icon">🛡️</div><h4>Admin Panel</h4><p>Role-gated (<code>users.is_admin</code>) dashboard: revenue/order stats, product CRUD, order status management — CSRF-protected forms.</p></div>
-    <div class="card"><div class="c-icon">🔍</div><h4>SEO-Friendly URLs</h4><p>Canonical <code>/product/{slug}</code> &amp; <code>/category/{slug}</code> routes, auto-generated <code>/sitemap.xml</code> + <code>/robots.txt</code>, per-page meta descriptions.</p></div>
+    <div class="card"><div class="c-icon">✨</div><h4>Fresh-Install Welcome Page</h4><p>A clean installation serves a single welcome page at <code>/</code> — your app layer (<code>app/</code>, views, routes) starts empty and ready to build on.</p></div>
+    <div class="card"><div class="c-icon">🔍</div><h4>SEO-Friendly URLs</h4><p>Descriptive, crawlable routes (<code>/product/{slug}</code> style), <code>/sitemap.xml</code> + <code>/robots.txt</code> support, and per-page <code>&lt;meta name="description"&gt;</code> are conventions your app can follow from day one.</p></div>
     <div class="card"><div class="c-icon">🪄</div><h4>Magic CLI</h4><p><code>spid3r magic serve / migrate / make:*</code> — scaffolding, migrations, route inspection, test runner.</p></div>
   </div>
 </section>
@@ -293,11 +294,12 @@
     <tr><td><strong>Web server</strong></td><td>Built-in Spid3r stdlib HTTP/TCP server — <strong>not Apache or Nginx</strong></td><td><code>Application.listen(port)</code> (<code>tcp_listen</code> + <code>serve_listener</code>) binds a socket and serves every route, API endpoint and static file from the same process — no Apache/Nginx/PHP-FPM needed. Each connection builds a <code>Request</code>, runs the middleware pipeline, dispatches the router, writes a <code>Response</code>. See <em>Server &amp; deployment</em> below.</td></tr>
     <tr><td><strong>Databases</strong></td><td>SQLite (default) · PostgreSQL · MySQL · MariaDB</td><td><code>DatabaseManager</code> resolves the driver from <code>SPID3R_DB_DRIVER</code> (or <code>.env</code>); <code>Connection.matrix</code> adapts dialects (DDL, last-insert-id, pragmas); app code is driver-agnostic</td></tr>
     <tr><td><strong>Templating</strong></td><td>SpiderBD (<code>.bd.html</code>)</td><td>Layouts/sections/yields/includes + a single nesting-aware directive pass for <code>@if</code>/<code>@foreach</code>; escaped <code>{{ var }}</code> and raw <code>{!! var !!}</code> interpolation with dot-path resolution</td></tr>
-    <tr><td><strong>Frontend</strong></td><td>Bootstrap 5.3 (CSS) + vanilla JS</td><td>Storefront/admin UI is server-rendered HTML; the only JavaScript is a small <code>fetch</code> layer for no-reload cart mutations and toast alerts — no SPA framework, no build step</td></tr>
+    <tr><td><strong>Frontend</strong></td><td>Self-contained CSS + vanilla JS (no framework, no CDN)</td><td>Server-rendered HTML plus one small stylesheet per app (<code>public/css/welcome.css</code> on a fresh install). Convention: mobile-first fluid layouts, semantic class names, 44px touch targets. JavaScript is progressive enhancement only — plain POST forms keep working without it. No SPA, no build step, no external assets</td></tr>
     <tr><td><strong>Auth &amp; crypto</strong></td><td>Spid3r stdlib <code>bcrypt</code> + <code>random_bytes</code></td><td>Passwords hashed with bcrypt; sessions use 192-bit CSPRNG tokens stored server-side in a <code>sessions</code> table (cookie or Bearer transport)</td></tr>
-    <tr><td><strong>Cache</strong></td><td>Cache facade</td><td>Memory / file (<code>storage/framework/cache</code>) / database drivers behind one API; powers cart state, login rate-limiting</td></tr>
-    <tr><td><strong>CLI tooling</strong></td><td>Magic (<code>ConsoleKernel</code>)</td><td>serve · migrate/rollback/status · db:seed · make:controller/model/migration · route:list · test — migrations auto-discovered from <code>database/migrations/</code></td></tr>
-    <tr><td><strong>Testing</strong></td><td>In-language suites + 4-tier E2E</td><td>Unit suites run in-process; opaque-box E2E boots a real <code>Application</code> and issues HTTP requests (<code>handle_request</code>); <code>magic test</code> runs everything with a recursion guard</td></tr>
+    <tr><td><strong>Cache</strong></td><td>Cache facade</td><td>Memory / file (<code>storage/framework/cache</code>) / database drivers behind one API; powers login rate-limiting and app-level caching</td></tr>
+    <tr><td><strong>Core systems</strong></td><td>Config · Log · Storage · Mail · Queue</td><td>Dot-notation config repository over <code>config/*.matrix</code>; leveled file logging (<code>storage/logs/</code>); local storage disks with traversal guards; mail with a log driver; database-backed job queue (<code>magic queue:work</code>) — see <a href="#core-systems">Core Systems</a></td></tr>
+    <tr><td><strong>CLI tooling</strong></td><td>Magic (<code>ConsoleKernel</code>)</td><td>serve · migrate/rollback/status · db:seed · queue:work · make:controller/model/migration · route:list · test — migrations auto-discovered from <code>database/migrations/</code></td></tr>
+    <tr><td><strong>Testing</strong></td><td>In-language suites</td><td>9 framework suites (router, validator, query builder, drivers, HTTP lifecycle, cache, throttle, core systems, multi-DB live) — 9/9 green on SQLite, MySQL 8.0, MariaDB 11 and PostgreSQL 16; <code>magic test</code> runs everything with a recursion guard</td></tr>
     <tr><td><strong>Config &amp; env</strong></td><td><code>.env</code> + <code>spider.toml</code></td><td><code>Env.matrix</code> loads <code>.env</code> (OS env wins); <code>spider.toml</code> is the package manifest (entry file, metadata)</td></tr>
   </table>
 
@@ -314,7 +316,7 @@
     <tr><td><strong>Server type</strong></td><td>Single-process, concurrent application server built on Spid3r stdlib sockets (<code>tcp_listen</code> + <code>serve_listener</code>). Serves dynamic routes, the JSON API and static files (<code>public/</code>, path-traversal protected) from one listener.</td></tr>
     <tr><td><strong>Bind address &amp; port</strong></td><td>Default <code>http://127.0.0.1:8000</code> (loopback — safe for dev). Override with <code>spid3r magic serve --port N</code>, <code>spid3r run server.matrix N</code>, or <code>SPID3R_HOST=0.0.0.0</code> to accept external traffic (required behind a reverse proxy or in a container).</td></tr>
     <tr><td><strong>Concurrency</strong></td><td>One OS process; each accepted connection is handled by the async scheduler and runs the full request pipeline. The memory cache driver is per-process (restarts clear it — use the file or database driver to persist across restarts).</td></tr>
-    <tr><td><strong>TLS / HTTPS</strong></td><td>Not built into the listener. Terminate TLS at a reverse proxy (Nginx, Caddy, a cloud load balancer) that forwards plain HTTP to <code>SPID3R_HOST=0.0.0.0</code>. Once HTTPS is in front, enable the <code>Secure</code> cookie flag in <code>Response.cookie</code>.</td></tr>
+    <tr><td><strong>TLS / HTTPS</strong></td><td>Not built into the listener. Terminate TLS at a reverse proxy (Nginx, Caddy, a cloud load balancer) that forwards plain HTTP to <code>SPID3R_HOST=0.0.0.0</code>. Once HTTPS is in front, force the <code>Secure</code> cookie flag via <code>SPID3R_COOKIE_SECURE=1</code> or <code>config/session.matrix</code> → <code>"secure", true</code>.</td></tr>
     <tr><td><strong>Security headers</strong></td><td>Added by the application itself (no web-server config needed): <code>X-Content-Type-Options: nosniff</code>, <code>X-Frame-Options: SAMEORIGIN</code>, <code>Referrer-Policy</code>, <code>Vary: Origin</code>; cross-origin POSTs are rejected by an Origin check plus session CSRF tokens.</td></tr>
     <tr><td><strong>Apache / Nginx role</strong></td><td><em>Optional.</em> Nothing in the stack requires them. Use Nginx/Caddy only as a front proxy for TLS, gzip/brotli, rate limiting or multiple app instances — proxy <code>/</code> to <code>http://127.0.0.1:8000</code> and it works unchanged.</td></tr>
     <tr><td><strong>Running in production</strong></td><td><code>spid3r magic serve --port 8000</code> (or the AOT-compiled binary), launched under a service manager (systemd, Docker <code>CMD</code>, etc.) with <code>SPID3R_HOST=0.0.0.0</code>, <code>APP_ENV=production</code> and the database configured via <code>.env</code>. Run <code>spid3r magic migrate</code> on deploy.</td></tr>
@@ -369,47 +371,55 @@
 <section id="structure">
   <h2>Project Structure</h2>
   <div class="tree"><span class="d">spid3r_web/</span>
-├── <span class="d">app/</span>                          <span class="n"># Application layer (your code)</span>
-│   ├── <span class="d">Controllers/</span>              <span class="n"># MVC controllers (.matrix, extend Controller)</span>
-│   │   ├── AuthController.matrix
-│   │   ├── CartController.matrix
-│   │   ├── OrderController.matrix    <span class="n"># "My Orders" history</span>
-│   │   ├── StoreController.matrix    <span class="n"># storefront + SEO routes (sitemap/robots)</span>
-│   │   └── AdminController.matrix    <span class="n"># admin dashboard, product CRUD, orders</span>
-│   ├── <span class="d">Support/</span>                  <span class="n"># CartService.matrix, Str.matrix (slugs)</span>
-│   ├── <span class="d">Middleware/</span>               <span class="n"># AdminMiddleware.matrix (role gate)</span>
-│   └── <span class="d">Models/</span>                   <span class="n"># Active Record models</span>
-│       ├── User.matrix
-│       ├── Product.matrix
-│       └── Order.matrix
+├── <span class="d">app/</span>                          <span class="n"># Application layer (your code) — empty on fresh install</span>
+│   ├── <span class="d">Controllers/</span>              <span class="n"># created by: spid3r magic make:controller</span>
+│   ├── <span class="d">Middleware/</span>               <span class="n"># created by hand or scaffolding</span>
+│   ├── <span class="d">Models/</span>                   <span class="n"># created by: spid3r magic make:model</span>
+│   └── <span class="d">Support/</span>                  <span class="n"># your helper services</span>
 ├── <span class="d">config/</span>
-│   ├── app.matrix                <span class="n"># App name, env, debug, URL, locale</span>
-│   └── database.matrix           <span class="n"># SQLite connection &amp; pragmas</span>
+│   ├── app.matrix                <span class="n"># App name, env, debug, URL, locale, app key</span>
+│   ├── auth.matrix               <span class="n"># Guards, users table/columns, reset knobs</span>
+│   ├── cache.matrix              <span class="n"># memory | file | database stores</span>
+│   ├── database.matrix           <span class="n"># SQLite/Postgres/MySQL/MariaDB connections</span>
+│   ├── filesystems.matrix        <span class="n"># Storage disks (local, public, logs)</span>
+│   ├── logging.matrix            <span class="n"># Log channels (single, daily, mail, queue)</span>
+│   ├── mail.matrix               <span class="n"># Mailers (log default, smtp reserved)</span>
+│   ├── queue.matrix              <span class="n"># Queue connections (database, sync)</span>
+│   ├── services.matrix           <span class="n"># SMS / payments / OAuth (env-based)</span>
+│   └── session.matrix            <span class="n"># Cookie name, lifetime, security flags</span>
 ├── <span class="d">database/</span>
-│   ├── database.sqlite           <span class="n"># SQLite storage file</span>
-│   ├── <span class="d">migrations/</span>              <span class="n"># 001_… through 007_… (auto-discovered)</span>
+│   ├── database.sqlite           <span class="n"># SQLite storage file (created by migrate)</span>
+│   ├── <span class="d">migrations/</span>              <span class="n"># 001 users · 003 sessions · 008 jobs</span>
 │   │   └── registry.matrix         <span class="n"># AUTO-GENERATED auto-discovery manifest</span>
-│   └── <span class="d">seeders/</span>                 <span class="n"># DatabaseSeeder.matrix</span>
+│   └── <span class="d">seeders/</span>                 <span class="n"># DatabaseSeeder.matrix (no-op until you add seeds)</span>
 ├── <span class="d">framework/</span>                    <span class="n"># Spid3rWeb core (do not edit casually)</span>
 │   ├── Application.matrix · Router.matrix · Request.matrix · Validator.matrix
 │   ├── Response.matrix · Middleware.matrix · Controller.matrix · ErrorRenderer.matrix
+│   ├── Env.matrix                <span class="n"># .env loader (OS env always wins)</span>
 │   ├── <span class="d">Auth/</span>  <span class="n">Auth.matrix, Hash.matrix</span>
-│   ├── <span class="d">Console/</span>  <span class="n">ConsoleKernel.matrix, TestRunner.matrix</span>
-│   ├── <span class="d">Database/</span>  <span class="n">DB, DatabaseManager, QueryBuilder, Connection, Model, Schema, Migration</span>
 │   ├── <span class="d">Cache/</span>  <span class="n">Cache.matrix (facade), CacheStore.matrix (drivers)</span>
+│   ├── <span class="d">Config/</span>  <span class="n">Config.matrix (dot-notation repository over config/*)</span>
+│   ├── <span class="d">Console/</span>  <span class="n">ConsoleKernel.matrix (incl. queue:work), TestRunner.matrix</span>
+│   ├── <span class="d">Database/</span>  <span class="n">DB, DatabaseManager, QueryBuilder, Connection, Model, Schema, Migration</span>
+│   ├── <span class="d">Filesystem/</span>  <span class="n">Storage.matrix (local disks, traversal-guarded)</span>
+│   ├── <span class="d">Log/</span>  <span class="n">Log.matrix (single/daily channels → storage/logs/)</span>
+│   ├── <span class="d">Mail/</span>  <span class="n">Mail.matrix (log driver; smtp fails fast)</span>
+│   ├── <span class="d">Queue/</span>  <span class="n">Queue.matrix (database + sync drivers, jobs table)</span>
 │   └── <span class="d">View/</span>  <span class="n">BD.matrix</span>
 ├── <span class="d">public/</span>                       <span class="n"># Static assets (path-traversal protected)</span>
-│   ├── <span class="d">css/</span> store.css
-│   └── <span class="d">js/</span> app.js
+│   └── <span class="d">css/</span> welcome.css         <span class="n"># Styles for the welcome page</span>
 ├── <span class="d">resources/views/</span>              <span class="n"># SpiderBD templates (.bd.html)</span>
-│   ├── <span class="d">layouts/</span>  <span class="n">store.bd.html</span>
-│   ├── <span class="d">admin/</span>   <span class="n">dashboard, products, product_form, orders, order_detail</span>
-│   ├── <span class="d">auth/</span>    <span class="n">login, register</span>
-│   └── <span class="d">store/</span>   <span class="n">index, show, cart, orders, success</span>
+│   └── welcome.bd.html           <span class="n"># The page served at "/" on a fresh install</span>
 ├── <span class="d">routes/</span>
-│   ├── web.matrix                <span class="n"># Frontend routes</span>
-│   └── api.matrix                <span class="n"># JSON REST routes (/api/v1)</span>
-├── <span class="d">tests/</span>                        <span class="n"># Unit + E2E suites (see Testing)</span>
+│   ├── web.matrix                <span class="n"># Frontend routes — GET / → welcome page</span>
+│   ├── api.matrix                <span class="n"># JSON REST routes (empty registrar)</span>
+│   └── queue.matrix              <span class="n"># Queue job handler registrations</span>
+├── <span class="d">storage/</span>                      <span class="n"># Runtime artifacts (not web-served)</span>
+│   ├── <span class="d">backups/</span>                  <span class="n"># pre-strip snapshots (zip)</span>
+│   └── <span class="d">logs/</span>                     <span class="n"># app-*.log, mail-*.log, queue-*.log</span>
+├── <span class="d">tests/</span>                        <span class="n"># 9 framework suites (see Testing)</span>
+├── .env.example                  <span class="n"># Every documented env var, commented</span>
+├── install.sh                    <span class="n"># One-click installer (language + project)</span>
 ├── magic                         <span class="n"># Magic CLI entrypoint (no extension)</span>
 ├── server.matrix                 <span class="n"># HTTP server entrypoint</span>
 ├── resync.matrix                 <span class="n"># Standalone migration-registry recovery</span>
@@ -432,10 +442,10 @@
   </ul>
 
   <h3>2. Initialize the database</h3>
-  <pre><code><span class="cmt"># Run outstanding migrations (creates users, sessions, products, orders tables)</span>
+  <pre><code><span class="cmt"># Run outstanding migrations (users, sessions, jobs tables)</span>
 spid3r magic migrate
 
-<span class="cmt"># Seed demo data (user ada@example.com + sample products)</span>
+<span class="cmt"># Optional — seeders are a no-op until you register seed data</span>
 spid3r magic db:seed
 
 <span class="cmt"># Verify migration status</span>
@@ -448,9 +458,14 @@ spid3r magic serve --dry-run  <span class="cmt"># validate boot without binding<
   <p>Alternatively run the server entrypoint directly with a port argument:</p>
   <pre><code>spid3r run server.matrix 9000</code></pre>
 
+  <div class="callout info">
+    <div class="co-title">ℹ️ A fresh install serves one page</div>
+    <p>Open <code>http://localhost:8000</code> and you'll see the <strong>welcome page</strong> (<code>resources/views/welcome.bd.html</code>, routed from <code>routes/web.matrix</code>). The application layer (<code>app/</code>, templates, routes) is empty and ready for your code — start with <code>spid3r magic make:model</code> / <code>make:controller</code> and add routes to <code>routes/web.matrix</code>.</p>
+  </div>
+
   <div class="callout tip">
     <div class="co-title">💡 Verify everything works</div>
-    <p>Run <code>spid3r magic test</code> — it executes all 6 unit suites plus the E2E track and exits <code>0</code> only if everything passes. <code>spid3r magic route:list</code> prints the full route table including <code>/cart</code> and <code>/api/v1/status</code>.</p>
+    <p>Run <code>spid3r magic test</code> — it executes all 9 framework suites and exits <code>0</code> only if everything passes (green on SQLite out of the box, and verified against MySQL 8.0, MariaDB 11 and PostgreSQL 16). <code>spid3r magic route:list</code> prints the registered route table. To verify against the bundled SQLite engine regardless of <code>.env</code>, use <code>SPID3R_DB_DRIVER=sqlite spid3r magic test</code>.</p>
   </div>
 
   <h3>4. Manifest (<code>spider.toml</code>)</h3>
@@ -499,7 +514,7 @@ Route.<span class="fn">post</span>(<span class="str">"/login"</span>, fn(req) { 
     <tr><td>Counter key</td><td><code>throttle:{identity}:{method}:{path}</code> — limits are per client <em>and</em> per route</td></tr>
     <tr><td>Exceeding the limit</td><td>HTTP <strong>429</strong> — JSON body for <code>/api/*</code>, themed HTML page otherwise, plus a <code>retry-after</code> header</td></tr>
     <tr><td>Storage</td><td>The configured <code>Cache</code> store; the memory driver resets counters on process restart (the file/database driver survives restarts)</td></tr>
-    <tr><td>Applied by default</td><td><code>POST /login</code> &amp; <code>POST /register</code> (10/60s, backstop to the per-email lockout), <code>POST /checkout</code> (20/60s), API auth endpoints (30/60s)</td></tr>
+    <tr><td>Applied by default</td><td>Nothing — the middleware is <strong>opt-in per route</strong>. Recommended: <code>.middleware("throttle:10,60")</code> on login/register submissions, <code>.middleware("throttle:20,60")</code> on any order/placement endpoint, <code>.middleware("throttle:30,60")</code> on API auth endpoints</td></tr>
   </table>
 
   <div class="callout info">
@@ -511,6 +526,13 @@ Route.<span class="fn">post</span>(<span class="str">"/login"</span>, fn(req) { 
 <!-- ============ CONFIG ============ -->
 <section id="config">
   <h2>Configuration</h2>
+  <p>Every runtime setting lives in a <code>config/*.matrix</code> file and is read through the <code>Config</code> repository (<code>framework/Config/Config.matrix</code>) with dot-notation paths. Bundled namespaces: <code>app</code>, <code>auth</code>, <code>cache</code>, <code>database</code>, <code>filesystems</code>, <code>logging</code>, <code>mail</code>, <code>queue</code>, <code>services</code>, <code>session</code>. Mutable values resolve from environment variables at read time via <code>*_env</code> keys. Full facade reference: <a href="#core-systems">Core Systems</a>.</p>
+  <pre><code>import "framework/Config/Config";
+Config.get("session.lifetime");            <span class="cmt">// 86400</span>
+Config.get("logging.channels.mail.path");  <span class="cmt">// storage/logs/mail.log</span>
+Config.get("mail.from.address", "fallback");
+Config.has("queue.connections.sync.driver");
+Config.set("app.maintenance", true);       <span class="cmt">// runtime override</span></code></pre>
 
   <h3><code>config/app.matrix</code></h3>
   <pre><code>public let config_app = map(
@@ -542,6 +564,14 @@ Route.<span class="fn">post</span>(<span class="str">"/login"</span>, fn(req) { 
     <tr><td><code>SPID3R_DB_PATH</code></td><td>Overrides the SQLite database path</td><td><code>database/database.sqlite</code></td></tr>
     <tr><td><code>SPID3R_PG_HOST / _PORT / _USER / _PASSWORD / _DATABASE</code></td><td>PostgreSQL connection settings</td><td><code>127.0.0.1:5432</code>, user <code>spid3r</code>, db <code>spid3r</code></td></tr>
     <tr><td><code>SPID3R_MYSQL_HOST / _PORT / _USER / _PASSWORD / _DATABASE</code></td><td>MySQL / MariaDB connection settings (MariaDB reuses the <code>SPID3R_MYSQL_*</code> vars)</td><td><code>127.0.0.1:3306</code>, user <code>spid3r</code>, db <code>spid3r</code></td></tr>
+    <tr><td><code>SPID3R_LOG_LEVEL</code></td><td>Minimum log level for every channel: <code>debug</code> | <code>info</code> | <code>warn</code> | <code>error</code> (overrides <code>config/logging.matrix</code>)</td><td>unset → per-channel defaults</td></tr>
+    <tr><td><code>SPID3R_SESSION_COOKIE</code></td><td>Session cookie name (also changeable in <code>config/session.matrix</code>)</td><td><code>spid3r_session</code></td></tr>
+    <tr><td><code>SPID3R_COOKIE_SECURE</code></td><td><code>1</code> forces the <code>Secure</code> flag on all cookies (recommended behind HTTPS)</td><td>unset (auto: on in production)</td></tr>
+    <tr><td><code>SPID3R_MAIL_MAILER</code></td><td>Active mailer: <code>log</code> (default) | <code>smtp</code> (fails fast — no outbound TCP in the runtime yet)</td><td><code>log</code></td></tr>
+    <tr><td><code>SPID3R_QUEUE</code></td><td>Active queue name for push/worker</td><td><code>default</code></td></tr>
+    <tr><td><code>SPID3R_QUEUE_CONNECTION</code></td><td>Queue driver: <code>database</code> | <code>sync</code> (per-push override also available)</td><td><code>database</code></td></tr>
+    <tr><td><code>SPID3R_SMS_*</code>, <code>SPID3R_SSLCZ_*</code>, <code>SPID3R_STRIPE_*</code>, <code>SPID3R_GOOGLE_*</code></td><td>Optional third-party service credentials (see <code>config/services.matrix</code>) — read at use time, never hardcoded</td><td>unset</td></tr>
+    <tr><td><code>APP_ENV</code></td><td>Application environment (<code>development</code> | <code>production</code>) — read by <code>config/app.matrix</code>; production also forces the <code>Secure</code> cookie flag</td><td><code>development</code></td></tr>
   </table>
 
   <div class="callout tip">
@@ -584,9 +614,10 @@ PRAGMA busy_timeout = 5000;   <span class="cmt">// ms — tolerates concurrent w
     <tr><td><code>spid3r magic migrate:rollback</code></td><td>Roll back the most recent migration batch (calls each <code>down()</code>)</td></tr>
     <tr><td><code>spid3r magic migrate:status</code><span class="badge b-green" style="margin-left:6px">safe</span></td><td>Show which migrations ran and in which batch</td></tr>
     <tr><td><code>spid3r magic db:seed</code></td><td>Execute registered seeders</td></tr>
-    <tr><td><code>spid3r magic make:controller &lt;Name&gt;</code></td><td>Scaffold a controller class in <code>app/Controllers/</code></td></tr>
-    <tr><td><code>spid3r magic make:model &lt;Name&gt; [-m]</code></td><td>Scaffold an Active Record model (optionally with a migration)</td></tr>
-    <tr><td><code>spid3r magic make:migration &lt;name&gt;</code></td><td>Scaffold a new timestamped migration file</td></tr>
+    <tr><td><code>spid3r magic queue:work</code><span class="badge b-green" style="margin-left:6px">safe</span></td><td>Drain queued jobs until the queue is empty (runtime has no sleep primitive — schedule via cron/Task Scheduler for continuous processing). <code>--once</code> processes a single job; <code>--queue=name</code> targets a specific queue</td></tr>
+    <tr><td><code>spid3r magic make:controller &lt;Name&gt;</code></td><td>Scaffold a controller class in <code>app/Controllers/</code> (creates the directory if missing; names must be plain identifiers)</td></tr>
+    <tr><td><code>spid3r magic make:model &lt;Name&gt; [-m]</code></td><td>Scaffold an Active Record model (optionally with a migration; creates <code>app/Models/</code> if missing)</td></tr>
+    <tr><td><code>spid3r magic make:migration &lt;name&gt;</code></td><td>Scaffold a new timestamped migration file (lowercase snake_case names only)</td></tr>
     <tr><td><code>spid3r magic help</code></td><td>Show the command list (header: <code>Spid3rWeb Magic CLI</code>)</td></tr>
   </table>
 
@@ -604,6 +635,12 @@ PRAGMA busy_timeout = 5000;   <span class="cmt">// ms — tolerates concurrent w
   <div class="callout warn">
     <div class="co-title">⚠️ Registering new seeders</div>
     <p>New seeders must still be registered in the <code>magic</code> entrypoint via <code>kernel.register_seeder(fn() { … })</code>.</p>
+  </div>
+
+  <div class="callout warn">
+    <div class="co-title">⚠️ If you hand-delete a migration file</div>
+    <p>Spid3r imports are compile-time constants: if <code>registry.matrix</code> still imports a deleted file, <code>spid3r magic</code> cannot boot (including <code>migrate:sync</code>, which compiles the stale registry first). Recover with the standalone rebuilder — it never imports the registry:</p>
+    <pre><code>SPID3R_PATH=. spid3r run resync.matrix</code></pre>
   </div>
 </section>
 
@@ -718,21 +755,19 @@ Route.<span class="fn">get</span>("/products/{id}/reviews/{reviewId}", handler);
   <h3>Matching rules</h3>
   <ul>
     <li>Trailing slashes are normalized on both pattern and request path.</li>
+    <li><code>HEAD</code> requests fall back to the <code>GET</code> handler for the same path (routes and static files) — a <code>HEAD</code> on a GET-only route returns <code>200</code>, not <code>405</code>.</li>
     <li>Segments must match in count; <code>:param</code> / <code>{param}</code> segments capture any value.</li>
     <li>If the path exists under other verbs → <code>405</code> with <code>Allow: GET, POST, …</code>; else <code>404</code> (themed HTML or JSON under <code>/api/</code>).</li>
   </ul>
 
-  <h3>SEO-friendly URLs</h3>
-  <p>The storefront emits and accepts descriptive, crawlable URLs. Canonical link format:</p>
+  <h3>SEO-friendly URL conventions</h3>
+  <p>The framework's router happily serves any URL shape — it is up to your app to keep links <strong>descriptive and crawlable</strong>. Conventions a Spid3rWeb app should follow:</p>
   <table>
-    <tr><th>URL</th><th>Purpose</th></tr>
-    <tr><td><code>/product/{slug}</code></td><td>Canonical product page (e.g. <code>/product/wireless-earbuds-pro</code>) — used by all catalog, cart and sitemap links</td></tr>
-    <tr><td><code>/product/{id}</code></td><td>Legacy numeric URLs keep working (backwards compatibility)</td></tr>
-    <tr><td><code>/category/{slug}</code></td><td>Crawlable category landing page (e.g. <code>/category/electronics</code>) — slug-matched case-insensitively against stored categories</td></tr>
-    <tr><td><code>/sitemap.xml</code></td><td>Auto-generated sitemap: home, catalog, all category slugs, all product slugs (absolute URLs from the request Host)</td></tr>
-    <tr><td><code>/robots.txt</code></td><td>Allows the storefront, disallows <code>/admin</code>, <code>/cart</code>, <code>/checkout</code>, <code>/orders</code>, auth pages; references the sitemap</td></tr>
+    <tr><th>Convention</th><th>Why</th></tr>
+    <tr><td><code>/product/{slug}</code>, <code>/category/{slug}</code></td><td>Human-readable, keyword-bearing URLs are better for users and search engines than raw numeric IDs</td></tr>
+    <tr><td><code>/sitemap.xml</code> + <code>/robots.txt</code></td><td>Serve both from your app so crawlers can discover pages (generate the sitemap from your models)</td></tr>
+    <tr><td><code>&lt;meta name="description"&gt;</code> on every page</td><td>Templates define <code>@section('meta_desc', …)</code>; pages without one should fall back to a sensible default via <code>@yield('meta_desc', '…')</code></td></tr>
   </table>
-  <p>Every page ships a <code>&lt;meta name="description"&gt;</code>: templates define <code>@section('meta_desc', …)</code> (e.g. the product description on <code>store/show</code>); pages without one fall back to the layout default via <code>@yield('meta_desc', '…')</code>. Slugs are generated with <code>Str.slug()</code> (<code>app/Support/Str.matrix</code>) — lowercase, <code>[a-z0-9-]</code> only — the same helper the admin panel uses for product slugs.</p>
   <div class="callout info">
     <div class="co-title">ℹ️ SpiderBD directives now nest</div>
     <p>The BD engine (<code>framework/View/BD.matrix</code>) processes <code>@if/@else/@endif</code> and <code>@foreach/@endforeach</code> in a single nesting-aware recursive pass — conditionals inside loops inside conditionals work, loop variables are visible to nested <code>@if</code> conditions (<code>@if(item.qty)</code>), and stray closing directives are dropped instead of leaking into pages. Keep the truthiness-only condition rule in mind (no <code>==</code> — precompute comparisons controller-side).</p>
@@ -1129,15 +1164,15 @@ Schema.<span class="fn">table</span>("orders", table => {
   <h3>Seeders</h3>
   <p>Seeders live in <code>database/seeders/</code>. Define <code>run_database_seeder()</code> and register a closure in the <code>magic</code> entrypoint:</p>
   <pre><code>kernel.<span class="fn">register_seeder</span>(<span class="kw">fn</span>() { <span class="fn">run_database_seeder</span>(); });</code></pre>
-  <p>The bundled <code>DatabaseSeeder</code> creates the demo user <code>ada@example.com</code> (bcrypt-hashed password) and a sample product catalog.</p>
+  <p>On a fresh installation the bundled <code>DatabaseSeeder</code> is a <strong>no-op</strong> — <code>spid3r magic db:seed</code> runs cleanly but inserts nothing. Add your seed logic to <code>run_database_seeder()</code> (or define additional functions and call them from it) and hash passwords with <code>Hash.make()</code> before inserting users.</p>
 </section>
 
 <!-- ============ VIEWS ============ -->
 <section id="views">
   <h2>SpiderBD Templates</h2>
   <p>Templates are <code>.bd.html</code> files under <code>resources/views/</code>, compiled by <code>framework/View/BD.matrix</code>. Render with the global <code>view()</code> helper — dot notation maps to directories:</p>
-  <pre><code><span class="fn">view</span>("store.index", <span class="fn">map</span>("products", products));
-<span class="cmt">// → resources/views/store/index.bd.html</span></code></pre>
+  <pre><code><span class="fn">view</span>("welcome", <span class="fn">map</span>("user", user));
+<span class="cmt">// → resources/views/welcome.bd.html</span></code></pre>
 
   <h3>Compilation pipeline</h3>
   <div class="flow">
@@ -1153,7 +1188,7 @@ Schema.<span class="fn">table</span>("orders", table => {
   <h3>Directives</h3>
   <table>
     <tr><th>Directive</th><th>Description</th></tr>
-    <tr><td><code>@extends('layouts/store')</code></td><td>Inherit a layout (must appear near the top of the file)</td></tr>
+    <tr><td><code>@extends('layouts/app')</code></td><td>Inherit a layout (must appear near the top of the file)</td></tr>
     <tr><td><code>@section('title', 'value')</code></td><td>Inline section (string or expression like <code>product.name</code>)</td></tr>
     <tr><td><code>@section('content') … @endsection</code></td><td>Block section</td></tr>
     <tr><td><code>@yield('content')</code> / <code>@yield('title', 'default')</code></td><td>Layout placeholder filled by child sections</td></tr>
@@ -1170,23 +1205,50 @@ Schema.<span class="fn">table</span>("orders", table => {
   </div>
 
   <h3>Full layout example</h3>
-  <pre><code><span class="tag">&lt;!-- resources/views/layouts/store.bd.html --&gt;</span>
+  <pre><code><span class="tag">&lt;!-- resources/views/layouts/app.bd.html --&gt;</span>
 &lt;html&gt;&lt;head&gt;&lt;title&gt;@<span class="fn">yield</span>('title', 'Spid3rWeb')&lt;/title&gt;&lt;/head&gt;
 &lt;body&gt;
   @<span class="fn">include</span>('partials.nav')
   &lt;main&gt;@<span class="fn">yield</span>('content')&lt;/main&gt;
 &lt;/body&gt;&lt;/html&gt;
 
-<span class="tag">&lt;!-- resources/views/store/index.bd.html --&gt;</span>
-@<span class="fn">extends</span>('layouts/store')
-@<span class="fn">section</span>('title', 'All Products')
+<span class="tag">&lt;!-- resources/views/posts/index.bd.html --&gt;</span>
+@<span class="fn">extends</span>('layouts/app')
+@<span class="fn">section</span>('title', 'All Posts')
 @<span class="fn">section</span>('content')
-  @<span class="fn">foreach</span>(product in products)
-    &lt;h3&gt;{{ $product.name }}&lt;/h3&gt;
-    &lt;p&gt;৳{{ $product.price }}&lt;/p&gt;
-    &lt;a href="/product/{{ $product.slug }}"&gt;View →&lt;/a&gt;
+  @<span class="fn">foreach</span>(post in posts)
+    &lt;h3&gt;{{ $post.title }}&lt;/h3&gt;
+    &lt;p&gt;{{ $post.excerpt }}&lt;/p&gt;
+    &lt;a href="/posts/{{ $post.id }}"&gt;Read →&lt;/a&gt;
   @<span class="fn">endforeach</span>
 @<span class="fn">endsection</span></code></pre>
+</section>
+
+<!-- ============ FRONTEND UI ============ -->
+<section id="frontend-ui">
+  <h2>Frontend Assets &amp; Responsive CSS</h2>
+  <p>Spid3rWeb apps ship plain, self-contained frontend assets — no CSS framework, no CDN link, no bundler and no build step. A fresh install loads exactly one stylesheet:</p>
+
+  <table>
+    <tr><th>File</th><th>Responsibility</th></tr>
+    <tr><td><code>public/css/welcome.css</code></td><td>Styles the fresh-install welcome page: CSS variables, dark hero panel, numbered next-steps list, and a <code>min-width: 640px</code> breakpoint</td></tr>
+  </table>
+
+  <h3>Markup conventions</h3>
+  <ul>
+    <li>Plain semantic class names (<code>.card</code>, <code>.btn</code>, <code>.grid</code>, <code>.table</code>) — no utility-framework soup, no inline <code>style=</code> attributes.</li>
+    <li>Mobile-first: single-column base layout, fluid grids, and 44px minimum touch targets.</li>
+    <li>Data tables carry <code>data-label="…"</code> on each <code>&lt;td&gt;</code> so mobile CSS can stack rows into labelled cards (<code>td::before { content: attr(data-label) }</code>).</li>
+    <li>Public pages keep descriptive, crawlable links and a per-page <code>&lt;meta name="description"&gt;</code>.</li>
+  </ul>
+
+  <h3>Progressive enhancement</h3>
+  <p>Forms are ordinary <code>POST</code> forms that work with JavaScript disabled. If you add JS, keep it progressive: intercept submissions only for enhancement (inline validation, optimistic UI), and always fall back to the normal submit when <code>fetch</code> fails.</p>
+
+  <div class="callout tip">
+    <div class="co-title">💡 Adding a page</div>
+    <p>Create a <code>.bd.html</code> file under <code>resources/views/</code>, route it from <code>routes/web.matrix</code> with <code>view("your.page")</code>, and style it from your stylesheet. Precompute any comparison-derived class/label in the controller — <code>@if</code> is truthiness-only.</p>
+  </div>
 </section>
 
 <!-- ============ AUTH ============ -->
@@ -1195,6 +1257,7 @@ Schema.<span class="fn">table</span>("orders", table => {
   <p><code>Auth</code> is a per-request <code>AuthManager</code> singleton (<code>framework/Auth/Auth.matrix</code>); <code>Hash</code> wraps the native bcrypt stdlib.</p>
 
   <h3>Credentials</h3>
+  <p>By convention, login is <strong>email + password</strong> — the framework's auth config (<code>config/auth.matrix</code>) defaults to an email column. If you add a username field later, point <code>auth.column</code> at it.</p>
   <pre><code><span class="cmt">// Verify email+password; on success, logs the user in</span>
 <span class="kw">if</span> Auth.<span class="fn">attempt</span>(email, password) { <span class="cmt">/* logged in */</span> }
 
@@ -1215,51 +1278,22 @@ let hash = Hash.<span class="fn">make</span>("plain-password");      <span class
   </table>
 
   <h3>Token transport</h3>
-  <p>Tokens arrive two ways (checked in order): the <code>Authorization: Bearer &lt;token&gt;</code> header (ideal for API clients) or the <code>spid3r_session</code> cookie (browser sessions). Set the cookie on login:</p>
-  <pre><code><span class="kw">return</span> <span class="fn">redirect</span>("/").<span class="fn">cookie</span>("spid3r_session", Auth.<span class="fn">token</span>());</code></pre>
+  <p>Tokens arrive two ways (checked in order): the <code>Authorization: Bearer &lt;token&gt;</code> header (ideal for API clients) or the session cookie (browser sessions). Set the cookie on login:</p>
+  <pre><code><span class="kw">return</span> <span class="fn">redirect</span>("/").<span class="fn">cookie</span>(<span class="fn">Config</span>.<span class="fn">get</span>("session.cookie", "spid3r_session"), Auth.<span class="fn">token</span>());</code></pre>
 
   <div class="callout info">
     <div class="co-title">ℹ️ Sessions schema</div>
     <p>The <code>sessions</code> table (migration 003) stores <code>token TEXT UNIQUE</code>, <code>user_id INTEGER</code>, and <code>last_activity INTEGER</code> (unix). <code>Auth.clear()</code> is invoked at the start of every request so state never leaks between connections.</p>
   </div>
-</section>
-
-<!-- ============ ADMIN ============ -->
-<section id="admin">
-  <h2>Admin Panel</h2>
-  <p>The built-in admin panel (<code>app/Controllers/AdminController.matrix</code>) provides order and product management for the Spid3r Bazaar store. Access is role-based via the <code>users.is_admin</code> flag (migration <code>007_add_is_admin_to_users_table</code>).</p>
-
-  <h3>Routes</h3>
-  <table>
-    <tr><th>Method</th><th>URI</th><th>Action</th></tr>
-    <tr><td>GET</td><td><code>/admin</code></td><td>Dashboard — revenue, order/product/user counts, pending + low-stock alerts</td></tr>
-    <tr><td>GET</td><td><code>/admin/products</code></td><td>Product list with edit/delete actions</td></tr>
-    <tr><td>GET / POST</td><td><code>/admin/products/create</code>, <code>/admin/products</code></td><td>Create product (auto-slug from name, deduped as <code>slug-2</code>, <code>slug-3</code>…)</td></tr>
-    <tr><td>GET / POST</td><td><code>/admin/products/:id/edit</code>, <code>/admin/products/:id</code></td><td>Edit product</td></tr>
-    <tr><td>POST</td><td><code>/admin/products/:id/delete</code></td><td>Delete product</td></tr>
-    <tr><td>GET</td><td><code>/admin/orders[?status=]</code></td><td>Order list with status filter (100 most recent)</td></tr>
-    <tr><td>GET</td><td><code>/admin/orders/:id</code></td><td>Order detail — decoded items, customer, account link</td></tr>
-    <tr><td>POST</td><td><code>/admin/orders/:id/status</code></td><td>Update status — whitelist: <code>pending, processing, shipped, delivered, cancelled</code></td></tr>
-  </table>
-
-  <h3>Access control</h3>
-  <p>Every <code>/admin</code> route carries <code>.middleware("admin")</code>. The alias is registered in <code>server.matrix</code>:</p>
-  <pre><code>app.<span class="fn">middleware</span>("admin", <span class="kw">fn</span>(_args) { <span class="kw">return</span> <span class="kw">new</span> <span class="fn">AdminMiddleware</span>(); });</code></pre>
-  <p><code>AdminMiddleware</code> (<code>app/Middleware/AdminMiddleware.matrix</code>) sends guests to <code>/login</code> (302) and rejects signed-in non-admins with 403. <code>Controller.shared()</code> also exposes <code>is_admin</code> so the navbar can render the ⚙️ Admin link.</p>
 
   <div class="callout info">
-    <div class="co-title">ℹ️ Bootstrapping an admin</div>
-    <p>Run <code>spid3r magic db:seed</code> with <code>SPID3R_ADMIN_EMAIL</code> (and optionally <code>SPID3R_ADMIN_PASSWORD</code>) in <code>.env</code> to promote or create that admin. With no env var set and no admin existing, a demo admin <code>admin@spid3r.test</code> / <code>secret123</code> is seeded — change it before deploying.</p>
+    <div class="co-title">ℹ️ Auth &amp; sessions are configuration-driven</div>
+    <p><code>config/auth.matrix</code> selects the active guard (<code>session</code> / <code>token</code>), the users table and its <code>username_column</code> / <code>password_column</code>, plus password-reset knobs. <code>config/session.matrix</code> controls the session table, the inactivity <code>lifetime</code>, the cookie <code>name</code> and the <code>secure</code> / <code>httponly</code> / <code>same_site</code> flags (applied by <code>Response.cookie</code>; <code>SPID3R_COOKIE_SECURE=1</code> also forces <code>Secure</code>). All values fall back to the historical defaults, and config-sourced table names are validated against <code>[A-Za-z0-9_]</code> before touching SQL.</p>
   </div>
 
   <div class="callout warn">
-    <div class="co-title">⚠️ BD templates: no string comparison, no nested @if</div>
-    <p><code>@if</code> is truthiness-only (no <code>==</code>) and conditionals cannot nest — an inner <code>@endif</code> closes the outer block. Precompute presentation strings (badge classes, selected dropdown flags, active-tab flags) in the controller (<code>status_class()</code>, <code>status_options</code>, <code>tabs</code> in <code>AdminController</code>) and keep every <code>@if</code> top-level.</p>
-  </div>
-
-  <div class="callout info">
-    <div class="co-title">ℹ️ CSRF in admin forms</div>
-    <p>Admin POST forms include <code>&lt;input type="hidden" name="_csrf" value="{{ csrf_token }}"&gt;</code>. Browsers are already covered by the Origin check; the token additionally protects no-Origin clients (tests, curl). Test suites can read the session's token from the <code>sessions.payload</code> column or extract it from any rendered form.</p>
+    <div class="co-title">⚠️ DB.statement runs stacked statements on SQLite</div>
+    <p><code>DB.statement(sql, params)</code> passes the batch to the driver as-is, and SQLite executes semicolon-separated statements in one call. Never concatenate runtime input into raw SQL — use parameter binding (<code>?</code> placeholders) or the QueryBuilder, which are injection-safe. Config-sourced identifiers (table names) are validated in the framework; keep any new ones validated too.</p>
   </div>
 </section>
 
@@ -1308,7 +1342,7 @@ Cache.<span class="fn">store</span>("file").<span class="fn">put</span>("key", v
             .<span class="fn">where</span>("category", "=", "Electronics")
             .<span class="fn">orderBy</span>("id", "DESC").<span class="fn">get</span>();
     });
-    <span class="kw">return</span> <span class="fn">view</span>("store.index", <span class="fn">map</span>("products", products));
+    <span class="kw">return</span> <span class="fn">view</span>("products.index", <span class="fn">map</span>("products", products));
 }</code></pre>
   </div>
 </section>
@@ -1326,10 +1360,65 @@ Cache.<span class="fn">store</span>("file").<span class="fn">put</span>("key", v
     <tr><td>Cookie hardening</td><td><code>HttpOnly</code> + <code>SameSite=Lax</code> on all framework cookies</td></tr>
     <tr><td>Mass assignment</td><td><code>fillable</code> whitelist on every model</td></tr>
     <tr><td>Method safety</td><td>405 with <code>Allow</code> header when a path exists under another verb</td></tr>
-    <tr><td>Rate limiting</td><td><code>throttle:max,seconds</code> middleware — cache-backed fixed window per client (session token or IP), 429 + <code>retry-after</code>; on by default for login/register/checkout and API auth endpoints</td></tr>
+    <tr><td>Rate limiting</td><td><code>throttle:max,seconds</code> middleware — cache-backed fixed window per client (session token or IP), 429 + <code>retry-after</code>; opt-in per route, recommended on login/register and API auth endpoints</td></tr>
     <tr><td>Brute-force login</td><td>Per-email lockout: 5 failed attempts → 10-minute lock (cache-backed), independent of the throttle backstop</td></tr>
     <tr><td>Error leakage</td><td>500 pages show the exception only; JSON API errors under <code>/api/</code> are structured; set <code>debug=false</code> in production config</td></tr>
   </table>
+</section>
+
+<!-- ============ CORE SYSTEMS ============ -->
+<section id="core-systems">
+  <h2>Core Systems — Config, Log, Storage, Mail, Queue</h2>
+  <p>Every runtime setting lives in a <code>config/*.matrix</code> file (a <code>public let config_&lt;name&gt; = map(...)</code>) and is read through one dot-notation repository. Mutable values resolve from environment variables at read time via <code>*_env</code> keys, so the same codebase runs anywhere without code edits.</p>
+
+  <pre><code>import "framework/Config/Config";
+
+Config.get("session.lifetime");                 <span class="cmt">// 86400</span>
+Config.get("logging.channels.mail.path");       <span class="cmt">// storage/logs/mail.log</span>
+Config.get("mail.from.address", "fallback");    <span class="cmt">// dot paths + fallbacks</span>
+Config.has("queue.connections.sync.driver");    <span class="cmt">// true</span>
+Config.set("app.maintenance", true);            <span class="cmt">// runtime overrides</span></code></pre>
+
+  <h3>The subsystems at a glance</h3>
+  <table>
+    <tr><th>System</th><th>Facade</th><th>Config file</th><th>What it does</th></tr>
+    <tr><td><strong>Config</strong></td><td><code>Config</code> (<code>framework/Config/Config.matrix</code>)</td><td>all of them</td><td>dot-notation repository, <code>get/has/set/load</code>, registers every bundled config at boot</td></tr>
+    <tr><td><strong>Logging</strong></td><td><code>Log</code> (<code>framework/Log/Log.matrix</code>)</td><td><code>config/logging.matrix</code></td><td><code>Log.debug/info/warn/error(msg, ctx)</code>; <code>single</code> + <code>daily</code> channels; UTC ISO timestamps; level filtering (<code>SPID3R_LOG_LEVEL</code> override); dedicated <code>mail</code>/<code>queue</code> channels</td></tr>
+    <tr><td><strong>Filesystem</strong></td><td><code>Storage</code> (<code>framework/Filesystem/Storage.matrix</code>)</td><td><code>config/filesystems.matrix</code></td><td><code>Storage.disk("local"|"public")</code> with <code>put/get/append/exists/delete/path/url</code>; auto-creates parent dirs; path traversal (../, absolute, drive prefixes) throws</td></tr>
+    <tr><td><strong>Mail</strong></td><td><code>Mail</code> (<code>framework/Mail/Mail.matrix</code>)</td><td><code>config/mail.matrix</code></td><td><code>Mail.to(to, subject, body)</code>; <code>log</code> driver renders full messages into the <code>mail</code> log channel; <code>smtp</code> fails fast with a clear error (no outbound TCP in the runtime yet)</td></tr>
+    <tr><td><strong>Queue</strong></td><td><code>Queue</code> (<code>framework/Queue/Queue.matrix</code>)</td><td><code>config/queue.matrix</code></td><td><code>database</code> driver (<code>jobs</code> table, migration 008) + <code>sync</code>; handlers registered in <code>routes/queue.matrix</code>; retry-after + max-attempts failure policy; drained by <code>magic queue:work</code></td></tr>
+    <tr><td><strong>Session</strong></td><td>(inside <code>Auth</code>/<code>Request</code>)</td><td><code>config/session.matrix</code></td><td>DB-backed sessions; cookie name, lifetime, <code>secure</code>/<code>httponly</code>/<code>same_site</code> flags now config-driven</td></tr>
+    <tr><td><strong>Auth</strong></td><td><code>Auth</code> (<code>framework/Auth/Auth.matrix</code>)</td><td><code>config/auth.matrix</code></td><td>guards (<code>session</code>/<code>token</code>), users table + username/password columns, password-reset knobs — all read from config with safe defaults</td></tr>
+    <tr><td><strong>Services</strong></td><td>—</td><td><code>config/services.matrix</code></td><td>SMS / payments (SSLCommerz, Stripe) / OAuth credential stubs — every secret via <code>*_env</code>, nothing hardcoded</td></tr>
+  </table>
+
+  <h3>Queue walkthrough</h3>
+  <pre><code><span class="cmt">// routes/queue.matrix — register handlers</span>
+Queue.job("mail.send", fn(data) { return Mail.send(data); });
+
+<span class="cmt">// anywhere in your app — dispatch</span>
+Queue.push("mail.send", map("to", "ada@example.com", "subject", "Welcome", "body", "Hi!"));
+
+<span class="cmt">// drain (no sleep primitive in the runtime → drain-and-exit worker;</span>
+<span class="cmt">// schedule via cron / Task Scheduler for continuous processing)</span>
+spid3r magic queue:work            <span class="cmt"># process until the queue is empty</span>
+spid3r magic queue:work --once     <span class="cmt"># a single job</span>
+spid3r magic queue:work --queue=default</code></pre>
+
+  <div class="callout info">
+    <div class="co-title">ℹ️ Producer vs worker: handler resolution</div>
+    <p>With the <strong>database</strong> driver, <code>Queue.push</code> does <em>not</em> require the handler to be registered in the pushing process — the worker resolves handlers from <code>routes/queue.matrix</code> at run time, so standalone producer scripts (cron entrypoints, CLI tools) can dispatch jobs they never execute. With the <strong>sync</strong> driver the handler runs inline during <code>push</code>, so it must be registered in that process.</p>
+  </div>
+
+  <div class="callout info">
+    <div class="co-title">ℹ️ Testing the core systems</div>
+    <p><code>tests/test_core_systems.matrix</code> covers the Config repository, Log formatting/level routing, Storage round-trips + all traversal rejections, the Mail log driver, Queue push/pop/run/retry semantics, sync-vs-database handler validation and the session/auth config wiring.</p>
+  </div>
+
+  <div class="callout warn">
+    <div class="co-title">⚠️ Known runtime limitation</div>
+    <p>The Spid3r runtime exposes <code>tcp_listen</code> (serving) but no outbound TCP API, so the SMTP mail driver intentionally fails fast with an explanatory error. Keep <code>SPID3R_MAIL_MAILER=log</code>; the log driver renders complete messages you can inspect or relay.</p>
+  </div>
 </section>
 
 <!-- ============ TESTING ============ -->
@@ -1338,39 +1427,30 @@ Cache.<span class="fn">store</span>("file").<span class="fn">put</span>("key", v
   <p>Run everything with:</p>
   <pre><code>spid3r magic test                      <span class="cmt"># Magic CLI runner (exit 0/1)</span>
 spid3r run tests/run_all.matrix        <span class="cmt"># direct runner</span>
-spid3r run tests/e2e/run_e2e.matrix    <span class="cmt"># E2E opaque-box track</span>
 
 <span class="cmt"># Run the whole suite against a live server engine:</span>
 SPID3R_DB_DRIVER=postgres SPID3R_PG_* … spid3r magic test
 SPID3R_DB_DRIVER=mysql    SPID3R_MYSQL_* … spid3r magic test</code></pre>
 
-  <h3>Unit suites</h3>
+  <h3>Suites</h3>
   <table>
     <tr><th>Suite</th><th>Covers</th></tr>
     <tr><td><code>tests/test_router.matrix</code></td><td>Route matching, params, groups</td></tr>
     <tr><td><code>tests/test_validator.matrix</code></td><td>required, email, min, max, numeric…</td></tr>
     <tr><td><code>tests/test_query_builder.matrix</code></td><td>Fluent SQL, CRUD, transactions</td></tr>
-    <tr><td><code>tests/test_model.matrix</code></td><td>Active Record, timestamps, relations</td></tr>
-    <tr><td><code>tests/test_bd.matrix</code></td><td>Layouts, sections, yields, foreach</td></tr>
-    <tr><td><code>tests/test_http_lifecycle.matrix</code></td><td>Full 200 / 404 / 401 dispatch</td></tr>
     <tr><td><code>tests/test_drivers.matrix</code></td><td>Multi-DB: escaping, interpolation, injection resistance, dialect DDL, driver resolution</td></tr>
+    <tr><td><code>tests/test_http_head.matrix</code></td><td>In-process HTTP lifecycle: route dispatch, <code>HEAD</code>→<code>GET</code> fallback (routes + static), 404/405 semantics, static path-traversal rejection (<code>../</code>, <code>%2e</code>, <code>%5c</code>, NUL, drive letters)</td></tr>
     <tr><td><code>tests/test_multi_db_live.matrix</code></td><td>Live integration per engine (lifecycle, QueryBuilder, migrations) — <code>[SKIP]</code> when a server is unreachable</td></tr>
-    <tr><td><code>tests/test_bd_adversarial.matrix</code></td><td>Template engine edge cases</td></tr>
     <tr><td><code>tests/test_cache.matrix</code></td><td>Cache facade + drivers (get/put/remember, TTL, increment)</td></tr>
-    <tr><td><code>tests/test_ecommerce.matrix</code></td><td>Storefront: catalog, cart, checkout, stock, SEO URLs</td></tr>
-    <tr><td><code>tests/test_admin.matrix</code></td><td>Admin gate (guest/403/admin), product CRUD, order status whitelist, CSRF</td></tr>
+    <tr><td><code>tests/test_core_systems.matrix</code></td><td>Config repository, Log channels/levels/rotation, Storage round-trips + traversal rejections, Mail log driver, Queue push/pop/retry/discard + sync-vs-database handler semantics, session/auth config wiring</td></tr>
     <tr><td><code>tests/test_throttle.matrix</code></td><td>Rate limiting: fixed window, 429 HTML/JSON, per-path/method/identity keying, session-over-IP, window reset</td></tr>
   </table>
-  <p><code>magic test</code> runs <strong>20 suites</strong> (12 unit/live + 8 E2E tiers) and is recursion-guarded — suites that invoke <code>magic test</code> themselves get a no-op success instead of recursing forever.</p>
+  <p><code>magic test</code> runs <strong>9 suites</strong> and is recursion-guarded — suites that invoke <code>magic test</code> themselves get a no-op success instead of recursing forever.</p>
 
-  <h3>E2E track (<code>tests/e2e/</code>)</h3>
-  <p>Independent opaque-box tests authored to verify behavior without reading framework internals (192 tests across 8 suites):</p>
-  <ul>
-    <li><strong>Tier 1</strong> — features: CLI, HTTP, ORM, advanced</li>
-    <li><strong>Tier 2</strong> — boundary conditions (parts 1 &amp; 2)</li>
-    <li><strong>Tier 3</strong> — cross-feature interactions</li>
-    <li><strong>Tier 4</strong> — real-world scenarios</li>
-  </ul>
+  <div class="callout tip">
+    <div class="co-title">✅ Verified against all four engines</div>
+    <p>The full suite is <strong>9/9 green on SQLite, MySQL 8.0, MariaDB 11, and PostgreSQL 16</strong> (each verified with real server containers; MySQL needs <code>mysql_native_password</code>, PostgreSQL client supports md5/trust auth). The database cache driver creates its <code>cache</code> table with a dialect-aware key column (<code>VARCHAR(255)</code> on MySQL/MariaDB, <code>TEXT</code> elsewhere). One framework-level limitation remains: the schema builder does not quote reserved SQL identifiers (e.g. a column named <code>desc</code>) — avoid reserved words in column names until that is fixed.</p>
+  </div>
 
   <div class="callout info">
     <div class="co-title">ℹ️ Test isolation</div>
@@ -1418,10 +1498,10 @@ spid3r magic migrate</code></pre>
         .<span class="fn">orderBy</span>("id", "DESC")
         .<span class="fn">limit</span>(per).<span class="fn">offset</span>((page - 1) * per)
         .<span class="fn">get</span>();
-    <span class="kw">return</span> <span class="fn">view</span>("store.index", <span class="fn">map</span>("products", products, "page", page));
+    <span class="kw">return</span> <span class="fn">view</span>("products.index", <span class="fn">map</span>("products", products, "page", page));
 }</code></pre>
 
-  <h3>5. Login/logout flow (as implemented in AuthController)</h3>
+  <h3>5. Login/logout flow (example)</h3>
   <pre><code><span class="cmt">// POST /login</span>
 <span class="kw">public fn</span> <span class="fn">login</span>(self, req) {
     <span class="kw">if</span> Auth.<span class="fn">attempt</span>(req.<span class="fn">string</span>("email"), req.<span class="fn">string</span>("password")) {

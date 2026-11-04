@@ -6,16 +6,10 @@
 
 import "database/migrations/001_create_users_table";
 import "database/migrations/003_create_sessions_table";
-import "database/migrations/004_create_products_table";
-import "database/migrations/005_create_orders_table";
-import "database/migrations/006_add_user_id_to_orders_table";
-import "database/migrations/007_add_is_admin_to_users_table";
+import "database/migrations/008_create_jobs_table";
 
 public fn register_all_migrations(kernel) {
     kernel.register_migration(new CreateUsersTable());
     kernel.register_migration(new CreateSessionsTable());
-    kernel.register_migration(new CreateProductsTable());
-    kernel.register_migration(new CreateOrdersTable());
-    kernel.register_migration(new AddUserIdToOrdersTable());
-    kernel.register_migration(new AddIsAdminToUsersTable());
+    kernel.register_migration(new CreateJobsTable());
 }

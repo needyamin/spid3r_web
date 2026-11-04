@@ -226,12 +226,19 @@ public class DatabaseCacheStore {
         if self.table_ready {
             return;
         }
-        // Simple portable DDL — works on sqlite, postgres, mysql, mariadb
-        DB.statement("CREATE TABLE IF NOT EXISTS cache (
-            cache_key TEXT NOT NULL PRIMARY KEY,
-            cache_value TEXT NOT NULL,
-            expiration INTEGER NOT NULL
-        )");
+        // Portable DDL. SQLite and PostgreSQL accept TEXT PRIMARY KEY;
+        // MySQL/MariaDB require a key length, so the key column must be
+        // VARCHAR(255) there (255*4 bytes = under the 3072-byte InnoDB
+        // index limit with utf8mb4).
+        let key_column = "TEXT";
+        let d = DB.driver_name();
+        if d == "mysql" or d == "mariadb" {
+            key_column = "VARCHAR(255)";
+        }
+        DB.statement("CREATE TABLE IF NOT EXISTS cache (" +
+            "cache_key " + key_column + " NOT NULL PRIMARY KEY, " +
+            "cache_value TEXT NOT NULL, " +
+            "expiration INTEGER NOT NULL)");
         self.table_ready = true;
     }
 

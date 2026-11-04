@@ -5,6 +5,7 @@
 
 import "http";
 import "framework/Validator";
+import "framework/Config/Config";
 
 public class Request {
     public let method;
@@ -255,12 +256,13 @@ public class Request {
                 return auth.replace("Bearer ", "").trim();
             }
         }
-        // 2. Cookie: spid3r_session=<token>
+        // 2. Cookie: <session cookie>=<token>  (name from config/session.matrix)
+        let cookie_name = Config.get("session.cookie", "spid3r_session");
         if self.headers.has("cookie") {
             let cookies = self.headers["cookie"].split(";");
             for c in cookies {
                 let pair = c.trim().split("=");
-                if pair[0] == "spid3r_session" and pair.len() > 1 {
+                if pair[0] == cookie_name and pair.len() > 1 {
                     self.session_source = "cookie";
                     return pair[1].trim();
                 }

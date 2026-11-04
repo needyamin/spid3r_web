@@ -134,6 +134,17 @@ public class Router {
             target_path = target_path.slice(0, target_path.len() - 1);
         }
 
+        let matched = self.match_route_exact(m, target_path);
+        // HEAD falls back to the GET handler (HTTP spec: HEAD = GET without
+        // a body); returning 405 for HEAD on a GET-only route breaks
+        // link checkers and health probes.
+        if matched == null and m == "HEAD" {
+            matched = self.match_route_exact("GET", target_path);
+        }
+        return matched;
+    }
+
+    fn match_route_exact(self, m: string, target_path: string) {
         for route in self.routes_list {
             if route.method == m {
                 let params = self.match_path(route.path, target_path);

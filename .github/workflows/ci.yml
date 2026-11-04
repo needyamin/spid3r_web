@@ -1,0 +1,166 @@
+# Continuous Integration for Spid3rWeb.
+#
+# Standards followed:
+#   - Least-privilege `permissions` block (contents: read only)
+#   - Pinned major versions of all third-party actions (@v4)
+#   - Concurrency group cancels superseded runs on the same ref
+#   - fail-fast: false so one engine failing does not hide the others
+#   - No secrets needed: everything runs against throwaway service containers
+#   - Matrix values reach shells via $ENGINE / $GITHUB_ENV, never via
+#     direct ${{ }} interpolation inside run blocks (injection-safe)
+#
+# Pipeline:
+#   lint  — shellcheck (install.sh) + actionlint (this workflow) + YAML parse
+#   test  — full framework suite on SQLite, MySQL 8.0 and PostgreSQL 16
+#           (migrate -> seed -> route:list -> serve --dry-run -> magic test)
+
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    name: Lint (shellcheck + actionlint)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: shellcheck install.sh (POSIX sh)
+        run: shellcheck -s sh install.sh
+
+      - name: actionlint (workflow syntax + semantics)
+        run: |
+          curl -fsSL https://raw.githubusercontent.com/rhysd/actionlint/main/scripts/download-actionlint.bash | bash -s -- v1.7.7
+          ./actionlint -color
+
+      - name: Workflow YAML is parseable
+        run: python3 -c "import yaml; yaml.safe_load(open('.github/workflows/ci.yml', encoding='utf-8'))"
+
+  test:
+    name: Tests (${{ matrix.engine }})
+    runs-on: ubuntu-latest
+    needs: lint
+    strategy:
+      fail-fast: false
+      matrix:
+        engine: [sqlite, mysql, postgres]
+
+    # Throwaway servers shared by the matrix; each job only talks to its
+    # own engine. MySQL ships with caching_sha2_password by default, so a
+    # dedicated step below creates the CI user with mysql_native_password
+    # (the Spid3r runtime's MySQL client requirement).
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: ciroot
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -pciroot"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=15
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: spid3r
+          POSTGRES_USER: postgres
+          POSTGRES_HOST_AUTH_METHOD: trust
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U postgres -d spid3r"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+
+    env:
+      ENGINE: ${{ matrix.engine }}
+      SPID3R_DB_DRIVER: ${{ matrix.engine }}
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Install Spid3r toolchain
+        run: |
+          sh -c "$(curl -fsSL https://raw.githubusercontent.com/needyamin/spid3r/main/install.sh)"
+          echo "$HOME/.spid3r/bin" >> "$GITHUB_PATH"
+          echo "Installed: $(spid3r --version)"
+
+      - name: Prepare project (.env from example + engine connection)
+        env:
+          SPID3R_MYSQL_HOST: 127.0.0.1
+          SPID3R_MYSQL_PORT: "3306"
+          SPID3R_MYSQL_USER: spid3r
+          SPID3R_MYSQL_PASSWORD: spid3r
+          SPID3R_MYSQL_DATABASE: spid3r
+          SPID3R_PG_HOST: 127.0.0.1
+          SPID3R_PG_PORT: "5432"
+          SPID3R_PG_USER: postgres
+          SPID3R_PG_PASSWORD: postgres
+          SPID3R_PG_DATABASE: spid3r
+        run: |
+          cp .env.example .env
+          # Engine-specific connection vars must be real OS env for every
+          # later step -> persist the ones for THIS engine via GITHUB_ENV.
+          case "$ENGINE" in
+            mysql)
+              echo "SPID3R_MYSQL_HOST=$SPID3R_MYSQL_HOST"       >> "$GITHUB_ENV"
+              echo "SPID3R_MYSQL_PORT=$SPID3R_MYSQL_PORT"       >> "$GITHUB_ENV"
+              echo "SPID3R_MYSQL_USER=$SPID3R_MYSQL_USER"       >> "$GITHUB_ENV"
+              echo "SPID3R_MYSQL_PASSWORD=$SPID3R_MYSQL_PASSWORD" >> "$GITHUB_ENV"
+              echo "SPID3R_MYSQL_DATABASE=$SPID3R_MYSQL_DATABASE" >> "$GITHUB_ENV"
+              ;;
+            postgres)
+              echo "SPID3R_PG_HOST=$SPID3R_PG_HOST"             >> "$GITHUB_ENV"
+              echo "SPID3R_PG_PORT=$SPID3R_PG_PORT"             >> "$GITHUB_ENV"
+              echo "SPID3R_PG_USER=$SPID3R_PG_USER"             >> "$GITHUB_ENV"
+              echo "SPID3R_PG_PASSWORD=$SPID3R_PG_PASSWORD"     >> "$GITHUB_ENV"
+              echo "SPID3R_PG_DATABASE=$SPID3R_PG_DATABASE"     >> "$GITHUB_ENV"
+              ;;
+            sqlite)
+              : # zero config — database/database.sqlite is created by migrate
+              ;;
+            *)
+              echo "Unknown engine: $ENGINE" >&2
+              exit 1
+              ;;
+          esac
+
+      # The runtime's MySQL client speaks mysql_native_password only, while
+      # MySQL 8.0 defaults to caching_sha2_password — create the user with
+      # the compatible plugin explicitly.
+      - name: Create MySQL user (mysql_native_password)
+        if: matrix.engine == 'mysql'
+        run: |
+          mysql -h 127.0.0.1 -uroot -pciroot -e "CREATE USER IF NOT EXISTS 'spid3r'@'%' IDENTIFIED WITH mysql_native_password BY 'spid3r'; GRANT ALL PRIVILEGES ON spid3r.* TO 'spid3r'@'%'; FLUSH PRIVILEGES;"
+
+      - name: Migrate database
+        run: spid3r magic migrate
+
+      - name: Seed database (no-op on fresh install)
+        run: spid3r magic db:seed
+
+      - name: Route table smoke check
+        run: spid3r magic route:list
+
+      - name: Server boot smoke check
+        run: spid3r magic serve --dry-run
+
+      - name: Full test suite (${{ matrix.engine }})
+        run: spid3r magic test

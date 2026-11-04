@@ -95,25 +95,12 @@ fn main() {
         "tests/test_router.matrix",
         "tests/test_validator.matrix",
         "tests/test_query_builder.matrix",
-        "tests/test_model.matrix",
-        "tests/test_bd.matrix",
-        "tests/test_bd_adversarial.matrix",
-        "tests/test_http_lifecycle.matrix",
         "tests/test_drivers.matrix",
         "tests/test_cache.matrix",
         "tests/test_throttle.matrix",
-        "tests/test_ecommerce.matrix",
-        "tests/test_admin.matrix",
-        "tests/test_multi_db_live.matrix",
-        // E2E track (tiers 1-4, minus tier1_features_cli which recurses
-        // into `spid3r magic test`). Full track: run tests/e2e/run_e2e.matrix
-        "tests/e2e/tier1_features_orm.matrix",
-        "tests/e2e/tier1_features_http.matrix",
-        "tests/e2e/tier1_features_advanced.matrix",
-        "tests/e2e/tier2_boundaries_part1.matrix",
-        "tests/e2e/tier2_boundaries_part2.matrix",
-        "tests/e2e/tier3_cross_feature.matrix",
-        "tests/e2e/tier4_real_world.matrix"
+        "tests/test_core_systems.matrix",
+        "tests/test_http_head.matrix",
+        "tests/test_multi_db_live.matrix"
     );
 
     let passed = 0;

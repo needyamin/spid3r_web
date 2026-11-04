@@ -4,13 +4,16 @@
 import "framework/Console/ConsoleKernel";
 import "routes/web";
 import "routes/api";
+import "routes/queue";
 import "database/migrations/registry";
 import "database/seeders/DatabaseSeeder";
 
 fn main() {
-    // 1. Register routes so route:list can inspect them
+    // 1. Register routes so route:list can inspect them, and queue job
+    //    handlers so queue:work / sync pushes can resolve them
     register_web_routes();
     register_api_routes();
+    register_queue_jobs();
 
     // 2. Setup Console Kernel
     let kernel = new ConsoleKernel();

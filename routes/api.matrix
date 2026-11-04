@@ -1,27 +1,14 @@
 // routes/api.matrix
 // Spid3rWeb JSON REST API Routes
+// Fresh installation: no API routes registered yet.
 
 import "framework/Router";
-import "framework/Response";
-import "app/Controllers/AuthController";
-
-let api_auth = new AuthController();
 
 public fn register_api_routes() {
-    Route.group(map("prefix", "/api/v1"), fn() {
-        // Public API
-        Route.get("/status", fn(_req) {
-            return json(map(
-                "status", "healthy",
-                "framework", "Spid3rWeb",
-                "version", "1.0.0",
-                "timestamp", unix_time()
-            ));
-        });
-
-        // Auth endpoints are rate-limited (30 attempts / 60s per client)
-        // to blunt credential-stuffing and brute-force abuse.
-        Route.post("/login", fn(req) { return api_auth.login(req); }).middleware("throttle:30,60");
-        Route.post("/register", fn(req) { return api_auth.register(req); }).middleware("throttle:30,60");
-    });
+    // Add JSON endpoints here, for example:
+    // Route.group(map("prefix", "/api/v1"), fn() {
+    //     Route.get("/status", fn(_req) {
+    //         return json(map("status", "healthy", "framework", "Spid3rWeb"));
+    //     });
+    // });
 }

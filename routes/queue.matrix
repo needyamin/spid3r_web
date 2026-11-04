@@ -1,0 +1,28 @@
+// routes/queue.matrix
+// Queue job handler registrations.
+//
+// Handlers MUST be registered here before Queue.push("name", ...) works —
+// the registry is process-local, so this file is imported by both entry
+// points (`magic` and `server.matrix`). Add your own jobs to the function
+// below; the worker resolves them by name at run time.
+
+import "framework/Queue/Queue";
+import "framework/Mail/Mail";
+import "framework/Log/Log";
+
+public fn register_queue_jobs() {
+    // Log a message — handy for proving the pipeline works end-to-end.
+    Queue.job("log.message", fn(data) {
+        let msg = "(empty)";
+        if data != null and type_of(data) == "map" and data.has("message") {
+            msg = string(data["message"]);
+        }
+        Log.info("[job] log.message: " + msg, data);
+        return true;
+    });
+
+    // Send an email via the Mail facade (log driver in development).
+    Queue.job("mail.send", fn(data) {
+        return Mail.send(data);
+    });
+}
