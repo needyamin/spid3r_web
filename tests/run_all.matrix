@@ -100,7 +100,8 @@ fn main() {
         "tests/test_throttle.matrix",
         "tests/test_core_systems.matrix",
         "tests/test_http_head.matrix",
-        "tests/test_multi_db_live.matrix"
+        "tests/test_multi_db_live.matrix",
+        "tests/test_systems_live.matrix"
     );
 
     let passed = 0;
