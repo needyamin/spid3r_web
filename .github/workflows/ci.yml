@@ -10,7 +10,7 @@
 #     direct ${{ }} interpolation inside run blocks (injection-safe)
 #
 # Pipeline:
-#   lint  — shellcheck (install.sh) + actionlint (this workflow) + YAML parse
+#   lint  — shellcheck (install.sh) + actionlint (this workflow)
 #   test  — full framework suite on SQLite, MySQL 8.0 and PostgreSQL 16
 #           (migrate -> seed -> route:list -> serve --dry-run -> magic test)
 
@@ -33,25 +33,24 @@ concurrency:
 jobs:
   lint:
     name: Lint (shellcheck + actionlint)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: Check out repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: shellcheck install.sh (POSIX sh)
         run: shellcheck -s sh install.sh
 
+      # NOTE: the download script requires a bare version ("1.7.7" — the
+      # leading "v" fails its ^\d+\.\d+\.\d+$ check and exits 1).
       - name: actionlint (workflow syntax + semantics)
         run: |
-          curl -fsSL https://raw.githubusercontent.com/rhysd/actionlint/main/scripts/download-actionlint.bash | bash -s -- v1.7.7
+          curl -fsSL https://raw.githubusercontent.com/rhysd/actionlint/main/scripts/download-actionlint.bash | bash -s -- 1.7.7
           ./actionlint -color
-
-      - name: Workflow YAML is parseable
-        run: python3 -c "import yaml; yaml.safe_load(open('.github/workflows/ci.yml', encoding='utf-8'))"
 
   test:
     name: Tests (${{ matrix.engine }})
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     needs: lint
     strategy:
       fail-fast: false
@@ -94,7 +93,7 @@ jobs:
 
     steps:
       - name: Check out repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Install Spid3r toolchain
         run: |

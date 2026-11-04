@@ -81,3 +81,12 @@ tmp/
 temp/
 deliverables/
 
+# ---------------------------------------------------------------------------
+# Local QA / Audit Artifacts (screenshots, linter binaries, browser sessions)
+# ---------------------------------------------------------------------------
+.screenshots/
+.playwright-cli/
+actionlint
+actionlint.exe
+shellcheck.exe
+
