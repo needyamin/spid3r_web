@@ -2,7 +2,6 @@
 // Spid3rWeb Transactional Database Migration Runner
 
 import "DB";
-import "Schema";
 
 public class Migration {
     public let name;

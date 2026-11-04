@@ -36,6 +36,15 @@ public class ErrorRenderer {
         return html(html_content, 404).to_http();
     }
 
+    // 419: CSRF token missing/invalid on a cookie-session form post.
+    public static fn csrf_timeout(req) {
+        let _ = self;
+        if req.path.starts_with("/api/") {
+            return json(map("error", "CSRF Token Mismatch", "message", "Missing or invalid CSRF token."), 419).to_http();
+        }
+        return html("<!DOCTYPE html><html lang='en'><head><meta charset='utf-8'><title>419 Page Expired - Spid3rWeb</title></head><body><h1>419 — Page Expired</h1><p>Your form session token was missing or invalid. Please go back, refresh the page, and try again.</p></body></html>", 419).to_http();
+    }
+
     // 500: full exception detail stays server-side (println log); clients
     // get a generic message so driver errors can never leak SQL fragments
     // or schema details.

@@ -7,7 +7,6 @@ import "framework/Response";
 import "framework/Router";
 import "framework/Middleware";
 import "framework/Auth/Auth";
-import "framework/View/BD";
 import "framework/ErrorRenderer";
 
 public class Application {
@@ -176,10 +175,7 @@ public class Application {
             // 0b. CSRF layer 2: session-token verification for cookie
             //     sessions without an Origin header (see csrf_valid).
             if not self.csrf_valid(req) {
-                if req.path.starts_with("/api/") {
-                    return json(map("error", "CSRF Token Mismatch", "message", "Missing or invalid CSRF token."), 419).to_http();
-                }
-                return html("<!DOCTYPE html><html lang='en'><head><meta charset='utf-8'><title>419 Page Expired - Spid3rWeb</title></head><body><h1>419 — Page Expired</h1><p>Your form session token was missing or invalid. Please go back, refresh the page, and try again.</p></body></html>", 419).to_http();
+                return ErrorRenderer.csrf_timeout(req);
             }
         }
 

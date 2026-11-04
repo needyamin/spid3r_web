@@ -1,8 +1,6 @@
 // framework/Router.matrix
 // Spid3rWeb Expressive Pattern Router & Controller Dispatcher
 
-import "framework/Response";
-
 public class RouteEntry {
     public let method;
     public let path;

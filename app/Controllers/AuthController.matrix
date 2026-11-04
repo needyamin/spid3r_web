@@ -1,11 +1,9 @@
 // app/Controllers/AuthController.matrix
 import "framework/Controller";
 import "framework/Response";
-import "framework/View/BD";
 import "framework/Auth/Auth";
 import "framework/Auth/Hash";
 import "framework/Cache/Cache";
-import "framework/Database/DB";
 import "app/Models/User";
 import "app/Support/CartService";
 

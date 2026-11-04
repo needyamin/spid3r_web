@@ -7,8 +7,6 @@
 // (403) before any action runs.
 
 import "framework/Controller";
-import "framework/Response";
-import "framework/View/BD";
 import "framework/Database/DB";
 import "app/Support/CartService";
 
@@ -173,7 +171,7 @@ public class AdminController extends Controller {
     public fn edit_form(self, req) {
         let cart = new CartService();
         let id = req.int("id", 0);
-        let row = DB.table("products").where("id", "=", id).first();
+        let row = DB.table("products").where("id", id).first();
         if row == null {
             return self.redirect("/admin/products");
         }
@@ -190,7 +188,7 @@ public class AdminController extends Controller {
 
     public fn update(self, req) {
         let id = req.int("id", 0);
-        let row = DB.table("products").where("id", "=", id).first();
+        let row = DB.table("products").where("id", id).first();
         if row == null {
             return self.redirect("/admin/products");
         }
@@ -209,7 +207,7 @@ public class AdminController extends Controller {
             }
         }
 
-        DB.table("products").where("id", "=", id).update(map(
+        DB.table("products").where("id", id).update(map(
             "name", string(check["name"]),
             "slug", slug,
             "description", string(check["description"]),
@@ -227,7 +225,7 @@ public class AdminController extends Controller {
     // POST /admin/products/:id/delete
     public fn destroy(self, req) {
         let id = req.int("id", 0);
-        DB.table("products").where("id", "=", id).delete();
+        DB.table("products").where("id", id).delete();
         return self.redirect("/admin/products");
     }
 
@@ -282,7 +280,7 @@ public class AdminController extends Controller {
     public fn order_detail(self, req) {
         let cart = new CartService();
         let id = req.int("id", 0);
-        let row = DB.table("orders").where("id", "=", id).first();
+        let row = DB.table("orders").where("id", id).first();
         if row == null {
             return self.redirect("/admin/orders");
         }
@@ -298,7 +296,7 @@ public class AdminController extends Controller {
         // Customer account (nullable for guest checkout)
         let customer = null;
         if row["user_id"] != null and int(row["user_id"]) > 0 {
-            customer = DB.table("users").where("id", "=", int(row["user_id"])).first();
+            customer = DB.table("users").where("id", int(row["user_id"])).first();
         }
 
         // Status dropdown options with the current one pre-selected
@@ -341,12 +339,12 @@ public class AdminController extends Controller {
             return self.redirect("/admin/orders/" + string(id) + "?error=Invalid+status");
         }
 
-        let order = DB.table("orders").where("id", "=", id).first();
+        let order = DB.table("orders").where("id", id).first();
         if order == null {
             return self.redirect("/admin/orders");
         }
 
-        DB.table("orders").where("id", "=", id).update(map(
+        DB.table("orders").where("id", id).update(map(
             "status", wanted,
             "updated_at", string(unix_time())
         ));

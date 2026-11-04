@@ -10,7 +10,6 @@
 //   the catalog) never inflate the navbar badge.
 
 import "framework/Cache/Cache";
-import "framework/Response";
 import "framework/Database/DB";
 
 public class CartService {
@@ -104,7 +103,7 @@ public class CartService {
         let data = self.data(token);
         let prune = false;
         for k in data.keys() {
-            let row = DB.table("products").where("id", "=", int(k)).first();
+            let row = DB.table("products").where("id", int(k)).first();
             if row != null {
                 let qty = int(data[k]);
                 out.push(map(

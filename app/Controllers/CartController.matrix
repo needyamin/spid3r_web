@@ -9,7 +9,6 @@
 
 import "framework/Controller";
 import "framework/Response";
-import "framework/View/BD";
 import "framework/Auth/Auth";
 import "framework/Database/DB";
 import "app/Models/Order";
@@ -295,7 +294,7 @@ public class CartController extends Controller {
                         throw "stock_changed:" + string(item["product"]["name"]);
                     }
                     let changes = DB.table("products")
-                        .where("id", "=", pid)
+                        .where("id", pid)
                         .where("stock", ">=", qty)
                         .update(map(
                             "stock", int(fresh.get("stock")) - qty,

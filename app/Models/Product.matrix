@@ -16,7 +16,7 @@ public class Product extends Model {
 
     public static fn find(id) {
         let _ = self;
-        let row = DB.table("products").where("id", "=", id).first();
+        let row = DB.table("products").where("id", id).first();
         if row != null {
             return new Product(row);
         }

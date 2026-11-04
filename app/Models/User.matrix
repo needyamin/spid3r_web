@@ -23,7 +23,7 @@ public class User extends Model {
 
     public static fn find(id) {
         let _ = self;
-        let row = DB.table("users").where("id", "=", id).first();
+        let row = DB.table("users").where("id", id).first();
         if row != null {
             return new User(row);
         }
