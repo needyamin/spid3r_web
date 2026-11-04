@@ -1,10 +1,12 @@
 // routes/web.matrix
 // Spid3rWeb Web Application Route Registrations
-// Fresh installation: a single welcome page at "/".
+// Fresh installation: a welcome page at "/" and a raw spid3rinfo() dump at "/info".
 
 import "framework/Router";
+import "framework/Response";
 import "framework/View/BD";
 
 public fn register_web_routes() {
     Route.get("/", fn(req) { return view("welcome"); }).name("welcome");
+    Route.get("/info", fn(req) { return html(string(spid3rinfo())); }).name("info");
 }
