@@ -37,7 +37,6 @@ public class Router {
     public let routes_list;
     public let group_prefix;
     public let group_middleware;
-    public let controller_registry;
     // App-defined catch-all invoked when no route matches and no static
     // asset exists. Receives the Request; must return a Response.
     public let fallback_handler;
@@ -46,7 +45,6 @@ public class Router {
         self.routes_list = list();
         self.group_prefix = "";
         self.group_middleware = list();
-        self.controller_registry = map();
         self.fallback_handler = null;
     }
 
@@ -65,10 +63,6 @@ public class Router {
             entry = self.add(m, path, handler);
         }
         return entry;
-    }
-
-    public fn register_controller(self, name: string, instance) {
-        self.controller_registry[name] = instance;
     }
 
     public fn add(self, method: string, path: string, handler) {
@@ -208,21 +202,10 @@ public class Router {
     // Dispatch Action
     // ------------------------------------------------------------------------
 
+    // Dispatch a route handler. Handlers are closures — Spid3r has no
+    // runtime reflection, so controller methods cannot be referenced by
+    // name ("Controller@action" strings are not supported).
     public fn dispatch(self, handler, req) {
-        if type_of(handler) == "string" {
-            let parts = handler.split("@");
-            let c_name = parts[0];
-            let action = parts[1];
-
-            if self.controller_registry.has(c_name) {
-                let ctrl = self.controller_registry[c_name];
-                // In Spid3r, call method by name or reflection
-                return ctrl.call_action(action, req);
-            } else {
-                return response("<h1>500 Error</h1><p>Controller '" + c_name + "' not registered.</p>", 500);
-            }
-        }
-        // Direct closure handler
         return handler(req);
     }
 

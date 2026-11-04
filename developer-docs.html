@@ -346,7 +346,8 @@
     <tr><td><code>framework/Application.matrix</code></td><td>Application kernel: HTTP server bridge, static file serving, middleware orchestration</td></tr>
     <tr><td><code>framework/ErrorRenderer.matrix</code></td><td>404/500 error rendering (JSON for <code>/api/*</code>, themed HTML pages otherwise)</td></tr>
     <tr><td><code>framework/Router.matrix</code></td><td><code>Route</code> singleton, <code>RouteEntry</code>, groups, parameter matching, 405 detection, controller dispatch</td></tr>
-    <tr><td><code>framework/Request.matrix</code></td><td>Request wrapper (query/form/JSON parsing, session extraction) + <code>Validator</code> engine</td></tr>
+    <tr><td><code>framework/Request.matrix</code></td><td>Request wrapper (query/form/JSON parsing, session extraction, typed accessors)</td></tr>
+    <tr><td><code>framework/Validator.matrix</code></td><td>Declarative validation engine — 15+ rules (<code>required</code>, <code>email</code>, <code>min</code>/<code>max</code>, <code>min_value</code>/<code>max_value</code>, <code>in</code>, <code>confirmed</code>…), exposed via <code>req.validate(rules)</code></td></tr>
     <tr><td><code>framework/Response.matrix</code></td><td>Response builder + global helpers (<code>response</code>, <code>json</code>, <code>html</code>, <code>redirect</code>)</td></tr>
     <tr><td><code>framework/Middleware.matrix</code></td><td><code>Pipeline</code> class + built-in <code>CorsMiddleware</code>, <code>LoggerMiddleware</code>, <code>AuthMiddleware</code>, <code>ThrottleMiddleware</code> (rate limiting)</td></tr>
     <tr><td><code>framework/Database/DB.matrix</code></td><td>Global <code>DB</code> facade (loads <code>.env</code>, exposes the <code>DatabaseManager</code> singleton)</td></tr>
@@ -390,7 +391,7 @@
 │   │   └── registry.matrix         <span class="n"># AUTO-GENERATED auto-discovery manifest</span>
 │   └── <span class="d">seeders/</span>                 <span class="n"># DatabaseSeeder.matrix</span>
 ├── <span class="d">framework/</span>                    <span class="n"># Spid3rWeb core (do not edit casually)</span>
-│   ├── Application.matrix · Router.matrix · Request.matrix
+│   ├── Application.matrix · Router.matrix · Request.matrix · Validator.matrix
 │   ├── Response.matrix · Middleware.matrix · Controller.matrix · ErrorRenderer.matrix
 │   ├── <span class="d">Auth/</span>  <span class="n">Auth.matrix, Hash.matrix</span>
 │   ├── <span class="d">Console/</span>  <span class="n">ConsoleKernel.matrix, TestRunner.matrix</span>

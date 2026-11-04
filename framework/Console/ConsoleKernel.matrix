@@ -387,7 +387,6 @@ public fn register_all_migrations(kernel) {
         let content = "// app/Controllers/" + clean_name + ".matrix
 import \"framework/Controller\";
 import \"framework/Response\";
-import \"framework/View/BD\";
 
 public class " + clean_name + " extends Controller {
     fn new() {
@@ -395,14 +394,16 @@ public class " + clean_name + " extends Controller {
     }
 
     public fn index(self, req) {
-        return self.view(\"" + base_view + ".index\", self.shared(map(
+        // render() merges shared layout data (is_auth, user_name, is_admin,
+        // csrf_token) automatically — no self.shared() juggling needed.
+        return self.render(req, \"" + base_view + ".index\", map(
             \"title\", \"" + clean_name + "\"
-        ), req));
+        ));
     }
 
     public fn show(self, req) {
         let id = req.param(\"id\");
-        return json(map(\"id\", id));
+        return self.json(map(\"id\", id));
     }
 }
 ";
