@@ -2,11 +2,16 @@
 // Shopping cart (Cache-backed via CartService) & checkout.
 // Mutations return JSON for AJAX requests (no page reload) and redirect
 // otherwise — the storefront stays fully functional without JavaScript.
+//
+// Inventory integrity: every mutation validates the product exists and caps
+// quantities at available stock; checkout re-validates against live stock
+// before the order is created (no negative stock, no inflated orders).
 
 import "framework/Controller";
 import "framework/Response";
 import "framework/View/BD";
 import "framework/Auth/Auth";
+import "framework/Database/DB";
 import "app/Models/Order";
 import "app/Models/Product";
 import "app/Support/CartService";
@@ -37,13 +42,54 @@ public class CartController extends Controller {
         if qty <= 0 {
             qty = 1;
         }
+
+        // The product must exist
+        let product = null;
+        let pname = "";
         if pid > 0 {
-            let data = cart.data(token);
-            let key = string(pid);
-            let cur = 0;
-            if data.has(key) {
-                cur = int(data[key]);
+            product = Product.find(pid);
+            if product != null {
+                pname = product.get("name");
             }
+        }
+
+        if product == null {
+            if self.is_ajax(req) {
+                return json(map(
+                    "ok", false,
+                    "message", "Product not found",
+                    "cart_count", cart.count(token)
+                ), 404);
+            }
+            return redirect("/");
+        }
+
+        // Cap the requested quantity at available stock
+        let data = cart.data(token);
+        let key = string(pid);
+        let cur = 0;
+        if data.has(key) {
+            cur = int(data[key]);
+        }
+        let stock = int(product.get("stock"));
+        let want = cur + qty;
+        let message = "Added to cart";
+        let ok = true;
+
+        if stock <= 0 {
+            ok = false;
+            message = "Sorry — " + pname + " is out of stock";
+            qty = 0;
+        } elif want > stock {
+            ok = false;
+            qty = stock - cur;
+            if qty < 0 {
+                qty = 0;
+            }
+            message = "Only " + string(stock) + " in stock — cart updated to maximum";
+        }
+
+        if qty > 0 {
             data[key] = cur + qty;
             cart.save(token, data);
         }
@@ -51,8 +97,8 @@ public class CartController extends Controller {
         let count = cart.count(token);
         if self.is_ajax(req) {
             let res = json(map(
-                "ok", true,
-                "message", "Added to cart",
+                "ok", ok,
+                "message", message,
                 "cart_count", count
             ));
             if new_cookie {
@@ -75,8 +121,9 @@ public class CartController extends Controller {
 
         // Prefill checkout fields for signed-in customers
         let customer_name = "";
-        if Auth.check() {
-            let user = Auth.user();
+        let auth = self.auth(req);
+        if auth.check() {
+            let user = auth.user();
             if user != null and user.has("name") {
                 customer_name = string(user["name"]);
             }
@@ -91,7 +138,7 @@ public class CartController extends Controller {
             "customer_name", customer_name,
             "phone", "",
             "address", ""
-        )));
+        ), req));
     }
 
     // POST /cart/update  (product_id, qty)
@@ -100,16 +147,31 @@ public class CartController extends Controller {
         let token = cart.token(req);
         let count = 0;
         let total = 0;
+        let ok = true;
+        let message = "Cart updated";
 
         if token != "" {
             let pid = req.int("product_id", 0);
             let qty = req.int("qty", 1);
             let data = cart.data(token);
             let key = string(pid);
+
             if qty <= 0 {
                 data.remove(key);
             } else {
-                data[key] = qty;
+                // Cap at available stock
+                let product = Product.find(pid);
+                if product == null {
+                    data.remove(key);
+                } else {
+                    let stock = int(product.get("stock"));
+                    if qty > stock {
+                        qty = stock;
+                        ok = false;
+                        message = "Only " + string(stock) + " in stock — quantity capped";
+                    }
+                    data[key] = qty;
+                }
             }
             cart.save(token, data);
             count = cart.count(token);
@@ -118,8 +180,8 @@ public class CartController extends Controller {
 
         if self.is_ajax(req) {
             return json(map(
-                "ok", true,
-                "message", "Cart updated",
+                "ok", ok,
+                "message", message,
                 "cart_count", count,
                 "total", total
             ));
@@ -183,12 +245,38 @@ public class CartController extends Controller {
                 "customer_name", customer_name,
                 "phone", phone,
                 "address", address
-            )));
+            ), req));
+        }
+
+        // Re-validate every line against LIVE stock before creating the
+        // order — protects inventory from stale/oversold carts.
+        let stock_errors = [];
+        for item in items {
+            let live = Product.find(item["product"]["id"]);
+            if live == null {
+                stock_errors.push(item["product"]["name"] + " is no longer available");
+            } elif int(item["qty"]) > int(live.get("stock")) {
+                stock_errors.push(item["product"]["name"] + " — only "
+                    + string(live.get("stock")) + " left in stock");
+            }
+        }
+        if stock_errors.len() > 0 {
+            return self.view("store.cart", self.shared(map(
+                "title", "Your Cart - Spid3r Bazaar",
+                "items", items,
+                "total", cart.total(token),
+                "cart_count", cart.count(token),
+                "error", stock_errors.join(" · "),
+                "customer_name", customer_name,
+                "phone", phone,
+                "address", address
+            ), req));
         }
 
         // Snapshot the cart into the order; attach the customer account
         // when one is signed in (guest checkout stays supported).
         let total = cart.total(token);
+        let auth = self.auth(req);
         let order_attrs = map(
             "customer_name", customer_name.trim(),
             "phone", phone.trim(),
@@ -197,19 +285,56 @@ public class CartController extends Controller {
             "total", total,
             "status", "pending"
         );
-        if Auth.check() {
-            order_attrs["user_id"] = Auth.id();
+        if auth.check() {
+            order_attrs["user_id"] = auth.id();
         }
-        let order = Order.create(order_attrs);
 
-        // Decrement product stock and increment sold count
-        for item in items {
-            let p = Product.find(item["product"]["id"]);
-            if p != null {
-                p.set("stock", max(0, p.get("stock") - item["qty"]));
-                p.set("sold", p.get("sold") + item["qty"]);
-                p.save();
+        // Order creation + inventory movement happen in ONE database
+        // transaction. Stock is decremented with a conditional UPDATE
+        // (WHERE stock >= qty): if a concurrent checkout wins the race,
+        // the update matches 0 rows, we throw, and the whole transaction
+        // (order included) rolls back. No oversell, no lost order.
+        let order = null;
+        try {
+            DB.transaction(fn() {
+                let created = Order.create(order_attrs);
+                for item in items {
+                    let pid = item["product"]["id"];
+                    let qty = int(item["qty"]);
+                    let fresh = Product.find(pid);
+                    if fresh == null or int(fresh.get("stock")) < qty {
+                        throw "stock_changed:" + string(item["product"]["name"]);
+                    }
+                    let changes = DB.table("products")
+                        .where("id", "=", pid)
+                        .where("stock", ">=", qty)
+                        .update(map(
+                            "stock", int(fresh.get("stock")) - qty,
+                            "sold", int(fresh.get("sold")) + qty
+                        ));
+                    if changes == 0 {
+                        throw "stock_changed:" + string(item["product"]["name"]);
+                    }
+                }
+                order = created;
+                return true;
+            });
+        } catch (e) {
+            let msg = string(e);
+            if msg.contains("stock_changed") {
+                let conflicted = msg.replace("stock_changed:", "");
+                return self.view("store.cart", self.shared(map(
+                    "title", "Your Cart - Spid3r Bazaar",
+                    "items", items,
+                    "total", cart.total(token),
+                    "cart_count", cart.count(token),
+                    "error", conflicted + " — stock changed while checking out. Please review your cart.",
+                    "customer_name", customer_name,
+                    "phone", phone,
+                    "address", address
+                ), req));
             }
+            throw e;
         }
 
         cart.clear(token);
@@ -218,6 +343,6 @@ public class CartController extends Controller {
             "title", "Order Placed - Spid3r Bazaar",
             "order", order.to_map(),
             "cart_count", 0
-        )));
+        ), req));
     }
 }

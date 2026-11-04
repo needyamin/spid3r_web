@@ -8,18 +8,26 @@ import "app/Controllers/AuthController";
 import "app/Controllers/StoreController";
 import "app/Controllers/CartController";
 import "app/Controllers/OrderController";
+import "app/Controllers/AdminController";
 
 let auth_ctrl = new AuthController();
 let store_ctrl = new StoreController();
 let cart_ctrl = new CartController();
 let order_ctrl = new OrderController();
+let admin_ctrl = new AdminController();
 
 public fn register_web_routes() {
     // Store (e-commerce) — the homepage IS the store
     Route.get("/", fn(req) { return store_ctrl.index(req); }).name("home");
     Route.get("/store", fn(req) { return store_ctrl.index(req); }).name("store.catalog");
     Route.get("/products", fn(req) { return store_ctrl.index(req); }).name("products.catalog");
+    // SEO: /product/{slug} is the canonical product URL; numeric /product/{id}
+    // keeps working for backwards compatibility. /category/{slug} is a
+    // crawlable category landing page.
     Route.get("/product/:id", fn(req) { return store_ctrl.show(req); }).name("store.show");
+    Route.get("/category/:slug", fn(req) { return store_ctrl.category(req); }).name("store.category");
+    Route.get("/sitemap.xml", fn(req) { return store_ctrl.sitemap(req); }).name("seo.sitemap");
+    Route.get("/robots.txt", fn(req) { return store_ctrl.robots(req); }).name("seo.robots");
 
     // Cart & Checkout (AJAX-friendly: JSON for XMLHttpRequest, redirect otherwise)
     Route.post("/cart/add", fn(req) { return cart_ctrl.add(req); }).name("cart.add");
@@ -29,8 +37,21 @@ public fn register_web_routes() {
     Route.get("/checkout", fn(req) { return redirect("/cart"); }).name("cart.checkout.redirect");
     Route.post("/checkout", fn(req) { return cart_ctrl.checkout(req); }).name("cart.checkout");
 
-    // Customer order history (requires login)
-    Route.get("/orders", fn(req) { return order_ctrl.index(req); }).name("orders.index");
+    // Customer order history (requires login — named auth middleware)
+    Route.get("/orders", fn(req) { return order_ctrl.index(req); }).name("orders.index").middleware("auth");
+
+    // Admin panel (requires the admin role — named admin middleware).
+    // The "admin" alias is registered in server.matrix at boot.
+    Route.get("/admin", fn(req) { return admin_ctrl.dashboard(req); }).name("admin.dashboard").middleware("admin");
+    Route.get("/admin/products", fn(req) { return admin_ctrl.products(req); }).name("admin.products").middleware("admin");
+    Route.get("/admin/products/create", fn(req) { return admin_ctrl.create_form(req); }).name("admin.products.create").middleware("admin");
+    Route.post("/admin/products", fn(req) { return admin_ctrl.store(req); }).name("admin.products.store").middleware("admin");
+    Route.get("/admin/products/:id/edit", fn(req) { return admin_ctrl.edit_form(req); }).name("admin.products.edit").middleware("admin");
+    Route.post("/admin/products/:id", fn(req) { return admin_ctrl.update(req); }).name("admin.products.update").middleware("admin");
+    Route.post("/admin/products/:id/delete", fn(req) { return admin_ctrl.destroy(req); }).name("admin.products.destroy").middleware("admin");
+    Route.get("/admin/orders", fn(req) { return admin_ctrl.orders(req); }).name("admin.orders").middleware("admin");
+    Route.get("/admin/orders/:id", fn(req) { return admin_ctrl.order_detail(req); }).name("admin.orders.show").middleware("admin");
+    Route.post("/admin/orders/:id/status", fn(req) { return admin_ctrl.update_status(req); }).name("admin.orders.status").middleware("admin");
 
     // User Authentication
     Route.get("/login", fn(req) { return auth_ctrl.showLogin(req); }).name("login");

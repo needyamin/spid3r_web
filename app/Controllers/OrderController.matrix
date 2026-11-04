@@ -48,13 +48,14 @@ public class OrderController extends Controller {
     }
 
     // GET /orders
-    public fn index(self, _req) {
-        if not Auth.check() {
+    public fn index(self, req) {
+        let auth = self.auth(req);
+        if not auth.check() {
             return self.redirect("/login");
         }
 
         let cart = new CartService();
-        let rows = Order.forUser(Auth.id());
+        let rows = Order.forUser(auth.id());
 
         let orders = [];
         for o in rows {
@@ -64,6 +65,6 @@ public class OrderController extends Controller {
         return self.view("store.orders", self.shared(map(
             "title", "My Orders - Spid3r Bazaar",
             "orders", orders
-        )));
+        ), req));
     }
 }

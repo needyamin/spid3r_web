@@ -19,7 +19,9 @@ public fn register_api_routes() {
             ));
         });
 
-        Route.post("/login", fn(req) { return api_auth.login(req); });
-        Route.post("/register", fn(req) { return api_auth.register(req); });
+        // Auth endpoints are rate-limited (30 attempts / 60s per client)
+        // to blunt credential-stuffing and brute-force abuse.
+        Route.post("/login", fn(req) { return api_auth.login(req); }).middleware("throttle:30,60");
+        Route.post("/register", fn(req) { return api_auth.register(req); }).middleware("throttle:30,60");
     });
 }

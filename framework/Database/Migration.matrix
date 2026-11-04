@@ -79,9 +79,13 @@ public class MigrationRunner {
             let m_name = m.name;
             if not applied.has(m_name) {
                 println("[Migrate] Running: {m_name}");
-                m.up();
-                let now = string(unix_time());
-                DB.statement("INSERT INTO migrations (migration, batch, applied_at) VALUES (?, ?, ?)", [m_name, next_batch, now]);
+                // Atomic: the schema change and its bookkeeping row commit
+                // together; a failed up() rolls back both.
+                DB.transaction(fn() {
+                    m.up();
+                    let now = string(unix_time());
+                    DB.statement("INSERT INTO migrations (migration, batch, applied_at) VALUES (?, ?, ?)", [m_name, next_batch, now]);
+                });
                 println("[Migrate] Done:    {m_name}");
                 ran_count = ran_count + 1;
             }
@@ -113,8 +117,13 @@ public class MigrationRunner {
             for m in migrations_list {
                 if m.name == target_name {
                     println("[Rollback] Rolling back: {m.name}");
-                    m.down();
-                    DB.statement("DELETE FROM migrations WHERE migration = ?", [m.name]);
+                    // Atomic: the down() change and the bookkeeping row
+                    // removal commit together.
+                    let m_name = m.name;
+                    DB.transaction(fn() {
+                        m.down();
+                        DB.statement("DELETE FROM migrations WHERE migration = ?", [m_name]);
+                    });
                     println("[Rollback] Reverted:     {m.name}");
                     rolled_count = rolled_count + 1;
                 }

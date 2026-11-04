@@ -31,23 +31,47 @@ public class Controller {
     }
 
     // ------------------------------------------------------------------
+    // Auth resolution
+    // ------------------------------------------------------------------
+    // Prefer the request-scoped AuthManager (safe under concurrent
+    // requests). Falls back to the global facade when called without a
+    // request (CLI, tests, legacy code paths).
+    public fn auth(self, req = null) {
+        if req != null and req.auth != null {
+            return req.auth;
+        }
+        return Auth;
+    }
+
+    // ------------------------------------------------------------------
     // Shared view data
     // Merges caller data with the auth-state variables the global store
-    // layout renders in the navbar (is_auth, user_name). Controllers use
-    // it as:  return self.view("store.index", self.shared(map(...)));
+    // layout renders in the navbar (is_auth, user_name) plus the CSRF
+    // token for form fields. Controllers use it as:
+    //   return self.view("store.index", self.shared(map(...), req));
     // ------------------------------------------------------------------
-    public fn shared(self, data = null) {
+    public fn shared(self, data = null, req = null) {
         if data == null {
             data = map();
         }
-        data["is_auth"] = Auth.check();
+        let auth = self.auth(req);
+        data["is_auth"] = auth.check();
 
         let user_name = "";
-        let user = Auth.user();
+        let user = auth.user();
         if user != null and user.has("name") {
             user_name = string(user["name"]);
         }
         data["user_name"] = user_name;
+        data["csrf_token"] = auth.csrf();
+
+        // Admin flag for the navbar link (false for guests/non-admins).
+        data["is_admin"] = false;
+        if user != null and user.has("is_admin") and user["is_admin"] != null {
+            if string(user["is_admin"]) == "1" {
+                data["is_admin"] = true;
+            }
+        }
         return data;
     }
 }

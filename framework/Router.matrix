@@ -38,12 +38,33 @@ public class Router {
     public let group_prefix;
     public let group_middleware;
     public let controller_registry;
+    // App-defined catch-all invoked when no route matches and no static
+    // asset exists. Receives the Request; must return a Response.
+    public let fallback_handler;
 
     fn new() {
         self.routes_list = list();
         self.group_prefix = "";
         self.group_middleware = list();
         self.controller_registry = map();
+        self.fallback_handler = null;
+    }
+
+    // Register a catch-all handler for unmatched requests.
+    public fn fallback(self, handler) {
+        self.fallback_handler = handler;
+        return self;
+    }
+
+    // Register the same handler under multiple verbs. NOTE: named
+    // match_any, not match — `match` is a reserved keyword in Spid3r and
+    // a method with that name is a parser error.
+    public fn match_any(self, methods, path: string, handler) {
+        let entry = null;
+        for m in methods {
+            entry = self.add(m, path, handler);
+        }
+        return entry;
     }
 
     public fn register_controller(self, name: string, instance) {

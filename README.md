@@ -10,10 +10,12 @@ A full-stack **MVC web framework** for the [Spid3r programming language](https:/
 - **Active Record ORM** — fluent query builder (`DB.table(...)`), timestamps, `fillable` mass-assignment protection
 - **Multi-engine database** — SQLite (default), PostgreSQL, MySQL, MariaDB via `SPID3R_DB_DRIVER` — app code never changes
 - **Auto-discovered migrations** — just drop a file in `database/migrations/` and run `migrate`; no manual registration. Includes `Schema.create(...)` and `Schema.table(...)` (ALTER TABLE), batch tracking, rollback
-- **SpiderBD templates** — `.bd.html` layouts with `@extends`, `@section`, `@include`, `@if`, `@foreach`, `{{ $var }}`
+- **SpiderBD templates** — `.bd.html` layouts with `@extends`, `@section`, `@include`, freely nesting `@if`/`@foreach`, `{{ $var }}`
 - **Expressive router** — static & parameterized routes (`:id`), groups, 405 handling
 - **Middleware pipeline** — CORS, logging, auth guards, custom error pages
 - **Built-in auth** — bcrypt hashing, CSPRNG session tokens (cookie or Bearer)
+- **Admin panel** — role-gated (`users.is_admin`) dashboard with order management and product CRUD
+- **SEO-friendly URLs** — canonical `/product/{slug}` and `/category/{slug}` routes, auto-generated `/sitemap.xml` + `/robots.txt`, per-page `<meta name="description">`
 - **Caching** — `Cache.remember(key, ttl, fn)` with memory, file, and database drivers
 - **Magic CLI** — migrations, seeding, scaffolding, route listing, test runner
 
@@ -32,13 +34,14 @@ Open **http://localhost:8000** — you get **Spid3r Bazaar**, a working demo sto
 
 | Page | URL | What it does |
 |---|---|---|
-| Storefront | `/` | Product grid, search, category filter |
-| Product detail | `/product/:id` | Related products, add to cart |
+| Storefront | `/` | Product grid, search, crawlable `/category/{slug}` pages |
+| Product detail | `/product/{slug}` | SEO-friendly canonical URLs (numeric `/product/:id` still works) |
 | Cart & checkout | `/cart` | AJAX quantity updates, validated cash-on-delivery checkout |
 | My Orders | `/orders` | Order history for signed-in customers (guests → login) |
 | Auth | `/login`, `/register` | Session-based accounts |
+| Admin panel | `/admin` | Dashboard, product CRUD, order status management (admin role only) |
 
-Demo login: **`ada@example.com` / `secret123`**. Guest checkout works without an account; signed-in orders are linked to the user.
+Demo login: **`ada@example.com` / `secret123`**. Demo admin: **`admin@spid3r.test` / `secret123`** (set `SPID3R_ADMIN_EMAIL` in `.env` before seeding for a real admin). Guest checkout works without an account; signed-in orders are linked to the user.
 
 ### Using PostgreSQL / MySQL / MariaDB
 

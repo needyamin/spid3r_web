@@ -405,6 +405,101 @@ fn test_checkout_completion_and_inventory(app, cart_service, token: string) {
     println("  [PASS] Test order cleaned and product inventory baseline restored");
 }
 
+// ----------------------------------------------------------------------------
+// Phase 9: SEO-friendly URLs (slug product pages, category URLs, sitemap, robots)
+// ----------------------------------------------------------------------------
+fn test_seo_urls(app) {
+    println("--- Testing SEO-friendly URLs ---");
+
+    // 1. Canonical slug product URL
+    let res_slug = app.handle_request(map(
+        "method", "GET",
+        "path", "/product/wireless-earbuds-pro",
+        "headers", map("accept", "text/html"),
+        "body", ""
+    ));
+    assert(res_slug["status"] == 200, "GET /product/<slug> should return 200");
+    assert(string(res_slug["body"]).contains("Wireless Earbuds Pro"), "Slug URL should render the product");
+    println("  [PASS] GET /product/wireless-earbuds-pro -> 200 (slug URL works)");
+
+    // 2. Numeric id URL keeps working (backwards compatibility)
+    let res_id = app.handle_request(map(
+        "method", "GET",
+        "path", "/product/1",
+        "headers", map("accept", "text/html"),
+        "body", ""
+    ));
+    assert(res_id["status"] == 200, "GET /product/<id> should still return 200");
+    println("  [PASS] GET /product/1 -> 200 (id URL backwards compatible)");
+
+    // 3. Unknown slug redirects safely
+    let res_bad = app.handle_request(map(
+        "method", "GET",
+        "path", "/product/not-a-real-product",
+        "headers", map("accept", "text/html"),
+        "body", ""
+    ));
+    assert(res_bad["status"] == 302, "Unknown slug should redirect");
+    println("  [PASS] GET /product/not-a-real-product -> 302");
+
+    // 4. SEO category URL
+    let res_cat = app.handle_request(map(
+        "method", "GET",
+        "path", "/category/electronics",
+        "headers", map("accept", "text/html"),
+        "body", ""
+    ));
+    assert(res_cat["status"] == 200, "GET /category/<slug> should return 200");
+    assert(string(res_cat["body"]).contains("Wireless Earbuds Pro"), "Category page should list its products");
+    assert(not string(res_cat["body"]).contains("Cotton Casual T-Shirt"), "Category page must not leak other categories");
+    let res_badcat = app.handle_request(map(
+        "method", "GET",
+        "path", "/category/nope",
+        "headers", map("accept", "text/html"),
+        "body", ""
+    ));
+    assert(res_badcat["status"] == 302, "Unknown category slug should redirect");
+    println("  [PASS] GET /category/electronics -> 200 filtered; unknown slug -> 302");
+
+    // 5. Catalog links use canonical slug URLs
+    let res_home = app.handle_request(map(
+        "method", "GET",
+        "path", "/",
+        "headers", map("accept", "text/html"),
+        "body", ""
+    ));
+    assert(string(res_home["body"]).contains("/product/wireless-earbuds-pro"), "Catalog links should use canonical slug URLs");
+    assert(not string(res_home["body"]).contains("href=\"/product/1\""), "Catalog links should not use numeric id URLs");
+    println("  [PASS] Catalog emits canonical /product/<slug> links");
+
+    // 6. sitemap.xml
+    let res_map = app.handle_request(map(
+        "method", "GET",
+        "path", "/sitemap.xml",
+        "headers", map("accept", "*/*"),
+        "body", ""
+    ));
+    assert(res_map["status"] == 200, "GET /sitemap.xml should return 200");
+    let sm = string(res_map["body"]);
+    assert(sm.contains("<urlset"), "Sitemap should be valid XML urlset");
+    assert(sm.contains("/product/wireless-earbuds-pro"), "Sitemap should list slug product URLs");
+    assert(sm.contains("/category/electronics"), "Sitemap should list category URLs");
+    println("  [PASS] GET /sitemap.xml -> 200 with slug + category URLs");
+
+    // 7. robots.txt
+    let res_robots = app.handle_request(map(
+        "method", "GET",
+        "path", "/robots.txt",
+        "headers", map("accept", "*/*"),
+        "body", ""
+    ));
+    assert(res_robots["status"] == 200, "GET /robots.txt should return 200");
+    let rb = string(res_robots["body"]);
+    assert(rb.contains("Disallow: /admin"), "robots.txt must exclude /admin");
+    assert(rb.contains("Sitemap:"), "robots.txt must reference the sitemap");
+    println("  [PASS] GET /robots.txt -> 200 with admin disallow + sitemap");
+}
+
 fn main() -> int {
     println("\n==================================================================");
     println("       E-Commerce Shopping Experience Test Suite (Requirement R2) ");
@@ -424,6 +519,7 @@ fn main() -> int {
     test_direct_get_checkout(app);
     test_checkout_validation(app, cart_service, token);
     test_checkout_completion_and_inventory(app, cart_service, token);
+    test_seo_urls(app);
 
     cart_service.clear(token);
     DB.close();

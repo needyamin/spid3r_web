@@ -1,0 +1,23 @@
+// database/migrations/007_add_is_admin_to_users_table.matrix
+// Role flag for the admin panel: 1 = staff/administrator, 0 (default) =
+// regular customer. Non-null int keeps comparisons simple in SQL and code.
+
+import "framework/Database/Schema";
+import "framework/Database/Migration";
+
+public class AddIsAdminToUsersTable extends Migration {
+    fn new(name: string = "007_add_is_admin_to_users_table") {
+        super(name);
+    }
+
+    public fn up(self) {
+        Schema.table("users", table => {
+            table.integer("is_admin").default(0);
+        });
+    }
+
+    public fn down(self) {
+        // SQLite cannot drop columns portably; rollback keeps the nullable
+        // column in place (harmless — regular users stay is_admin = 0).
+    }
+}

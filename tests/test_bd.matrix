@@ -19,7 +19,7 @@ fn test_bd_view_rendering() {
         "title", "Spid3r Bazaar - Online Shopping",
         "search_term", "",
         "cart_count", 2,
-        "categories", list("Electronics", "Fashion"),
+        "categories", list(map("name", "Electronics", "slug", "electronics"), map("name", "Fashion", "slug", "fashion")),
         "products", list(
             map(
                 "id", 1,
@@ -167,7 +167,7 @@ fn test_store_show_and_index_views() {
 
     // Test store.index
     let rendered_index = global_bd.render("store.index", map(
-        "categories", list("Books", "Electronics"),
+        "categories", list(map("name", "Books", "slug", "books"), map("name", "Electronics", "slug", "electronics")),
         "search_term", "",
         "products", list(
             map(
@@ -187,6 +187,71 @@ fn test_store_show_and_index_views() {
     println("  [PASS] test_store_show_and_index_views");
 }
 
+fn test_nested_conditionals_in_skipped_block() {
+    // Regression: nested @if inside a @foreach inside a SKIPPED @if used to
+    // escape the non-nesting evaluator, leaking raw fragments + literal
+    // @endif into the rendered page.
+    let t_view = "resources/views/test_nested_skip.bd.html";
+    let content = "@if(not items)\n" +
+                  "<p>empty-state</p>\n" +
+                  "@endif\n" +
+                  "@if(items)\n" +
+                  "<ul>\n" +
+                  "@foreach(it in items)\n" +
+                  "<li>{{ it.name }}</li>\n" +
+                  "@if(it.flag)\n" +
+                  "<em>flagged</em>\n" +
+                  "@endif\n" +
+                  "@endforeach\n" +
+                  "</ul>\n" +
+                  "@endif\n" +
+                  "@if(not items)\n" +
+                  "<p>stray-endif-guard</p>\n" +
+                  "@endif";
+    write_file(t_view, content);
+
+    let rendered_empty = global_bd.render("test_nested_skip", map("items", list()));
+    file_delete(t_view);
+
+    assert(rendered_empty.contains("empty-state"), "Empty state must render when list is empty");
+    assert(not rendered_empty.contains("@endif"), "Literal @endif must never leak into output");
+    assert(not rendered_empty.contains("@foreach"), "Literal @foreach must never leak into output");
+    assert(not rendered_empty.contains("<li>"), "Loop body must not render when list is empty");
+    assert(not rendered_empty.contains("flagged"), "Nested conditional content must not leak from skipped block");
+    println("  [PASS] test_nested_conditionals_in_skipped_block");
+}
+
+fn test_conditional_on_loop_variable() {
+    // Per-iteration scope: @if on a loop variable must evaluate per item
+    // (dot-path conditions inside loops).
+    let t_view = "resources/views/test_loop_if.bd.html";
+    let content = "@foreach(u in users)\n" +
+                  "<div>{{ u.name }}</div>\n" +
+                  "@if(u.admin)\n" +
+                  "<b>staff</b>\n" +
+                  "@endif\n" +
+                  "@if(not u.admin)\n" +
+                  "<i>customer</i>\n" +
+                  "@endif\n" +
+                  "@endforeach";
+    write_file(t_view, content);
+
+    let rendered = global_bd.render("test_loop_if", map(
+        "users", list(
+            map("name", "Ada", "admin", 1),
+            map("name", "Bob", "admin", 0)
+        )
+    ));
+    file_delete(t_view);
+
+    assert(rendered.contains("<div>Ada</div>"), "Loop variable interpolation must work");
+    assert(rendered.contains("<b>staff</b>"), "Truthiness on loop var (admin=1) must render staff");
+    assert(not rendered.contains("<i>customer</i>") or not rendered.contains("<div>Ada</div><i>customer</i>"), "staff row must not show customer tag");
+    assert(rendered.contains("<i>customer</i>"), "Non-admin row must show customer tag");
+    assert(not rendered.contains("@if("), "Directive lines must be consumed");
+    println("  [PASS] test_conditional_on_loop_variable");
+}
+
 fn main() {
     println("\n=== Running SpiderBD Test Suite ===");
     test_html_escape();
@@ -197,5 +262,7 @@ fn main() {
     test_null_safety_and_missing_properties();
     test_model_dot_notation();
     test_store_show_and_index_views();
+    test_nested_conditionals_in_skipped_block();
+    test_conditional_on_loop_variable();
     println("=== All SpiderBD Tests Passed! ===\n");
 }

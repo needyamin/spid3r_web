@@ -1,0 +1,77 @@
+// app/Middleware/AdminMiddleware.matrix
+// Admin-area gate: requires a signed-in user whose users.is_admin flag is 1.
+//
+// Behavior:
+//   - Guest                -> 302 redirect to /login (JSON clients get 401)
+//   - Signed-in non-admin  -> 403 Forbidden page (JSON clients get 403)
+//   - Admin                -> null (pipeline continues to the controller)
+//
+// Register the alias once at boot (server.matrix):
+//   app.middleware("admin", fn(_args) { return new AdminMiddleware(); });
+// then guard routes with: Route.get(...).middleware("admin")
+
+import "framework/Response";
+import "framework/Auth/Auth";
+
+public class AdminMiddleware {
+    fn new() {}
+
+    public fn handle(self, req) {
+        // Prefer the request-scoped auth state (set by Application); fall
+        // back to the global facade for direct/legacy invocation.
+        let auth = null;
+        if req.auth != null {
+            auth = req.auth;
+        } else {
+            auth = Auth;
+        }
+
+        // Authenticate session if token present
+        if req.session_id != "" and not auth.check() {
+            auth.authenticate_token(req.session_id);
+        }
+
+        if not auth.check() {
+            if req.path.starts_with("/api/") {
+                return json(map("error", "Unauthorized", "message", "Authentication required."), 401);
+            }
+            return redirect("/login");
+        }
+
+        if not self.user_is_admin(auth.user()) {
+            if req.path.starts_with("/api/") {
+                return json(map("error", "Forbidden", "message", "Administrator access required."), 403);
+            }
+            let html = "<!DOCTYPE html><html lang='en'><head><meta charset='utf-8'>"
+                + "<meta name='viewport' content='width=device-width, initial-scale=1'>"
+                + "<title>403 Forbidden - Spid3rWeb</title></head>"
+                + "<body style=\"font-family:sans-serif;text-align:center;padding-top:4rem;\">"
+                + "<h1>403 — Forbidden</h1>"
+                + "<p>You do not have permission to access this area.</p>"
+                + "<p><a href='/'>Back to store</a></p></body></html>";
+            return response(html, 403);
+        }
+
+        return null; // proceed
+    }
+
+    // Shared rule: a user map/model is an admin iff is_admin == 1.
+    // Kept public so controllers can belt-and-braces check without
+    // duplicating the type-juggling logic.
+    public fn user_is_admin(self, user) -> bool {
+        if user == null {
+            return false;
+        }
+        if not user.has("is_admin") {
+            return false;
+        }
+        let flag = user["is_admin"];
+        if flag == null {
+            return false;
+        }
+        if string(flag) == "1" or string(flag) == "true" {
+            return true;
+        }
+        return false;
+    }
+}

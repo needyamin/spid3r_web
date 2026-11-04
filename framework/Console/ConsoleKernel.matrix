@@ -195,6 +195,15 @@ public class ConsoleKernel {
     }
 
     fn command_test(self, cli_args = null) -> int {
+        // Recursion guard: some registered suites (e.g. e2e tier2 CLI
+        // boundaries) invoke `magic test` themselves to verify the command
+        // works. Without a guard that recurses forever. A nested test run
+        // is a no-op that reports success — the outer run does the work.
+        if env("SPID3R_MAGIC_TEST_GUARD").is_some() {
+            return 0;
+        }
+        env_set("SPID3R_MAGIC_TEST_GUARD", "1");
+
         let root = self.resolve_root();
         if root != "" {
             env_set("SPID3R_PATH", root);
@@ -235,11 +244,24 @@ public class ConsoleKernel {
             "tests/test_query_builder.matrix",
             "tests/test_model.matrix",
             "tests/test_bd.matrix",
+            "tests/test_bd_adversarial.matrix",
             "tests/test_http_lifecycle.matrix",
             "tests/test_drivers.matrix",
             "tests/test_cache.matrix",
             "tests/test_ecommerce.matrix",
-            "tests/test_multi_db_live.matrix"
+            "tests/test_admin.matrix",
+            "tests/test_multi_db_live.matrix",
+            // e2e/tier1_features_cli is intentionally excluded here: it
+            // invokes `magic test` itself (in-process and via subprocess),
+            // which would recurse forever. Run it via the e2e orchestrator:
+            // spid3r run tests/e2e/run_e2e.matrix
+            "tests/e2e/tier1_features_orm.matrix",
+            "tests/e2e/tier1_features_http.matrix",
+            "tests/e2e/tier1_features_advanced.matrix",
+            "tests/e2e/tier2_boundaries_part1.matrix",
+            "tests/e2e/tier2_boundaries_part2.matrix",
+            "tests/e2e/tier3_cross_feature.matrix",
+            "tests/e2e/tier4_real_world.matrix"
         );
 
         let total_run = 0;
@@ -543,16 +565,22 @@ public fn register_all_migrations(kernel) {
             clean_name = clean_name + "Controller";
         }
         let file_path = self.resolve_root() + "app/Controllers/" + clean_name + ".matrix";
+        let base_view = clean_name.slice(0, clean_name.len() - 10).lower();
 
         let content = "// app/Controllers/" + clean_name + ".matrix
+import \"framework/Controller\";
 import \"framework/Response\";
 import \"framework/View/BD\";
 
-public class " + clean_name + " {
-    fn new() {}
+public class " + clean_name + " extends Controller {
+    fn new() {
+        super();
+    }
 
     public fn index(self, req) {
-        return json(map(\"message\", \"Hello from " + clean_name + "\"));
+        return self.view(\"" + base_view + ".index\", self.shared(map(
+            \"title\", \"" + clean_name + "\"
+        ), req));
     }
 
     public fn show(self, req) {
@@ -633,11 +661,27 @@ public let " + name + "Model = " + name + ";
         let file_name = ts + "_" + name + ".matrix";
         let file_path = self.resolve_root() + "database/migrations/" + file_name;
 
+        // Derive a readable class name from the migration name:
+        // "create_users_table" -> "CreateUsersTable"
+        let words = name.split("_");
+        let class_words = [];
+        for w in words {
+            if w.trim() != "" {
+                let fw = w.trim();
+                let head = fw.slice(0, 1).upper();
+                if fw.len() > 1 {
+                    head = head + fw.slice(1, fw.len());
+                }
+                class_words.push(head);
+            }
+        }
+        let class_name = "Migration" + class_words.join("");
+
         let content = "// database/migrations/" + file_name + "
 import \"framework/Database/Schema\";
 import \"framework/Database/Migration\";
 
-public class Migration_" + ts + " extends Migration {
+public class " + class_name + " extends Migration {
     fn new(name: string = \"" + name + "\") {
         super(name);
     }

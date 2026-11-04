@@ -110,7 +110,7 @@ fn main() {
 
         let products = list(p1.to_map(), p2.to_map());
         let rendered = global_bd.render("store.index", map(
-            "categories", list("Cat"),
+            "categories", list(map("name", "Cat", "slug", "cat")),
             "search_term", "",
             "products", products
         ));

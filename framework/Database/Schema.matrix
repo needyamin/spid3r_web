@@ -2,6 +2,7 @@
 // Spid3rWeb DDL Schema Builder & Blueprint (multi-dialect: sqlite, postgres, mysql/mariadb)
 
 import "DB";
+import "Connection";
 
 public class ColumnDefinition {
     public let name;
@@ -188,10 +189,17 @@ public class SchemaBuilder {
         return d;
     }
 
+    // Table/column identifiers are interpolated into DDL — validate them
+    // with the shared identifier guard so user-influenced names can never
+    // inject SQL.
+    fn check_identifier(self, name: string) -> string {
+        return sql_check_identifier(name);
+    }
+
     public fn create(self, table_name: string, callback) {
         let blueprint = new Blueprint();
         callback(blueprint);
-        let sql = blueprint.to_sql(table_name, self.dialect());
+        let sql = blueprint.to_sql(self.check_identifier(table_name), self.dialect());
         DB.statement(sql);
         return true;
     }
@@ -202,20 +210,30 @@ public class SchemaBuilder {
     public fn table(self, table_name: string, callback) {
         let blueprint = new Blueprint();
         callback(blueprint);
+        let safe_name = self.check_identifier(table_name);
         for col in blueprint.columns {
-            let sql = "ALTER TABLE " + table_name + " ADD COLUMN "
+            let sql = "ALTER TABLE " + safe_name + " ADD COLUMN "
+                + self.check_identifier(col.name) + " "
                 + col.to_sql(self.dialect()) + ";";
             try {
                 DB.statement(sql);
-            } catch (_e) {
-                // Column already exists — treat as applied.
+            } catch (e) {
+                // Only tolerate "column already exists" — anything else
+                // (syntax, locking, permissions) is a real failure and
+                // must not be silently recorded as applied.
+                let msg = string(e).lower();
+                if msg.contains("duplicate column") or msg.contains("already exists") or msg.contains("42701") {
+                    // Column already exists — treat as applied.
+                } else {
+                    throw e;
+                }
             }
         }
         return true;
     }
 
     public fn dropIfExists(self, table_name: string) {
-        let sql = "DROP TABLE IF EXISTS {table_name};";
+        let sql = "DROP TABLE IF EXISTS " + self.check_identifier(table_name) + ";";
         DB.statement(sql);
         return true;
     }

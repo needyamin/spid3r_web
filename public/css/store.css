@@ -396,3 +396,11 @@ img, svg, picture, video {
   text-overflow: ellipsis;
 }
 .sz-nav-link { white-space: nowrap; }
+@media (max-width: 480px) {
+  /* Compress navbar auth area so brand + auth + cart fit at 375px */
+  .sz-nav-actions { gap: 4px !important; }
+  .sz-nav-actions .btn { padding: .2rem .5rem; font-size: .8rem; min-height: 38px; }
+  .sz-cart-link { padding: 8px 12px 8px 8px; }
+  .sz-nav-user { max-width: 84px; font-size: .8rem; }
+  .sz-nav-link { font-size: .85rem; }
+}

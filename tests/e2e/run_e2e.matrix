@@ -122,11 +122,13 @@ fn main() {
     println("Total Elapsed Time: " + string(elapsed) + "ms");
     println("==================================================================\n");
 
+    // Strict by default: a failing suite fails the run. Pass --lenient to
+    // keep the old behavior (always exit 0) for reporting-style invocations.
     let cli_args = args();
-    let strict_mode = false;
+    let strict_mode = true;
     for a in cli_args {
-        if a == "--strict" {
-            strict_mode = true;
+        if a == "--lenient" {
+            strict_mode = false;
         }
     }
 

@@ -221,6 +221,7 @@
   <div class="group">
     <div class="group-title">Core Concepts</div>
     <a href="#cli">Magic CLI</a>
+    <a href="#toolchain">VM &amp; AOT Toolchain</a>
     <a href="#routing">Routing</a>
     <a href="#controllers">Controllers</a>
     <a href="#requests">Requests &amp; Validation</a>
@@ -245,6 +246,7 @@
   <div class="group">
     <div class="group-title">Security</div>
     <a href="#auth">Authentication &amp; Hashing</a>
+    <a href="#admin">Admin Panel</a>
     <a href="#security">Security Hardening</a>
   </div>
   <div class="group">
@@ -536,6 +538,74 @@ PRAGMA busy_timeout = 5000;   <span class="cmt">// ms — tolerates concurrent w
   </div>
 </section>
 
+<!-- ============ TOOLCHAIN ============ -->
+<section id="toolchain">
+  <h2>Spid3r Toolchain: VM &amp; AOT Compiler</h2>
+  <p>Spid3r gives every program <strong>two exits from the same source file</strong>: a fast <strong>bytecode VM</strong> for the development loop, and an <strong>AOT compiler</strong> that produces native machine-code executables for shipping. You never choose between iteration speed and deployment simplicity.</p>
+
+  <div class="grid">
+    <div class="card"><div class="c-icon">🧪</div><h4>Develop on the VM</h4><p><code>spid3r run</code> compiles to optimized bytecode and executes instantly — profiler, debugger, coverage, and sandboxing built in.</p></div>
+    <div class="card"><div class="c-icon">📦</div><h4>Ship native binaries</h4><p><code>spid3r build</code> emits machine code. With <code>--bundle-runtime</code> the exe runs on machines with no Spid3r installed.</p></div>
+    <div class="card"><div class="c-icon">⚖️</div><h4>Dual-engine parity</h4><p>The same code runs on a tree-walking interpreter (<code>--engine tree</code>) and the bytecode VM (<code>--engine vm</code>) — a built-in correctness oracle.</p></div>
+  </div>
+
+  <h3>The pipeline</h3>
+  <pre><code>app.matrix  ──spid3r run / compile──▶  .matrixc bytecode  ──▶  VM execution      (dev: prof · debug · coverage · budget)
+      └──────spid3r build────────────▶  native executable  ──▶  runs anywhere     (AOT machine code, no install)</code></pre>
+
+  <h3>Development loop (VM)</h3>
+  <table>
+    <tr><th>Command / flag</th><th>What it does</th></tr>
+    <tr><td><code>spid3r run app.matrix</code></td><td>Compile + execute on the VM (bytecode optimizations on by default)</td></tr>
+    <tr><td><code>--engine tree</code> / <code>--engine vm</code></td><td>Choose the execution engine: tree-walking interpreter or bytecode VM</td></tr>
+    <tr><td><code>--prof</code></td><td>Print per-opcode execution counts — find hot paths</td></tr>
+    <tr><td><code>--coverage</code></td><td>Record line coverage during the run</td></tr>
+    <tr><td><code>--no-opt</code></td><td>Disable bytecode optimizations (useful for debugging the toolchain)</td></tr>
+    <tr><td><code>--budget N</code></td><td>Cap execution work — run <strong>untrusted code safely</strong> (built-in sandboxing)</td></tr>
+    <tr><td><code>spid3r check app.matrix</code></td><td>Lex, parse, and semantic-check without running; lints: <code>unused-variable</code>, <code>unused-parameter</code>, <code>unused-import</code>, <code>unreachable-code</code>; <code>--json</code> for tooling</td></tr>
+    <tr><td><code>spid3r debug app.matrix --break 12,30</code></td><td>Line-based debugger on the VM (commands via <code>--commands FILE</code>)</td></tr>
+    <tr><td><code>spid3r repl</code></td><td>Interactive read-eval-print loop for quick experiments</td></tr>
+    <tr><td><code>spid3r exec app.matrixc</code></td><td>Run pre-compiled bytecode directly on the VM</td></tr>
+  </table>
+
+  <h3>Shipping (bytecode &amp; AOT build)</h3>
+  <table>
+    <tr><th>Command / flag</th><th>What it does</th></tr>
+    <tr><td><code>spid3r compile app.matrix -o app.matrixc</code></td><td>Write optimized bytecode; <code>--dump</code> prints it, <code>--no-opt</code> disables optimizations</td></tr>
+    <tr><td><code>spid3r build app.matrix -o app.exe</code></td><td>Compile to a <strong>native machine-code executable</strong></td></tr>
+    <tr><td><code>--bundle-runtime</code></td><td>Embed the runtime — the exe runs with <strong>no Spid3r installation</strong> on the target machine</td></tr>
+    <tr><td><code>--bytecode app.matrixc</code></td><td>Ship compiled bytecode instead of source (keeps your code private)</td></tr>
+    <tr><td><code>--icon app.ico</code> · <code>--subsystem console|windows</code></td><td>Windows executable metadata: app icon, console vs GUI subsystem</td></tr>
+    <tr><td><code>--embed payload</code> / <code>--allow-gui</code></td><td>Embed a payload (run via <code>gui --payload</code> straight from the exe) and allow GUI apps</td></tr>
+    <tr><td><code>spid3r bundle &lt;file&gt; --target wasm|desktop|android</code></td><td>Package for distribution (<code>--self-contained</code> embeds the runtime, desktop only)</td></tr>
+  </table>
+
+  <h3>Worked example: ship the Spid3rWeb server as one file</h3>
+  <pre><code><span class="cmt">// Build a self-contained server executable</span>
+spid3r build server.matrix -o Spid3rWebServer.exe --bundle-runtime
+
+<span class="cmt">// Copy it anywhere and run — no Spid3r install required</span>
+./Spid3rWebServer.exe 8080
+
+<span class="cmt">// Prefer shipping bytecode instead of source?</span>
+spid3r compile server.matrix -o server.matrixc
+spid3r build launcher.matrix -o app.exe --bytecode server.matrixc --bundle-runtime</code></pre>
+
+  <div class="callout info">
+    <div class="co-title">ℹ️ Why this matters for Spid3rWeb</div>
+    <p>A Laravel deployment needs PHP + extensions installed on every server. A Spid3rWeb deployment can be <strong>one self-contained executable</strong> — the framework, HTTP server, ORM, and Magic CLI all ship inside it. During development you keep script-speed iteration (<code>magic serve</code>), and in production you hand over a binary.</p>
+  </div>
+
+  <h3>How it compares</h3>
+  <table>
+    <tr><th>vs.</th><th>The difference</th></tr>
+    <tr><td>PHP / Laravel</td><td>Artisan apps require PHP + extensions on every server; Spid3r ships as a single native exe (<code>--bundle-runtime</code>)</td></tr>
+    <tr><td>Python / Node</td><td>Same dynamic ergonomics (REPL, instant <code>run</code>), but you end with machine code instead of shipping an interpreter + dependencies</td></tr>
+    <tr><td>Go / Rust</td><td>Keeps the fast dynamic dev loop and debugger, yet still produces native binaries — no long compile waits while iterating</td></tr>
+    <tr><td>Java / C#</td><td>Similar bytecode idea, but AOT goes straight to machine code — no JVM or runtime install on the target</td></tr>
+  </table>
+</section>
+
 <!-- ============ ROUTING ============ -->
 <section id="routing">
   <h2>Routing</h2>
@@ -582,6 +652,22 @@ Route.<span class="fn">get</span>("/products/{id}/reviews/{reviewId}", handler);
     <li>Segments must match in count; <code>:param</code> / <code>{param}</code> segments capture any value.</li>
     <li>If the path exists under other verbs → <code>405</code> with <code>Allow: GET, POST, …</code>; else <code>404</code> (themed HTML or JSON under <code>/api/</code>).</li>
   </ul>
+
+  <h3>SEO-friendly URLs</h3>
+  <p>The storefront emits and accepts descriptive, crawlable URLs. Canonical link format:</p>
+  <table>
+    <tr><th>URL</th><th>Purpose</th></tr>
+    <tr><td><code>/product/{slug}</code></td><td>Canonical product page (e.g. <code>/product/wireless-earbuds-pro</code>) — used by all catalog, cart and sitemap links</td></tr>
+    <tr><td><code>/product/{id}</code></td><td>Legacy numeric URLs keep working (backwards compatibility)</td></tr>
+    <tr><td><code>/category/{slug}</code></td><td>Crawlable category landing page (e.g. <code>/category/electronics</code>) — slug-matched case-insensitively against stored categories</td></tr>
+    <tr><td><code>/sitemap.xml</code></td><td>Auto-generated sitemap: home, catalog, all category slugs, all product slugs (absolute URLs from the request Host)</td></tr>
+    <tr><td><code>/robots.txt</code></td><td>Allows the storefront, disallows <code>/admin</code>, <code>/cart</code>, <code>/checkout</code>, <code>/orders</code>, auth pages; references the sitemap</td></tr>
+  </table>
+  <p>Every page ships a <code>&lt;meta name="description"&gt;</code>: templates define <code>@section('meta_desc', …)</code> (e.g. the product description on <code>store/show</code>); pages without one fall back to the layout default via <code>@yield('meta_desc', '…')</code>. Slugs are generated with <code>Str.slug()</code> (<code>app/Support/Str.matrix</code>) — lowercase, <code>[a-z0-9-]</code> only — the same helper the admin panel uses for product slugs.</p>
+  <div class="callout info">
+    <div class="co-title">ℹ️ SpiderBD directives now nest</div>
+    <p>The BD engine (<code>framework/View/BD.matrix</code>) processes <code>@if/@else/@endif</code> and <code>@foreach/@endforeach</code> in a single nesting-aware recursive pass — conditionals inside loops inside conditionals work, loop variables are visible to nested <code>@if</code> conditions (<code>@if(item.qty)</code>), and stray closing directives are dropped instead of leaking into pages. Keep the truthiness-only condition rule in mind (no <code>==</code> — precompute comparisons controller-side).</p>
+  </div>
 </section>
 
 <!-- ============ CONTROLLERS ============ -->
@@ -1067,6 +1153,45 @@ let hash = Hash.<span class="fn">make</span>("plain-password");      <span class
   </div>
 </section>
 
+<!-- ============ ADMIN ============ -->
+<section id="admin">
+  <h2>Admin Panel</h2>
+  <p>The built-in admin panel (<code>app/Controllers/AdminController.matrix</code>) provides order and product management for the Spid3r Bazaar store. Access is role-based via the <code>users.is_admin</code> flag (migration <code>007_add_is_admin_to_users_table</code>).</p>
+
+  <h3>Routes</h3>
+  <table>
+    <tr><th>Method</th><th>URI</th><th>Action</th></tr>
+    <tr><td>GET</td><td><code>/admin</code></td><td>Dashboard — revenue, order/product/user counts, pending + low-stock alerts</td></tr>
+    <tr><td>GET</td><td><code>/admin/products</code></td><td>Product list with edit/delete actions</td></tr>
+    <tr><td>GET / POST</td><td><code>/admin/products/create</code>, <code>/admin/products</code></td><td>Create product (auto-slug from name, deduped as <code>slug-2</code>, <code>slug-3</code>…)</td></tr>
+    <tr><td>GET / POST</td><td><code>/admin/products/:id/edit</code>, <code>/admin/products/:id</code></td><td>Edit product</td></tr>
+    <tr><td>POST</td><td><code>/admin/products/:id/delete</code></td><td>Delete product</td></tr>
+    <tr><td>GET</td><td><code>/admin/orders[?status=]</code></td><td>Order list with status filter (100 most recent)</td></tr>
+    <tr><td>GET</td><td><code>/admin/orders/:id</code></td><td>Order detail — decoded items, customer, account link</td></tr>
+    <tr><td>POST</td><td><code>/admin/orders/:id/status</code></td><td>Update status — whitelist: <code>pending, processing, shipped, delivered, cancelled</code></td></tr>
+  </table>
+
+  <h3>Access control</h3>
+  <p>Every <code>/admin</code> route carries <code>.middleware("admin")</code>. The alias is registered in <code>server.matrix</code>:</p>
+  <pre><code>app.<span class="fn">middleware</span>("admin", <span class="kw">fn</span>(_args) { <span class="kw">return</span> <span class="kw">new</span> <span class="fn">AdminMiddleware</span>(); });</code></pre>
+  <p><code>AdminMiddleware</code> (<code>app/Middleware/AdminMiddleware.matrix</code>) sends guests to <code>/login</code> (302) and rejects signed-in non-admins with 403. <code>Controller.shared()</code> also exposes <code>is_admin</code> so the navbar can render the ⚙️ Admin link.</p>
+
+  <div class="callout info">
+    <div class="co-title">ℹ️ Bootstrapping an admin</div>
+    <p>Run <code>spid3r magic db:seed</code> with <code>SPID3R_ADMIN_EMAIL</code> (and optionally <code>SPID3R_ADMIN_PASSWORD</code>) in <code>.env</code> to promote or create that admin. With no env var set and no admin existing, a demo admin <code>admin@spid3r.test</code> / <code>secret123</code> is seeded — change it before deploying.</p>
+  </div>
+
+  <div class="callout warn">
+    <div class="co-title">⚠️ BD templates: no string comparison, no nested @if</div>
+    <p><code>@if</code> is truthiness-only (no <code>==</code>) and conditionals cannot nest — an inner <code>@endif</code> closes the outer block. Precompute presentation strings (badge classes, selected dropdown flags, active-tab flags) in the controller (<code>status_class()</code>, <code>status_options</code>, <code>tabs</code> in <code>AdminController</code>) and keep every <code>@if</code> top-level.</p>
+  </div>
+
+  <div class="callout info">
+    <div class="co-title">ℹ️ CSRF in admin forms</div>
+    <p>Admin POST forms include <code>&lt;input type="hidden" name="_csrf" value="{{ csrf_token }}"&gt;</code>. Browsers are already covered by the Origin check; the token additionally protects no-Origin clients (tests, curl). Test suites can read the session's token from the <code>sessions.payload</code> column or extract it from any rendered form.</p>
+  </div>
+</section>
+
 <!-- ============ CACHE ============ -->
 <section id="cache">
   <h2>Caching System</h2>
@@ -1161,7 +1286,7 @@ SPID3R_DB_DRIVER=mysql    SPID3R_MYSQL_* … spid3r magic test</code></pre>
   </table>
 
   <h3>E2E track (<code>tests/e2e/</code>)</h3>
-  <p>Independent opaque-box tests authored to verify behavior without reading framework internals (see <code>TEST_READY.md</code> — 192 tests):</p>
+  <p>Independent opaque-box tests authored to verify behavior without reading framework internals (192 tests across 8 suites):</p>
   <ul>
     <li><strong>Tier 1</strong> — features: CLI, HTTP, ORM, advanced</li>
     <li><strong>Tier 2</strong> — boundary conditions (parts 1 &amp; 2)</li>

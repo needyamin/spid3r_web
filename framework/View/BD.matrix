@@ -17,9 +17,34 @@ public fn html_escape(value) -> string {
 
 public class BD {
     public let views_path;
+    // Compiled-template content cache (opt-in via SPID3R_VIEW_CACHE=1).
+    // Caches raw file contents by resolved path — evaluation still happens
+    // per request. Disable during development so edits show immediately.
+    public let template_cache;
 
     fn new(views_path: string = "resources/views") {
         self.views_path = views_path;
+        self.template_cache = map();
+    }
+
+    fn load_template(self, file_path: string) {
+        let use_cache = false;
+        let cache_env = env("SPID3R_VIEW_CACHE");
+        if cache_env.is_some() and string(cache_env.unwrap()).trim() == "1" {
+            use_cache = true;
+        }
+        if use_cache and self.template_cache.has(file_path) {
+            return self.template_cache[file_path];
+        }
+        let res = read_file(file_path);
+        if res.is_err() {
+            return null;
+        }
+        let content = res.unwrap();
+        if use_cache {
+            self.template_cache[file_path] = content;
+        }
+        return content;
     }
 
     public fn render(self, view_name: string, data = null) -> string {
@@ -27,11 +52,10 @@ public class BD {
             data = map();
         }
         let file_path = self.resolve_view_path(view_name);
-        let res = read_file(file_path);
-        if res.is_err() {
+        let template = self.load_template(file_path);
+        if template == null {
             return "<!-- BD Error: View '" + view_name + "' not found at '" + file_path + "' -->";
         }
-        let template = res.unwrap();
 
         // 1. Check for layout extension (@extends('...'))
         let layout_name = "";
@@ -51,9 +75,9 @@ public class BD {
         let output = "";
         if layout_name != "" {
             let layout_file = self.resolve_view_path(layout_name);
-            let layout_res = read_file(layout_file);
-            if layout_res.is_ok() {
-                output = layout_res.unwrap();
+            let layout_res = self.load_template(layout_file);
+            if layout_res != null {
+                output = layout_res;
                 // Replace @yield('section_name') with section content
                 output = self.apply_yields(output, sections);
             } else {
@@ -63,12 +87,11 @@ public class BD {
             output = template;
         }
 
-        // 4. Handle @include('...') partials
-        output = self.apply_includes(output);
+        // 4. Handle @include('...') partials (nested, depth-capped)
+        output = self.apply_includes(output, 0);
 
-        // 5. Evaluate Directives: @if, @foreach, and Variable Interpolation
-        output = self.evaluate_conditionals(output, data);
-        output = self.evaluate_loops(output, data);
+        // 5. Evaluate Directives: @if/@else/@endif, @foreach, then variables
+        output = self.evaluate_directives(output, data);
         output = self.evaluate_variables(output, data);
 
         return output;
@@ -203,7 +226,13 @@ public class BD {
         return out_lines.join("\n");
     }
 
-    fn apply_includes(self, template: string) -> string {
+    // Resolve @include directives. Partials may themselves contain
+    // @include lines, so resolution recurses with a depth cap to survive
+    // accidental include cycles.
+    fn apply_includes(self, template: string, depth: int) -> string {
+        if depth > 5 {
+            return template;
+        }
         let out_lines = list();
         let lines = template.split("\n");
 
@@ -212,9 +241,9 @@ public class BD {
             if line.starts_with("@include(") and line.ends_with(")") {
                 let partial_name = self.extract_quoted_arg(line, "@include(");
                 let p_file = self.resolve_view_path(partial_name);
-                let p_res = read_file(p_file);
-                if p_res.is_ok() {
-                    out_lines.push(p_res.unwrap());
+                let p_content = self.load_template(p_file);
+                if p_content != null {
+                    out_lines.push(self.apply_includes(p_content, depth + 1));
                 } else {
                     out_lines.push("<!-- BD Include Error: " + partial_name + " -->");
                 }
@@ -226,108 +255,71 @@ public class BD {
         return out_lines.join("\n");
     }
 
-    fn evaluate_conditionals(self, template: string, data) -> string {
-        // Simple @if($condition) ... @else ... @endif evaluator
+    fn evaluate_directives(self, template: string, data) -> string {
+        // Unified nesting-aware directive pass: @if/@else/@endif and
+        // @foreach/@endforeach are processed together by a recursive-descent
+        // walker, so conditionals and loops nest freely and loop bodies get
+        // a per-iteration scope (conditions on loop variables work).
         let lines = template.split("\n");
-        let result_lines = list();
-        let skip_block = false;
-        let in_conditional = false;
-        let condition_met = false;
-
-        for raw_line in lines {
-            let line = raw_line.trim();
-
-            if line.starts_with("@if(") and line.ends_with(")") {
-                in_conditional = true;
-                let cond_expr = self.extract_quoted_arg(line, "@if(");
-                let invert = false;
-                let var_name = cond_expr.replace("$", "").trim();
-
-                // Support a leading `not` / `!` negation (e.g. @if(not products))
-                let effective = var_name;
-                if effective.starts_with("not ") {
-                    invert = true;
-                    effective = effective.slice(4, effective.len()).trim();
-                } elif effective.starts_with("!") {
-                    invert = true;
-                    effective = effective.slice(1, effective.len()).trim();
-                }
-
-                let val = null;
-                if data.has(effective) {
-                    val = data[effective];
-                }
-
-                // Truthiness check
-                let is_true = false;
-                if val != null {
-                    if type_of(val) == "bool" and val == true {
-                        is_true = true;
-                    } else if type_of(val) == "string" and val != "" and val != "0" and val != "false" {
-                        is_true = true;
-                    } else if type_of(val) == "int" and val > 0 {
-                        is_true = true;
-                    } else if type_of(val) == "list" and val.len() > 0 {
-                        is_true = true;
-                    } else if type_of(val) == "map" and val.len() > 0 {
-                        is_true = true;
-                    }
-                }
-
-                if invert {
-                    is_true = not is_true;
-                }
-
-                if is_true {
-                    skip_block = false;
-                    condition_met = true;
-                } else {
-                    skip_block = true;
-                    condition_met = false;
-                }
-                continue;
-            }
-
-            if in_conditional and line == "@else" {
-                if condition_met {
-                    skip_block = true;
-                } else {
-                    skip_block = false;
-                }
-                continue;
-            }
-
-            if in_conditional and line == "@endif" {
-                in_conditional = false;
-                skip_block = false;
-                condition_met = false;
-                continue;
-            }
-
-            if not skip_block {
-                result_lines.push(raw_line);
-            }
-        }
-
-        return result_lines.join("\n");
+        let out_lines = list();
+        self.eval_lines(lines, data, out_lines);
+        return out_lines.join("\n");
     }
 
-    fn evaluate_loops(self, template: string, data) -> string {
-        // Supports @foreach($items as $item) ... @endforeach
-        let lines = template.split("\n");
-        let result_lines = list();
-        let in_loop = false;
-        let loop_list_name = "";
-        let loop_item_name = "";
-        let loop_body_lines = list();
+    // Recursive walker: emits lines into out, expanding @if/@else/@endif
+    // and @foreach/@endforeach blocks. Stray closing directives (no open
+    // block) are dropped instead of leaking into the rendered page.
+    fn eval_lines(self, lines, data, out) {
+        let i = 0;
+        while i < lines.len() {
+            let raw = lines[i];
+            let line = raw.trim();
 
-        for raw_line in lines {
-            let line = raw_line.trim();
+            // ---- Conditional block ----
+            if line.starts_with("@if(") and line.ends_with(")") {
+                let cond_expr = self.extract_quoted_arg(line, "@if(");
+                let is_true = self.evaluate_truthiness(cond_expr, data);
 
+                i = i + 1;
+                let if_lines = list();
+                let else_lines = list();
+                let branch = if_lines;
+                let depth = 0;
+                while i < lines.len() {
+                    let l2 = lines[i].trim();
+                    if l2.starts_with("@if(") and l2.ends_with(")") {
+                        depth = depth + 1;
+                        branch.push(lines[i]);
+                    } elif l2 == "@endif" {
+                        if depth == 0 {
+                            break;
+                        }
+                        depth = depth - 1;
+                        branch.push(lines[i]);
+                    } elif l2 == "@else" and depth == 0 {
+                        branch = else_lines;
+                    } else {
+                        branch.push(lines[i]);
+                    }
+                    i = i + 1;
+                }
+                // i sits on @endif (or end of input) - step past it
+                i = i + 1;
+
+                if is_true {
+                    self.eval_lines(if_lines, data, out);
+                } else {
+                    self.eval_lines(else_lines, data, out);
+                }
+                continue;
+            }
+
+            // ---- Loop block ----
             if line.starts_with("@foreach(") and line.ends_with(")") {
-                in_loop = true;
                 let expr = line.replace("@foreach(", "");
-                expr = expr.slice(0, expr.len() - 1).trim(); // "$items as $item" | "item in items"
+                expr = expr.slice(0, expr.len() - 1).trim();
+                let loop_list_name = "";
+                let loop_item_name = "";
                 // Documented syntax: @foreach(item in items)
                 if expr.contains(" in ") {
                     let in_parts = expr.split(" in ");
@@ -349,44 +341,109 @@ public class BD {
                 if loop_list_name.starts_with("$") {
                     loop_list_name = loop_list_name.slice(1, loop_list_name.len()).trim();
                 }
-                loop_body_lines = list();
-                continue;
-            }
 
-            if in_loop and line == "@endforeach" {
-                in_loop = false;
-                // Render loop items
+                i = i + 1;
+                let body_lines = list();
+                let depth = 0;
+                while i < lines.len() {
+                    let l2 = lines[i].trim();
+                    if l2.starts_with("@foreach(") and l2.ends_with(")") {
+                        depth = depth + 1;
+                        body_lines.push(lines[i]);
+                    } elif l2 == "@endforeach" {
+                        if depth == 0 {
+                            break;
+                        }
+                        depth = depth - 1;
+                        body_lines.push(lines[i]);
+                    } else {
+                        body_lines.push(lines[i]);
+                    }
+                    i = i + 1;
+                }
+                i = i + 1; // step past @endforeach
+
                 let items = self.resolve_expression(loop_list_name, data);
                 if items != null and type_of(items) == "list" {
                     for item in items {
                         let item_data = map();
-                        // copy parent scope
+                        // copy parent scope, then bind the loop variable
                         for k in data.keys() {
                             item_data[k] = data[k];
                         }
                         item_data[loop_item_name] = item;
-
-                        let rendered_body = self.render_loop_iteration(loop_body_lines, item_data, loop_item_name);
-                        result_lines.push(rendered_body);
+                        // Interpolate variables HERE, while the iteration
+                        // scope (loop var + parent data) is alive — the
+                        // top-level variable pass cannot see loop scopes.
+                        let body_out_lines = list();
+                        self.eval_lines(body_lines, item_data, body_out_lines);
+                        out.push(self.evaluate_variables(body_out_lines.join("\n"), item_data));
                     }
                 }
-                loop_body_lines = list();
                 continue;
             }
 
-            if in_loop {
-                loop_body_lines.push(raw_line);
-            } else {
-                result_lines.push(raw_line);
+            // ---- Stray closing directives: never leak into output ----
+            if line == "@else" or line == "@endif" or line == "@endforeach" {
+                i = i + 1;
+                continue;
             }
-        }
 
-        return result_lines.join("\n");
+            out.push(raw);
+            i = i + 1;
+        }
     }
 
+    // Truthiness for a BD condition expression (dot-path aware):
+    // bool true / non-empty string (not "0"/"false") / int > 0 / float > 0 /
+    // non-empty list / non-empty map. Supports leading `not` / `!`.
+    fn evaluate_truthiness(self, cond_expr: string, data) -> bool {
+        let effective = string(cond_expr).trim();
+        if effective.starts_with("not ") {
+            let inner = self.evaluate_truthiness(effective.slice(4, effective.len()).trim(), data);
+            return not inner;
+        }
+        if effective.starts_with("!") {
+            let inner = self.evaluate_truthiness(effective.slice(1, effective.len()).trim(), data);
+            return not inner;
+        }
+        if effective == "" {
+            return false;
+        }
+        let val = self.resolve_dot_path(effective, data);
+        if val == null {
+            return false;
+        }
+        let t = type_of(val);
+        if t == "bool" and val == true {
+            return true;
+        }
+        if t == "string" and val != "" and val != "0" and val != "false" {
+            return true;
+        }
+        if t == "int" and val > 0 {
+            return true;
+        }
+        if t == "float" and val > 0.0 {
+            return true;
+        }
+        if t == "list" and val.len() > 0 {
+            return true;
+        }
+        if t == "map" and val.len() > 0 {
+            return true;
+        }
+        return false;
+    }
+
+    // Render one loop iteration: the body may itself contain nested
+    // conditionals and loops, so re-run the directive walker on the body
+    // with the iteration scope merged over the parent data.
     fn render_loop_iteration(self, body_lines, data, item_var_name: string) -> string {
-        let block = body_lines.join("\n");
-        return self.evaluate_variables(block, data);
+        let out_lines = list();
+        self.eval_lines(body_lines, data, out_lines);
+        let out = out_lines.join("\n");
+        return self.evaluate_variables(out, data);
     }
 
     fn resolve_expression(self, raw_expr: string, data) {

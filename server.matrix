@@ -4,6 +4,7 @@
 import "framework/Application";
 import "routes/web";
 import "routes/api";
+import "app/Middleware/AdminMiddleware";
 
 fn main() {
     println("==================================================================");
@@ -13,6 +14,9 @@ fn main() {
     // 1. Initialize Application Kernel
     let app = new Application();
 
+    // 1b. Named middleware aliases (route-level guards)
+    app.middleware("admin", fn(_args) { return new AdminMiddleware(); });
+
     // 2. Register Web and API Routes
     register_web_routes();
     register_api_routes();
@@ -21,9 +25,15 @@ fn main() {
     let port = 8000;
     let cli_args = args();
     if cli_args.len() > 0 {
-        let p_val = int(cli_args[0]);
-        if p_val > 0 {
-            port = p_val;
+        let parsed = 0;
+        try {
+            parsed = int(cli_args[0]);
+        } catch (_e) {
+            println("[Spid3rWeb] Invalid port argument '" + string(cli_args[0]) + "', falling back to 8000");
+            parsed = 0;
+        }
+        if parsed > 0 {
+            port = parsed;
         }
     }
 

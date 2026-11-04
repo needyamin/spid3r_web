@@ -121,7 +121,7 @@ fn main() {
     });
 
     runner.test("F8.5: Method mismatch returns 405 Method Not Allowed (M4 contract)", fn() {
-        // Contract requirement from PROJECT.md Feature 14 & TEST_INFRA Feature 8:
+        // Contract requirement (PROJECT.md Feature 14, e2e spec Feature 8):
         // Returning 405 Method Not Allowed when path matches another verb
         let app = new Application();
         Route.get("/e2e-405-probe", fn(_r) { return response("ok", 200); });

@@ -1,0 +1,57 @@
+// app/Support/Str.matrix
+// Small string helpers shared across controllers — SEO slugs and friends.
+
+public class StrHelper {
+    fn new() {}
+
+    // "Home & Kitchen!" -> "home-kitchen" (SEO-friendly URL slugs)
+    public fn slug(self, name: string) -> string {
+        let lower = string(name).trim().lower();
+        let out = "";
+        let prev_dash = false;
+        let i = 0;
+        while i < lower.len() {
+            let ch = lower.slice(i, i + 1);
+            let ok = false;
+            if (ch >= "a" and ch <= "z") or (ch >= "0" and ch <= "9") {
+                ok = true;
+            }
+            if ok {
+                out = out + ch;
+                prev_dash = false;
+            } else {
+                if not prev_dash and out != "" {
+                    out = out + "-";
+                    prev_dash = true;
+                }
+            }
+            i = i + 1;
+        }
+        if out.ends_with("-") {
+            out = out.slice(0, out.len() - 1);
+        }
+        if out == "" {
+            out = "item";
+        }
+        return out;
+    }
+
+    // "1" -> true, "wireless-earbuds-pro" -> false
+    public fn is_numeric(self, s: string) -> bool {
+        let t = string(s).trim();
+        if t == "" {
+            return false;
+        }
+        let i = 0;
+        while i < t.len() {
+            let ch = t.slice(i, i + 1);
+            if ch < "0" or ch > "9" {
+                return false;
+            }
+            i = i + 1;
+        }
+        return true;
+    }
+}
+
+public let Str = new StrHelper();

@@ -4,26 +4,56 @@ import "framework/Response";
 import "framework/View/BD";
 import "framework/Auth/Auth";
 import "framework/Auth/Hash";
+import "framework/Cache/Cache";
 import "framework/Database/DB";
 import "app/Models/User";
+import "app/Support/CartService";
 
 public class AuthController extends Controller {
     fn new() {
         super();
     }
 
-    public fn showLogin(self, _req) {
-        if Auth.check() {
-            return redirect("/");
-        }
-        return view("auth.login", map(
-            "title", "Sign In - Spid3rWeb",
-            "error", "",
-            "is_auth", false,
-            "user_name", ""
-        ));
+    // Brute-force guard: after MAX_FAILS failed attempts for one email,
+    // lock further attempts for LOCK_SECONDS (Cache-backed, per email).
+    fn MAX_FAILS(self) -> int { return 5; }
+    fn LOCK_SECONDS(self) -> int { return 600; }
+
+    fn fails_key(self, email: string) -> string {
+        return "login_fails:" + string(email).trim().lower();
     }
 
+    fn is_locked(self, email: string) -> bool {
+        let fails = int(Cache.get(self.fails_key(email), 0));
+        return fails >= self.MAX_FAILS();
+    }
+
+    fn record_fail(self, email: string) {
+        let key = self.fails_key(email);
+        let fails = int(Cache.get(key, 0)) + 1;
+        Cache.put(key, fails, self.LOCK_SECONDS());
+    }
+
+    fn clear_fails(self, email: string) {
+        Cache.forget(self.fails_key(email));
+    }
+
+    // Password hashes must never leave the server — strip the password
+    // field from any user map returned in API responses.
+    fn safe_user(self, user) {
+        if user == null {
+            return null;
+        }
+        let out = map();
+        for k in user.keys() {
+            if k != "password" {
+                out[k] = user[k];
+            }
+        }
+        return out;
+    }
+
+    // POST /login  (email, password)
     public fn login(self, req) {
         let validator = req.validate(map(
             "email", "required|email",
@@ -34,48 +64,71 @@ public class AuthController extends Controller {
             if req.path.starts_with("/api/") {
                 return json(map("error", "Validation Failed", "messages", validator.error_messages()), 422);
             }
-            return view("auth.login", map(
-                "title", "Sign In - Spid3rWeb",
-                "error", validator.error_summary(),
-                "is_auth", false,
-                "user_name", ""
-            ));
+            return self.render_login(req, validator.error_summary());
         }
 
         let email = req.string("email").trim().lower();
         let password = req.string("password");
 
-        if Auth.attempt(email, password) {
+        // Brute-force lockout check
+        if self.is_locked(email) {
             if req.path.starts_with("/api/") {
-                return json(map("status", "success", "token", Auth.token(), "user", Auth.user()));
+                return json(map("error", "Too many attempts. Try again later."), 429);
+            }
+            return self.render_login(req, "Too many failed attempts. Please try again in a few minutes.");
+        }
+
+        if req.auth.attempt(email, password) {
+            self.clear_fails(email);
+            if req.path.starts_with("/api/") {
+                return json(map("status", "success", "token", req.auth.token(), "user", self.safe_user(req.auth.user())));
             }
             let res = redirect("/");
-            res.cookie("spid3r_session", Auth.token(), "/", 86400);
+            res.cookie("spid3r_session", req.auth.token(), "/", 86400);
             return res;
         }
+
+        self.record_fail(email);
 
         if req.path.starts_with("/api/") {
             return json(map("error", "Invalid credentials"), 401);
         }
 
-        return view("auth.login", map(
-            "title", "Sign In - Spid3rWeb",
-            "error", "Invalid email or password combination.",
-            "is_auth", false,
-            "user_name", ""
-        ));
+        return self.render_login(req, "Invalid email or password combination.");
     }
 
-    public fn showRegister(self, _req) {
-        if Auth.check() {
+    // Shared renderer so every login view gets full layout data (cart badge)
+    fn render_login(self, req, error: string) {
+        let cart = new CartService();
+        return self.view("auth.login", self.shared(map(
+            "title", "Sign In - Spid3r Bazaar",
+            "error", error,
+            "cart_count", cart.count(cart.token(req))
+        ), req));
+    }
+
+    public fn showLogin(self, req) {
+        if self.auth(req).check() {
             return redirect("/");
         }
-        return view("auth.register", map(
-            "title", "Create Account - Spid3rWeb",
-            "error", "",
-            "is_auth", false,
-            "user_name", ""
-        ));
+        return self.render_login(req, "");
+    }
+
+    // Shared renderer for the register view (full layout data)
+    fn render_register(self, req, error: string) {
+        let cart = new CartService();
+        return self.view("auth.register", self.shared(map(
+            "title", "Create Account - Spid3r Bazaar",
+            "error", error,
+            "cart_count", cart.count(cart.token(req))
+        ), req));
+    }
+
+    public fn showRegister(self, req) {
+        if self.auth(req).check() {
+            return redirect("/");
+        }
+        return self.render_register(req, "");
     }
 
     public fn register(self, req) {
@@ -89,12 +142,7 @@ public class AuthController extends Controller {
             if req.path.starts_with("/api/") {
                 return json(map("error", "Validation Failed", "messages", validator.error_messages()), 422);
             }
-            return view("auth.register", map(
-                "title", "Create Account - Spid3rWeb",
-                "error", validator.error_summary(),
-                "is_auth", false,
-                "user_name", ""
-            ));
+            return self.render_register(req, validator.error_summary());
         }
 
         let email = req.string("email").trim().lower();
@@ -104,12 +152,7 @@ public class AuthController extends Controller {
             if req.path.starts_with("/api/") {
                 return json(map("error", "Email already in use"), 422);
             }
-            return view("auth.register", map(
-                "title", "Create Account - Spid3rWeb",
-                "error", "This email address is already registered.",
-                "is_auth", false,
-                "user_name", ""
-            ));
+            return self.render_register(req, "This email address is already registered.");
         }
 
         let hashed = Hash.make(req.string("password"));
@@ -119,19 +162,19 @@ public class AuthController extends Controller {
             "password", hashed
         ));
 
-        Auth.login(user.to_map());
+        req.auth.login(user.to_map());
 
         if req.path.starts_with("/api/") {
-            return json(map("status", "created", "token", Auth.token(), "user", user.to_map()), 201);
+            return json(map("status", "created", "token", req.auth.token(), "user", self.safe_user(req.auth.user())), 201);
         }
 
         let res = redirect("/");
-        res.cookie("spid3r_session", Auth.token(), "/", 86400);
+        res.cookie("spid3r_session", req.auth.token(), "/", 86400);
         return res;
     }
 
     public fn logout(self, req) {
-        Auth.logout();
+        req.auth.logout();
         if req.path.starts_with("/api/") {
             return json(map("status", "logged_out"));
         }

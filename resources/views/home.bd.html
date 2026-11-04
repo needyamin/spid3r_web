@@ -8,7 +8,7 @@
   <div class="container d-flex align-items-center gap-2 flex-wrap py-2">
     <a class="sz-chip sz-chip-active" href="/">All</a>
     @foreach(cat in categories)
-      <a class="sz-chip" href="/?category={{ cat }}">{{ cat }}</a>
+      <a class="sz-chip" href="/category/{{ cat.slug }}">{{ cat.name }}</a>
     @endforeach
   </div>
 </div>
@@ -33,11 +33,11 @@
     @foreach(product in products)
       <div class="col-6 col-md-4 col-lg-3">
         <div class="card h-100 sz-card">
-          <a href="/product/{{ product.id }}" class="sz-thumb" aria-label="{{ product.name }}">
+          <a href="/product/{{ product.slug }}" class="sz-thumb" aria-label="{{ product.name }}">
             <span>{{ product.emoji }}</span>
           </a>
           <div class="card-body p-2 d-flex flex-column">
-            <a class="sz-name" href="/product/{{ product.id }}">{{ product.name }}</a>
+            <a class="sz-name" href="/product/{{ product.slug }}">{{ product.name }}</a>
             <div class="sz-price-row mt-1">
               <span class="sz-price">৳{{ product.price }}</span>
               {!! product.discount_html !!}

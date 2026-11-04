@@ -2,6 +2,7 @@
 // Spid3rWeb HTTP Response Builder & Helpers
 
 import "http";
+import "framework/Env";
 
 public class Response {
     public let status_code;
@@ -11,29 +12,79 @@ public class Response {
     fn new(body = "", status_code: int = 200) {
         self.body = string(body);
         self.status_code = status_code;
+        // Sensible security headers on every response. CORS headers are
+        // intentionally NOT global defaults: blanket access-control-allow-*
+        // should only be set by CorsMiddleware / API routing, never on
+        // cookie-authenticated HTML responses.
         self.headers = map(
             "content-type", "text/html; charset=utf-8",
-            "access-control-allow-origin", "*",
-            "access-control-allow-methods", "GET, POST, PUT, DELETE, PATCH, OPTIONS",
-            "access-control-allow-headers", "content-type, authorization, x-requested-with"
+            "x-content-type-options", "nosniff",
+            "x-frame-options", "SAMEORIGIN",
+            "referrer-policy", "strict-origin-when-cross-origin",
+            "x-permitted-cross-domain-policies", "none",
+            "cross-origin-opener-policy", "same-origin"
         );
+        // Opt-in HSTS for TLS deployments (SPID3R_HSTS=1)
+        let hsts = env("SPID3R_HSTS");
+        if hsts.is_some() and string(hsts.unwrap()).trim().lower() == "1" {
+            self.headers["strict-transport-security"] = "max-age=31536000; includeSubDomains";
+        }
+    }
+
+    // Header names and values must never carry CRLF — a single \r or \n
+    // enables HTTP response splitting. Values are rejected, not sanitized,
+    // so misuse fails loudly instead of silently corrupting headers.
+    fn is_header_safe(self, value: string) -> bool {
+        return not value.contains("\r") and not value.contains("\n") and not value.contains(chr(0));
     }
 
     public fn header(self, key: string, value: string) {
-        self.headers[string(key).lower()] = string(value);
+        let k = string(key).lower();
+        if not self.is_header_safe(string(value)) {
+            throw "Response.header: illegal character (CR/LF/NUL) in header value for '" + k + "'";
+        }
+        self.headers[k] = string(value);
         return self;
     }
 
     public fn withHeaders(self, new_headers) {
         for k in new_headers.keys() {
-            self.headers[string(k).lower()] = string(new_headers[k]);
+            self.header(k, string(new_headers[k]));
         }
         return self;
     }
 
-    public fn cookie(self, name: string, value: string, path: string = "/", max_age: int = 86400) {
+    public fn cookie(self, name: string, value: string, path: string = "/", max_age: int = 86400, secure = null) {
+        if not self.is_header_safe(name) or not self.is_header_safe(value) {
+            throw "Response.cookie: illegal character (CR/LF/NUL) in cookie name or value";
+        }
+        // Secure flag: explicit argument wins; otherwise SPID3R_COOKIE_SECURE=1
+        // (or a production APP_ENV) enables it for HTTPS deployments.
+        let secure_flag = false;
+        if secure != null {
+            secure_flag = secure == true or secure == 1 or string(secure) == "1" or string(secure) == "true";
+        } else {
+            let env_secure = env("SPID3R_COOKIE_SECURE");
+            if env_secure.is_some() and string(env_secure.unwrap()).trim() == "1" {
+                secure_flag = true;
+            } else {
+                let app_env = env("APP_ENV");
+                if app_env.is_some() and string(app_env.unwrap()).trim().lower() == "production" {
+                    secure_flag = true;
+                }
+            }
+        }
         let cookie_str = name + "=" + value + "; Path=" + path + "; Max-Age=" + string(max_age) + "; HttpOnly; SameSite=Lax";
-        self.headers["set-cookie"] = cookie_str;
+        if secure_flag {
+            cookie_str = cookie_str + "; Secure";
+        }
+        // Support multiple cookies per response: comma-join Set-Cookie values
+        // (safe here — cookies use Max-Age, never Expires dates).
+        if self.headers.has("set-cookie") {
+            self.headers["set-cookie"] = string(self.headers["set-cookie"]) + ", " + cookie_str;
+        } else {
+            self.headers["set-cookie"] = cookie_str;
+        }
         return self;
     }
 

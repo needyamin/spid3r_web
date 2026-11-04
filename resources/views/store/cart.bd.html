@@ -29,11 +29,11 @@
               <div class="row align-items-center g-2 g-md-3">
                 <!-- Tier 1 Left / Desktop Col 1: Product Thumbnail & Name Info -->
                 <div class="col-8 col-md-5 order-md-1 d-flex align-items-center gap-2 gap-sm-3 min-w-0">
-                  <a href="/product/{{ item.product.id }}" class="sz-thumb sz-thumb-sm flex-shrink-0" style="width: 56px; height: 56px; min-width: 56px;">
+                  <a href="/product/{{ item.product.slug }}" class="sz-thumb sz-thumb-sm flex-shrink-0" style="width: 56px; height: 56px; min-width: 56px;">
                     <span>{{ item.product.emoji }}</span>
                   </a>
                   <div class="min-w-0">
-                    <a class="sz-name text-truncate d-block fw-semibold" href="/product/{{ item.product.id }}">{{ item.product.name }}</a>
+                    <a class="sz-name text-truncate d-block fw-semibold" href="/product/{{ item.product.slug }}">{{ item.product.name }}</a>
                     <div class="sz-meta text-muted">৳{{ item.product.price }} each</div>
                   </div>
                 </div>
@@ -93,6 +93,7 @@
           <div class="card-body">
             <h6 class="fw-bold mb-3">Checkout — Cash on Delivery</h6>
             <form method="POST" action="/checkout">
+              <input type="hidden" name="_csrf" value="{{ csrf_token }}">
               <div class="mb-2">
                 <label for="customer_name" class="form-label fw-semibold small mb-1">Full Name</label>
                 <input id="customer_name" class="form-control" type="text" name="customer_name" placeholder="Full name" value="{{ customer_name }}" required>

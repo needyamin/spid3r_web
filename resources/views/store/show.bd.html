@@ -2,6 +2,8 @@
 
 @section('title', '{{ product.name }} - Spid3r Bazaar')
 
+@section('meta_desc', product.description)
+
 @section('content')
 
 <div class="container py-4">
@@ -71,9 +73,9 @@
     @foreach(rp in related)
       <div class="col-6 col-md-4 col-lg-3">
         <div class="card h-100 sz-card">
-          <a href="/product/{{ rp.id }}" class="sz-thumb"><span>{{ rp.emoji }}</span></a>
+          <a href="/product/{{ rp.slug }}" class="sz-thumb"><span>{{ rp.emoji }}</span></a>
           <div class="card-body p-2 d-flex flex-column">
-            <a class="sz-name" href="/product/{{ rp.id }}">{{ rp.name }}</a>
+            <a class="sz-name" href="/product/{{ rp.slug }}">{{ rp.name }}</a>
             <div class="sz-price-row mt-1">
               <span class="sz-price">৳{{ rp.price }}</span>
               {!! rp.discount_html !!}

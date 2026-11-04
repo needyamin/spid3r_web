@@ -2,6 +2,7 @@
 // Spid3rWeb HTTP Request Representation & Validation Engine
 
 import "http";
+import "framework/Database/DB";
 
 public class Validator {
     public let errors;
@@ -80,6 +81,15 @@ public class Request {
     public let body;
     public let data;
     public let session_id;
+    // Request-scoped auth state (an AuthManager instance created per request
+    // by Application.handle_request). Prefer this over the global Auth
+    // facade inside the request lifecycle: the global is shared across
+    // concurrent connections, per-request state is not.
+    public let auth;
+    // How the session token arrived: "cookie" | "bearer" | ""
+    public let session_source;
+    // Original raw request map (kept for driver-specific accessors)
+    public let raw;
 
     fn new(raw_req = null) {
         self.params = map();
@@ -90,6 +100,9 @@ public class Request {
         self.method = "GET";
         self.path = "/";
         self.session_id = "";
+        self.session_source = "";
+        self.auth = null;
+        self.raw = null;
 
         if raw_req != null {
             self.init_from_raw(raw_req);
@@ -97,6 +110,7 @@ public class Request {
     }
 
     fn init_from_raw(self, raw) {
+        self.raw = raw;
         if raw.has("method") {
             self.method = string(raw["method"]).upper();
         }
@@ -303,6 +317,7 @@ public class Request {
         if self.headers.has("authorization") {
             let auth = self.headers["authorization"];
             if auth.starts_with("Bearer ") {
+                self.session_source = "bearer";
                 return auth.replace("Bearer ", "").trim();
             }
         }
@@ -312,11 +327,60 @@ public class Request {
             for c in cookies {
                 let pair = c.trim().split("=");
                 if pair[0] == "spid3r_session" and pair.len() > 1 {
+                    self.session_source = "cookie";
                     return pair[1].trim();
                 }
             }
         }
         return "";
+    }
+
+    // ------------------------------------------------------------------
+    // Client identity
+    // ------------------------------------------------------------------
+    // Best-effort client IP. Direct socket peers: the runtime may expose
+    // the peer address under several key names depending on version, so we
+    // probe the common ones. Reverse-proxy deployments: set
+    // SPID3R_TRUST_PROXY=1 to honor X-Forwarded-For / X-Real-IP (only do
+    // this when the proxy overwrites — never appends — these headers).
+    public fn client_ip(self) -> string {
+        let trust_proxy = false;
+        let tp = env("SPID3R_TRUST_PROXY");
+        if tp.is_some() {
+            let v = string(tp.unwrap()).trim().lower();
+            if v == "1" or v == "true" or v == "yes" {
+                trust_proxy = true;
+            }
+        }
+        if trust_proxy {
+            if self.headers.has("x-forwarded-for") {
+                let parts = string(self.headers["x-forwarded-for"]).split(",");
+                if parts.len() > 0 {
+                    let first = parts[0].trim();
+                    if first != "" {
+                        return first;
+                    }
+                }
+            }
+            if self.headers.has("x-real-ip") {
+                let rip = string(self.headers["x-real-ip"]).trim();
+                if rip != "" {
+                    return rip;
+                }
+            }
+        }
+        if self.raw != null and type_of(self.raw) == "map" {
+            let candidates = list("peer_addr", "remote_addr", "client_addr", "ip");
+            for k in candidates {
+                if self.raw.has(k) {
+                    let v = string(self.raw[k]);
+                    if v != "" {
+                        return v;
+                    }
+                }
+            }
+        }
+        return "unknown";
     }
 
     // ------------------------------------------------------------------------
@@ -394,6 +458,17 @@ public class Request {
             let val = self.input(field, null);
             let val_str = "";
             if val != null { val_str = string(val).trim(); }
+
+            // The "nullable" modifier: empty values pass every other rule.
+            let skip_if_empty = false;
+            for nr in field_rules {
+                if nr.trim() == "nullable" {
+                    skip_if_empty = true;
+                }
+            }
+            if skip_if_empty and (val == null or val_str == "") {
+                continue;
+            }
 
             for r in field_rules {
                 let r_trimmed = r.trim();

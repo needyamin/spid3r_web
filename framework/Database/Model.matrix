@@ -94,6 +94,11 @@ public class Model {
             }
 
             let new_id = self.query().insert(data_to_insert);
+            if new_id == null or int(new_id) == 0 {
+                // A 0 last_id means the row was not persisted — fail loudly
+                // instead of silently setting id = 0 and marking exists.
+                throw "Model insert failed for table " + self.table;
+            }
             self.attributes[self.primary_key] = new_id;
             self.exists = true;
             return self;
@@ -125,5 +130,59 @@ public class Model {
             out[k] = self.attributes[k];
         }
         return out;
+    }
+
+    // ------------------------------------------------------------------------
+    // Relationships
+    // ------------------------------------------------------------------------
+
+    // One-to-many: a QueryBuilder over `table` filtered on foreign_key = pk.
+    // Chain .get() to hydrate, or add more constraints before executing.
+    public fn hasMany(self, table: string, foreign_key: string) {
+        return DB.table(table).where(foreign_key, "=", self.attributes[self.primary_key]);
+    }
+
+    // Many-to-one: the single owner row in `table` whose owner_key matches
+    // this record's foreign_key (null when unset or not found).
+    public fn belongsTo(self, table: string, foreign_key: string, owner_key: string = "id") {
+        return DB.table(table).where(owner_key, "=", self.attributes[foreign_key]).first();
+    }
+
+    // ------------------------------------------------------------------------
+    // Row Refresh Helpers
+    // ------------------------------------------------------------------------
+
+    // Re-fetch this row from the database into self.attributes. exists stays
+    // true when the row is found, becomes false when it disappeared.
+    public fn reload(self) {
+        if not self.exists {
+            return self;
+        }
+        let pk_val = self.attributes[self.primary_key];
+        let rows = self.query().where(self.primary_key, "=", pk_val).limit(1).get();
+        if rows.len() > 0 {
+            let fresh = {};
+            let row = rows[0];
+            for k in row.keys() {
+                fresh[k] = row[k];
+            }
+            self.attributes = fresh;
+            self.exists = true;
+        } else {
+            self.exists = false;
+        }
+        return self;
+    }
+
+    // Update ONLY updated_at (both in the database and on this instance).
+    public fn touch(self) {
+        if not self.exists {
+            return self;
+        }
+        let now = string(unix_time());
+        self.attributes["updated_at"] = now;
+        let pk_val = self.attributes[self.primary_key];
+        self.query().where(self.primary_key, "=", pk_val).update(map("updated_at", now));
+        return self;
     }
 }
