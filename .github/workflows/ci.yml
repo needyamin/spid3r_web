@@ -92,6 +92,11 @@ jobs:
     env:
       ENGINE: ${{ matrix.engine }}
       SPID3R_DB_DRIVER: ${{ matrix.engine }}
+      # Direct `spid3r run tests/...` invocations (the VM-engine steps and
+      # the example/bench smokes) resolve `framework/*` imports through
+      # SPID3R_PATH — set it here so they work from any cwd. magic test
+      # sets it itself, matching this value.
+      SPID3R_PATH: .
 
     steps:
       - name: Check out repository
