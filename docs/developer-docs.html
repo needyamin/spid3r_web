@@ -199,6 +199,7 @@
     <a href="#getting-started">Getting Started</a>
     <a href="#api-reference">API Reference</a>
     <a href="#testing">Testing</a>
+    <a href="https://github.com/needyamin/spid3r_web/blob/eCommerce/docs/ecommerce/developer.html" title="Spid3r Store &#8212; the full e-commerce application on the eCommerce branch">&#128722; Store Docs</a>
   </nav>
 </header>
 
@@ -277,6 +278,12 @@
 <section id="overview">
   <h1>🕷️ Spid3rWeb Developer Documentation</h1>
   <p class="lead">Spid3rWeb is an expressive, full-stack MVC framework for the <strong>Spid3r programming language</strong> — routing, ORM, migrations, auth, queues, a DI container, an event bus, REST resources, typed exceptions and a WebSocket server, with <strong>zero external dependencies</strong>, running natively on Spid3r's interpreter and bytecode VM.</p>
+
+  <div class="callout tip">
+    <div class="co-title">&#128722; Built something real with it: Spid3r Store</div>
+    <p>The <strong>eCommerce branch</strong> of this repository carries a complete, production-grade e-commerce application &mdash; catalog, cart, checkout, payments (COD + gateways), shipping &amp; fulfilment, returns, reviews, loyalty, multi-currency, an admin panel &mdash; 16 build phases, 31 test suites on three database engines, and CI with a live-server smoke. Its full developer documentation lives at
+    <a href="https://github.com/needyamin/spid3r_web/blob/eCommerce/docs/ecommerce/developer.html"><code>docs/ecommerce/developer.html</code> (eCommerce branch)</a>.</p>
+  </div>
 
   <div class="grid">
     <div class="card"><div class="c-icon">🧱</div><h4>Service Providers &amp; DI</h4><p>Register bindings in a <code>ServiceProvider</code> (<code>register</code>/<code>boot</code> phases), resolve through the <code>Container</code> facade — bind, singleton, alias, extend.</p></div>
