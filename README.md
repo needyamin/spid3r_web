@@ -1,8 +1,8 @@
 # Spid3rWeb 🕸️
 
-A full-stack **MVC web framework** for the [Spid3r language](https://github.com/needyamin/spid3r). Zero external dependencies — ORM, template engine, migrations, auth, cache, config, logging, mail, queue and CLI all run natively on Spid3r's VM.
+A full-stack **MVC web framework** for the [Spid3r language](https://github.com/needyamin/spid3r). Zero external dependencies — ORM, template engine, migrations, auth, cache, queues, DI container, events, REST resources and CLI all run natively on Spid3r's interpreter and bytecode VM.
 
-📖 **Full documentation:** [developer-docs.html](developer-docs.html)
+📖 **Architecture & roadmap:** [ARCHITECTURE.md](ARCHITECTURE.md) · **Reference docs:** [developer-docs.html](developer-docs.html) · **Worked example:** [examples/task-api/main.matrix](examples/task-api/main.matrix)
 
 ## Quick Start
 
@@ -30,8 +30,6 @@ A fresh installation serves a single **welcome page** at `/` (`resources/views/w
 | Create code | `spid3r magic make:model Post` · `spid3r magic make:controller PostController` |
 | Database | `spid3r magic make:migration create_posts_table` → `spid3r magic migrate` |
 
-The layout is mobile-first with plain semantic CSS — one self-contained stylesheet (`public/css/welcome.css` on a fresh install), no CSS framework, no CDN, no build step.
-
 ## Magic CLI
 
 ```bash
@@ -48,10 +46,59 @@ spid3r magic make:model <Name> [-m]   # scaffold a model (+ optional migration)
 spid3r magic make:migration <name>    # scaffold a migration (auto-registered)
 ```
 
+## What's in the Box
+
+| Area | Highlights |
+|---|---|
+| **HTTP kernel** | keep-alive server loop, graceful shutdown (Ctrl+C), body-size limits, per-request error isolation, static assets with traversal protection |
+| **Routing** | `Route.get/post/put/patch/delete`, `:param` captures, groups (prefix + middleware), named routes, 405 detection, `Route.fallback` |
+| **Middleware** | onion pipeline + named aliases: `auth` (401 JSON / `/login` redirect), `guest`, `cors`, `logger`, `throttle:60,60` — register your own with `app.middleware("alias", factory)` |
+| **Service providers & DI** | `ServiceProvider` base (`register`/`boot`), `Application.register()` + auto idempotent `boot()`, service container (`bind`/`singleton`/`extend`/`alias`), handlers get `req.app` |
+| **Events** | global `Event` bus: exact + `prefix.*` wildcard listeners, `once`, class subscribers, `app.booted` lifecycle event |
+| **Models & ORM** | Active Record, QueryBuilder (`where`/`whereIn`/joins/unions of clauses), **model lifecycle events with veto**, **batched eager loading** (`load_has_many` / `load_belongs_to` — one query, never N+1), transactions (`DB.transaction(fn)`) |
+| **Migrations** | auto-discovery, registry-synced, `make:migration`, rollback/status |
+| **Validation** | rule strings (`required|min:3|max:200`, `nullable`, `email`, …), error maps feed 422 responses |
+| **Typed exceptions** | `not_found()`, `validation_failed(errors)`, `unauthorized()`, `forbidden()`, `bad_request()`, `too_many_requests()` — thrown anywhere in a handler, rendered centrally (JSON for `/api/*`, HTML cards otherwise). Raw exceptions stay a detail-free 500 |
+| **REST resources** | `resource_item` / `resource_collection` / `resource_paginated` envelopes; transformers always receive plain maps (models auto-unwrapped — password columns never leak by construction) |
+| **Auth** | bcrypt hashing, CSPRNG session tokens, per-session CSRF tokens, DB-backed sessions with sliding expiry |
+| **WebSocket** | `WsServer` — real RFC 6455 server alongside the HTTP app: per-connection protocols **and** cross-connection `broadcast()`/fan-out (safe concurrent send-while-read) |
+| **Caching** | memory / file / database drivers, `remember`/`add`/`increment`, powers the throttle middleware |
+| **Queues** | database + sync drivers, `routes/queue.matrix` handlers, `queue:work` |
+| **Config / Env** | `config/*.matrix` dot-notation + `.env` loading, env-var overrides |
+| **CLI** | `magic serve/test/migrate*/db:seed/queue:work/route:list/make:*` |
+| **Testing** | 16 suites, `spid3r magic test` exit-code contract |
+
+## Flavor of the Framework
+
+```spid3r
+import "framework/Application";
+import "framework/HttpException";
+import "framework/Resource";
+
+let app = new Application();
+
+Route.get("/api/posts/:id", fn(req) {
+    let post = DB.table("posts").find(req.params["id"]);
+    if post == null {
+        throw not_found("No post with that id.");   // -> 404 JSON for /api/*
+    }
+    return json(resource_item(post, fn(p) {
+        return map("id", p["id"], "title", p["title"]);
+    }));
+});
+
+app.listen(8000);
+```
+
+Providers, model events, and eager loading in [examples/task-api/main.matrix](examples/task-api/main.matrix) — runnable with zero setup:
+
+```bash
+SPID3R_DB_DRIVER=sqlite spid3r run examples/task-api/main.matrix
+```
+
 ## Core Systems
 
-All runtime configuration lives in `config/*.matrix` and is read through a
-single dot-notation repository:
+All runtime configuration lives in `config/*.matrix` and is read through a single dot-notation repository:
 
 ```spid3r
 import "framework/Config/Config";
@@ -70,27 +117,47 @@ Config.get("mail.from.address");
 | Auth | `Auth` | `config/auth.matrix` | guards, users table/columns, password-reset knobs |
 | Services | `Config` | `config/services.matrix` | SMS / payments / OAuth credentials, all env-based |
 
-```spid3r
-import "framework/Queue/Queue";
-Queue.push("mail.send", map("to", "ada@example.com", "subject", "Welcome", "body", "Hi!"));
-```
-
 ## Databases
 
 SQLite works with zero config. For PostgreSQL / MySQL / MariaDB, copy `.env.example` → `.env`, set `SPID3R_DB_DRIVER=postgres` (or `mysql` / `mariadb`) and the `SPID3R_PG_*` / `SPID3R_MYSQL_*` values — no code changes needed.
+
+## Performance
+
+The bytecode VM is measurably faster than the tree-walk interpreter on framework work — routing +62%, query compilation +89%, template rendering +114% (see method and numbers in [benchmarks/RESULTS.md](benchmarks/RESULTS.md)). Serve under it in production:
+
+```bash
+spid3r run --engine vm server.matrix
+```
+
+Reproduce the benchmarks yourself:
+
+```bash
+SPID3R_DB_DRIVER=sqlite spid3r run benchmarks/bench.matrix
+SPID3R_DB_DRIVER=sqlite spid3r run --engine vm benchmarks/bench.matrix
+```
 
 ## Layout
 
 ```
 app/            Your code — Controllers, Models, Middleware (empty on fresh install)
+benchmarks/     Micro-benchmarks + recorded results (RESULTS.md)
 config/         App, auth, session, cache, database, filesystems, logging, mail, queue, services
-database/       Migrations (auto-discovered) + seeders (no-op on fresh install)
-framework/      Framework core (router, ORM, views, auth, cache, config, log, mail, queue, CLI)
+database/       Migrations (auto-discovered) + seeders
+examples/       task-api — runnable full-stack example
+framework/      Framework core (kernel, router, ORM, providers, events, resources, exceptions, views, auth, cache, websocket, CLI)
 public/         Static assets
-resources/      SpiderBD templates (.bd.html) — welcome.bd.html on fresh install
+resources/      SpiderBD templates (.bd.html)
 routes/         web.matrix + api.matrix + queue.matrix (job handlers)
-tests/          Framework test suites (9 suites, 9/9 green on SQLite · MySQL 8.0 · MariaDB 11 · PostgreSQL 16)
+tests/          16 framework test suites — `spid3r magic test`
 ```
+
+## Testing
+
+```bash
+SPID3R_DB_DRIVER=sqlite spid3r magic test    # 16/16 suites, exit code 0/1
+```
+
+Live server suites (PostgreSQL / MySQL) activate automatically when `SPID3R_DB_DRIVER` points at a running server.
 
 ## License
 

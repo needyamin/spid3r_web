@@ -492,6 +492,12 @@ public class QueryBuilder {
         if per_page < 1 {
             per_page = 1;
         }
+        // Cap: a caller-supplied per_page must never turn into a
+        // full-table dump (per_page=100000 would otherwise be a
+        // denial-of-service vector on public endpoints).
+        if per_page > 100 {
+            per_page = 100;
+        }
 
         let conn = self.get_connection();
 

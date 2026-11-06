@@ -185,3 +185,24 @@ jobs:
 
       - name: Full test suite (${{ matrix.engine }})
         run: spid3r magic test
+
+      # The remaining checks only need SQLite (the matrix leg that always
+      # has a working engine) — run them once, on the sqlite leg.
+      # NOTE: run_all.matrix spawns its suites without an engine flag, so
+      # to genuinely exercise the bytecode VM we run key suites under
+      # --engine vm directly.
+      - name: Bytecode VM engine runs (sqlite leg)
+        if: matrix.engine == 'sqlite'
+        run: |
+          set -e
+          for t in test_router test_container test_events test_model test_resource test_websocket; do
+            spid3r run --engine vm "tests/$t.matrix"
+          done
+
+      - name: Full-stack example (sqlite leg)
+        if: matrix.engine == 'sqlite'
+        run: spid3r run examples/task-api/main.matrix
+
+      - name: Benchmarks execute cleanly (sqlite leg)
+        if: matrix.engine == 'sqlite'
+        run: spid3r run benchmarks/bench.matrix

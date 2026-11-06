@@ -97,6 +97,30 @@ public class AuthMiddleware {
     }
 }
 
+// GuestMiddleware — the inverse of AuthMiddleware: for routes that only make
+// sense while logged out (login/register pages). An authenticated visitor is
+// redirected away instead of seeing the form again. Alias: "guest".
+public class GuestMiddleware {
+    public let redirect_to;
+
+    fn new(redirect_to: string = "/") {
+        self.redirect_to = redirect_to;
+    }
+
+    public fn handle(self, req) {
+        let auth = null;
+        if req.auth != null {
+            auth = req.auth;
+        } else {
+            auth = Auth;
+        }
+        if auth.check() {
+            return redirect(self.redirect_to);
+        }
+        return null;
+    }
+}
+
 // ----------------------------------------------------------------------------
 // ThrottleMiddleware — Cache-backed per-client rate limiting
 // ----------------------------------------------------------------------------

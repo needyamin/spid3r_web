@@ -21,6 +21,10 @@ public class Request {
     // facade inside the request lifecycle: the global is shared across
     // concurrent connections, per-request state is not.
     public let auth;
+    // The Application instance handling this request (set by
+    // Application.handle_request). Gives handlers access to the service
+    // container (req.app.container) and router without importing globals.
+    public let app;
     // How the session token arrived: "cookie" | "bearer" | ""
     public let session_source;
     // Original raw request map (kept for driver-specific accessors)
@@ -37,6 +41,7 @@ public class Request {
         self.session_id = "";
         self.session_source = "";
         self.auth = null;
+        self.app = null;
         self.raw = null;
 
         if raw_req != null {
