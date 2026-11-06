@@ -3,7 +3,7 @@
 > **⚠️ Historical document.** The milestone tables below describe the pre-fresh-install
 > storefront era and are outdated (the `User`/`Product`/`Order` domain models were removed
 > in the 2026-11-05 strip). The authoritative architecture, component status, and roadmap
-> now live in **[ARCHITECTURE.md](ARCHITECTURE.md)**.
+> now live in **[ARCHITECTURE.md](../ARCHITECTURE.md)**.
 
 ## Architecture
 - **Layer 1: Runtime & CLI**: `magic` entrypoint, `ConsoleKernel.matrix`, `spider.toml` package manifest. Provides command dispatch (`serve`, `migrate`, `db:seed`, `test`, `route:list`, `make:*`).

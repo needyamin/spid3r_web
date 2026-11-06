@@ -1,6 +1,6 @@
 # Spid3r Web — Architecture & Roadmap
 
-**Status:** authoritative engineering document. Supersedes the milestone tables in `PROJECT.md` (kept for history).
+**Status:** authoritative engineering document. Supersedes the milestone tables in `docs/history/PROJECT.md` (kept for history).
 
 **Verified:** 2026-11-06, against the Spid3r language source (`spid3r/src`, `stdlib/`, `docs/`) and this repository.
 

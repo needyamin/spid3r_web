@@ -6,7 +6,7 @@
 // it, `spid3r magic` cannot boot (the module it references is gone).
 // This script does NOT import the registry, so it always runs:
 //
-//     SPID3R_PATH=. spid3r run resync.matrix
+//     SPID3R_PATH=. spid3r run tools/resync.matrix
 //
 // (SPID3R_PATH=. is required so the framework modules resolve outside
 // package mode.) It rebuilds registry.matrix from the migration files

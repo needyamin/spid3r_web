@@ -295,7 +295,7 @@ public class ConsoleKernel {
     // Returns the number of newly discovered files (0 = up to date),
     // or -1 on write failure. Set force=true to rebuild even when the
     // scan looks up to date (used when migration files were deleted —
-    // see resync.matrix).
+    // see tools/resync.matrix).
     public fn sync_migration_registry(self, verbose: bool, force: bool = false) -> int {
         let files = self.scan_migration_files();
         let reg_path = self.migrations_dir() + "/registry.matrix";

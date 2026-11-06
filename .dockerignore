@@ -8,7 +8,7 @@ storage
 vendor
 node_modules
 *.md
-docker-compose.yml
-Dockerfile
+deploy/docker-compose.yml
+deploy/Dockerfile
 .env
 ci_jobs.tmp.json

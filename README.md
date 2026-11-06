@@ -2,7 +2,7 @@
 
 A full-stack **MVC web framework** for the [Spid3r language](https://github.com/needyamin/spid3r). Zero external dependencies — ORM, template engine, migrations, auth, cache, queues, DI container, events, REST resources and CLI all run natively on Spid3r's interpreter and bytecode VM.
 
-📖 **Architecture & roadmap:** [ARCHITECTURE.md](ARCHITECTURE.md) · **Reference docs:** [developer-docs.html](developer-docs.html) · **Worked example:** [examples/task-api/main.matrix](examples/task-api/main.matrix)
+📖 **Architecture & roadmap:** [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) · **Reference docs:** [docs/developer-docs.html](docs/developer-docs.html) · **Worked example:** [examples/task-api/main.matrix](examples/task-api/main.matrix)
 
 ## Quick Start
 
@@ -143,12 +143,21 @@ app/            Your code — Controllers, Models, Middleware (empty on fresh in
 benchmarks/     Micro-benchmarks + recorded results (RESULTS.md)
 config/         App, auth, session, cache, database, filesystems, logging, mail, queue, services
 database/       Migrations (auto-discovered) + seeders
+deploy/         Docker: Dockerfile + docker-compose.yml
+docs/           Architecture & roadmap (ARCHITECTURE.md), reference docs, history/
 examples/       task-api — runnable full-stack example
 framework/      Framework core (kernel, router, ORM, providers, events, resources, exceptions, views, auth, cache, websocket, CLI)
 public/         Static assets
 resources/      SpiderBD templates (.bd.html)
 routes/         web.matrix + api.matrix + queue.matrix (job handlers)
+storage/        Logs, cache, compiled views — runtime artifacts
 tests/          16 framework test suites — `spid3r magic test`
+tools/          Maintenance scripts (resync.matrix rebuilds the migration registry)
+
+install.sh      One-line project + toolchain setup
+magic           CLI entrypoint (`spid3r magic serve|test|migrate|...`)
+server.matrix   Production server entrypoint (`spid3r run --engine vm server.matrix`)
+spider.toml     Package manifest
 ```
 
 ## Testing
