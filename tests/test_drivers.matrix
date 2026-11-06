@@ -142,7 +142,10 @@ fn test_dialect_ddl_postgres() {
     assert(sql.contains("title VARCHAR(255) NOT NULL"), "pg: string -> VARCHAR(255)");
     assert(sql.contains("views_count INTEGER NOT NULL"), "pg: integer -> INTEGER");
     assert(sql.contains("rating DOUBLE PRECISION NOT NULL"), "pg: float -> DOUBLE PRECISION");
-    assert(sql.contains("is_active BOOLEAN NOT NULL"), "pg: boolean -> BOOLEAN");
+    // Boolean columns are INTEGER on every dialect: the runtime SQL binder
+    // cannot bind bool params, so 0/1 integers are the portable storage
+    // (see framework/Database/Schema.matrix).
+    assert(sql.contains("is_active INTEGER NOT NULL"), "pg: boolean -> INTEGER (portable 0/1)");
     assert(sql.starts_with("CREATE TABLE IF NOT EXISTS probe_dialect"), "pg: create stmt");
     println("  [PASS] test_dialect_ddl_postgres");
 }

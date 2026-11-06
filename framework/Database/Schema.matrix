@@ -12,6 +12,8 @@ public class ColumnDefinition {
     public let is_unique;
     public let is_nullable;
     public let default_value;
+    public let precision;
+    public let scale;
 
     fn new(name: string, kind: string, len: int = 255) {
         self.name = name;
@@ -21,6 +23,8 @@ public class ColumnDefinition {
         self.is_unique = false;
         self.is_nullable = false;
         self.default_value = null;
+        self.precision = 12;
+        self.scale = 2;
     }
 
     public fn unique(self) {
@@ -67,6 +71,24 @@ public class ColumnDefinition {
             }
             return "INTEGER";
         }
+        if self.kind == "bigint" {
+            if dialect == "postgres" {
+                return "BIGINT";
+            }
+            if dialect == "mysql" {
+                return "BIGINT";
+            }
+            return "INTEGER";   // SQLite INTEGER is 64-bit already
+        }
+        if self.kind == "decimal" {
+            // Exact numeric where the engine supports it. SQLite has no
+            // DECIMAL: it maps to INTEGER minor units by convention (the
+            // application stores money as integer minor units anyway).
+            if dialect == "sqlite" {
+                return "INTEGER";
+            }
+            return "NUMERIC(" + string(self.precision) + "," + string(self.scale) + ")";
+        }
         if self.kind == "float" {
             if dialect == "postgres" {
                 return "DOUBLE PRECISION";
@@ -77,9 +99,9 @@ public class ColumnDefinition {
             return "REAL";
         }
         if self.kind == "boolean" {
-            if dialect == "postgres" {
-                return "BOOLEAN";
-            }
+            // The runtime SQL binder does not accept bool parameters, so
+            // flags are stored as 0/1 integers on EVERY dialect (including
+            // PostgreSQL/MySQL). This keeps inserts/updates portable.
             if dialect == "mysql" {
                 return "TINYINT(1)";
             }
@@ -100,11 +122,8 @@ public class ColumnDefinition {
             if type_of(self.default_value) == "string" {
                 parts.push("DEFAULT '" + string(self.default_value) + "'");
             } elif type_of(self.default_value) == "bool" {
-                if dialect == "postgres" {
-                    if self.default_value { parts.push("DEFAULT TRUE"); } else { parts.push("DEFAULT FALSE"); }
-                } else {
-                    if self.default_value { parts.push("DEFAULT 1"); } else { parts.push("DEFAULT 0"); }
-                }
+                // Boolean columns are integers on every dialect.
+                if self.default_value { parts.push("DEFAULT 1"); } else { parts.push("DEFAULT 0"); }
             } else {
                 parts.push("DEFAULT " + string(self.default_value));
             }
@@ -115,9 +134,16 @@ public class ColumnDefinition {
 
 public class Blueprint {
     public let columns;
+    // Table-level clauses (foreign keys, composite uniques) appended after
+    // the column definitions in CREATE TABLE.
+    public let constraints;
+    // Secondary indexes emitted after CREATE TABLE by SchemaBuilder.create.
+    public let indexes;
 
     fn new() {
         self.columns = [];
+        self.constraints = [];
+        self.indexes = [];
     }
 
     public fn id(self, name: string = "id") {
@@ -142,6 +168,73 @@ public class Blueprint {
         let col = new ColumnDefinition(name, "integer");
         self.columns.push(col);
         return col;
+    }
+
+    // 64-bit integers: money in minor units, counters, totals.
+    public fn bigint(self, name: string) {
+        let col = new ColumnDefinition(name, "bigint");
+        self.columns.push(col);
+        return col;
+    }
+
+    // Exact numeric on PostgreSQL/MySQL (NUMERIC/DECIMAL). SQLite maps to
+    // INTEGER — apps store money as integer minor units, never floats.
+    public fn decimal(self, name: string, precision: int = 12, scale: int = 2) {
+        let col = new ColumnDefinition(name, "decimal");
+        col.precision = precision;
+        col.scale = scale;
+        self.columns.push(col);
+        return col;
+    }
+
+    // FOREIGN KEY (col) REFERENCES ref_table(ref_col) ON DELETE/UPDATE ...
+    // Identifiers are validated with the shared guard before interpolation.
+    public fn foreign(self, column: string, ref_table: string, ref_column: string, on_delete: string = "RESTRICT", on_update: string = "CASCADE") {
+        let c = sql_check_identifier(column);
+        let t = sql_check_identifier(ref_table);
+        let r = sql_check_identifier(ref_column);
+        // Actions are fixed vocabulary — never pass user input here.
+        let allowed_delete = ["CASCADE", "RESTRICT", "SET NULL", "NO ACTION"];
+        let allowed_update = ["CASCADE", "RESTRICT", "SET NULL", "NO ACTION"];
+        let od = string(on_delete).upper();
+        let ou = string(on_update).upper();
+        if not allowed_delete.contains(od) {
+            od = "RESTRICT";
+        }
+        if not allowed_update.contains(ou) {
+            ou = "CASCADE";
+        }
+        self.constraints.push(
+            "FOREIGN KEY (" + c + ") REFERENCES " + t + "(" + r + ") ON DELETE " + od + " ON UPDATE " + ou
+        );
+        return self;
+    }
+
+    // Composite UNIQUE constraint (single-column uniqueness is .unique()
+    // on a ColumnDefinition).
+    public fn unique_columns(self, cols) {
+        let safe = [];
+        for c in cols {
+            safe.push(sql_check_identifier(string(c)));
+        }
+        self.constraints.push("UNIQUE (" + safe.join(", ") + ")");
+        return self;
+    }
+
+    // Secondary index; `name` must be unique within the schema. Emitted
+    // after CREATE TABLE by SchemaBuilder.create (portable: MySQL has no
+    // CREATE INDEX IF NOT EXISTS, so duplicates are tolerated by name).
+    public fn index(self, name: string, cols, is_unique: bool = false) {
+        let safe = [];
+        for c in cols {
+            safe.push(sql_check_identifier(string(c)));
+        }
+        self.indexes.push(map(
+            "name", sql_check_identifier(name),
+            "columns", safe,
+            "unique", is_unique
+        ));
+        return self;
     }
 
     public fn float(self, name: string) {
@@ -173,6 +266,9 @@ public class Blueprint {
         for col in self.columns {
             col_defs.push(col.to_sql(dialect));
         }
+        for clause in self.constraints {
+            col_defs.push(clause);
+        }
         return "CREATE TABLE IF NOT EXISTS " + table_name + " (\n  " + col_defs.join(",\n  ") + "\n);";
     }
 }
@@ -199,8 +295,37 @@ public class SchemaBuilder {
     public fn create(self, table_name: string, callback) {
         let blueprint = new Blueprint();
         callback(blueprint);
-        let sql = blueprint.to_sql(self.check_identifier(table_name), self.dialect());
+        let safe_name = self.check_identifier(table_name);
+        let dialect = self.dialect();
+        let sql = blueprint.to_sql(safe_name, dialect);
         DB.statement(sql);
+        // Secondary indexes: IF NOT EXISTS where supported; MySQL needs a
+        // plain CREATE INDEX with duplicate-name errors tolerated.
+        let i = 0;
+        while i < blueprint.indexes.len() {
+            let idx = blueprint.indexes[i];
+            let kind = "INDEX ";
+            if idx["unique"] {
+                kind = "UNIQUE INDEX ";
+            }
+            let guard = "IF NOT EXISTS ";
+            if dialect == "mysql" {
+                guard = "";
+            }
+            let index_sql = "CREATE " + kind + guard + idx["name"] + " ON "
+                + safe_name + " (" + idx["columns"].join(", ") + ");";
+            try {
+                DB.statement(index_sql);
+            } catch (e) {
+                let msg = string(e).lower();
+                if dialect == "mysql" and (msg.contains("already exists") or msg.contains("duplicate key")) {
+                    // Idempotent re-run on MySQL.
+                } else {
+                    throw e;
+                }
+            }
+            i += 1;
+        }
         return true;
     }
 

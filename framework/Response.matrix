@@ -17,13 +17,21 @@ public class Response {
         // intentionally NOT global defaults: blanket access-control-allow-*
         // should only be set by CorsMiddleware / API routing, never on
         // cookie-authenticated HTML responses.
+        //
+        // CSP: script-src is STRICT ('self', no inline) — the app ships no
+        // inline JavaScript. style-src keeps 'unsafe-inline' because the
+        // framework's standalone error pages (ErrorRenderer) must render
+        // even when no static assets are reachable; executable content is
+        // not affected. A page that needs more can override the header.
         self.headers = map(
             "content-type", "text/html; charset=utf-8",
             "x-content-type-options", "nosniff",
             "x-frame-options", "SAMEORIGIN",
             "referrer-policy", "strict-origin-when-cross-origin",
             "x-permitted-cross-domain-policies", "none",
-            "cross-origin-opener-policy", "same-origin"
+            "cross-origin-opener-policy", "same-origin",
+            "permissions-policy", "camera=(), microphone=(), geolocation=()",
+            "content-security-policy", "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; form-action 'self'; frame-ancestors 'none'; base-uri 'none'; object-src 'none'"
         );
         // Opt-in HSTS for TLS deployments (SPID3R_HSTS=1)
         let hsts = env("SPID3R_HSTS");

@@ -231,7 +231,9 @@ public class Application {
         if req.method == "POST" or req.method == "PUT" or req.method == "PATCH" or req.method == "DELETE" {
             let origin = req.header("origin", "");
             if origin != "" and not self.is_same_origin(req, origin) {
-                return http_response(403, map("content-type", "text/plain"), "403 Forbidden — cross-origin request rejected");
+                let plain = response("403 Forbidden — cross-origin request rejected", 403);
+                plain.header("content-type", "text/plain");
+                return plain.to_http();
             }
             // 0b. CSRF layer 2: session-token verification for cookie
             //     sessions without an Origin header (see csrf_valid).
@@ -274,7 +276,9 @@ public class Application {
         if match_result == null {
             // Check if static root (e.g. /favicon.ico)
             if req.path == "/favicon.ico" {
-                return http_response(204, map("content-type", "image/x-icon"), "");
+                let icon = response("", 204);
+                icon.header("content-type", "image/x-icon");
+                return icon.to_http();
             }
             let allowed = self.router.allowed_methods(req.path);
             if allowed.len() > 0 {
@@ -303,21 +307,34 @@ public class Application {
             }
             throw e;
         }
-        route_pipeline.send(req).through(mw_instances);
-
-        let final_response = route_pipeline.then(fn(r) {
-            try {
-                return self.router.dispatch(route_entry.handler, r);
-            } catch (e) {
-                if is_http_exception(e) {
-                    return ErrorRenderer.http_error(r, e);
+        // Middleware bodies run OUTSIDE the destination closure, so their
+        // typed exceptions (401/403/429/...) need their own catch here —
+        // otherwise a guard's `throw unauthorized(...)` escapes the kernel
+        // instead of producing an HTTP response.
+        let final_response = null;
+        try {
+            route_pipeline.send(req).through(mw_instances);
+            final_response = route_pipeline.then(fn(r) {
+                try {
+                    return self.router.dispatch(route_entry.handler, r);
+                } catch (e) {
+                    if is_http_exception(e) {
+                        return ErrorRenderer.http_error(r, e);
+                    }
+                    return ErrorRenderer.server_error(r, e);
                 }
-                return ErrorRenderer.server_error(r, e);
+            });
+        } catch (e) {
+            if is_http_exception(e) {
+                return ErrorRenderer.http_error(req, e);
             }
-        });
+            return ErrorRenderer.server_error(req, e);
+        }
 
         if final_response == null {
-            return http_response(200, map("content-type", "text/plain"), "");
+            let empty = response("", 200);
+            empty.header("content-type", "text/plain");
+            return empty.to_http();
         }
 
         return self.normalize_response(final_response);
