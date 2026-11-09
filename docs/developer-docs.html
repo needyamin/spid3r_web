@@ -135,6 +135,67 @@
   .card h4 { margin: 8px 0 6px; }
   .card p { font-size: 13px; color: var(--text-soft); margin: 0; }
 
+  .diagram-box {
+    background: #ffffff;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px;
+    margin: 22px 0 28px;
+    box-shadow: 0 4px 16px rgba(15, 23, 42, 0.05);
+  }
+  .diagram-box-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--border);
+  }
+  .diagram-box-title {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--text);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .diagram-badge {
+    font-size: 10.5px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    padding: 2px 7px;
+    border-radius: 999px;
+    background: var(--accent-soft);
+    color: var(--accent);
+  }
+  .diagram-actions {
+    display: flex;
+    gap: 12px;
+    font-size: 12.5px;
+  }
+  .diagram-actions a {
+    color: var(--accent);
+    text-decoration: none;
+    font-weight: 600;
+  }
+  .diagram-actions a:hover {
+    text-decoration: underline;
+  }
+  .diagram-box img {
+    width: 100%;
+    height: auto;
+    display: block;
+    border-radius: 6px;
+    border: 1px solid #f1f5f9;
+  }
+  .diagram-caption {
+    font-size: 13px;
+    color: var(--text-soft);
+    margin-top: 12px;
+    line-height: 1.5;
+  }
+
   @media (max-width: 900px) {
     aside.sidebar { display: none; }
     main { padding: 24px 20px 80px; }
@@ -147,6 +208,7 @@
   <div class="logo"><span class="spider">🕷️</span> Spid3r<span class="web">Web</span></div>
   <span class="version-badge">v2.0 — Modern MVC</span>
   <nav class="links">
+    <a href="#diagrams">Diagrams</a>
     <a href="#getting-started">Getting Started</a>
     <a href="#barrel">Single-Import DX</a>
     <a href="#api-reference">API Reference</a>
@@ -162,6 +224,7 @@
   <div class="group">
     <div class="group-title">Introduction</div>
     <a href="#overview">Overview &amp; Highlights</a>
+    <a href="#diagrams">Architecture Diagrams</a>
     <a href="#barrel">Single-Import Barrel (<code>Web</code>)</a>
     <a href="#stack">Tech Stack</a>
     <a href="#structure">Project Structure</a>
@@ -234,7 +297,59 @@
   </div>
 </section>
 
-<!-- ============ BARREL ============ -->
+<!-- ============ DIAGRAMS ============ -->
+<section id="diagrams">
+  <h2>Architecture &amp; Technical Diagrams</h2>
+  <p class="lead">Visual schematics illustrating Spid3rWeb's zero-dependency runtime layers, request flow, router matching, onion middleware wrapping, ORM persistence, and dual authentication.</p>
+
+  <div class="diagram-box">
+    <div class="diagram-box-header">
+      <div class="diagram-box-title">
+        <span>🕷️ 3-Tier Zero-Dependency Architecture</span>
+        <span class="diagram-badge">System Overview</span>
+      </div>
+      <div class="diagram-actions">
+        <a href="diagrams/architecture-overview.svg" target="_blank">Open Full SVG ↗</a>
+        <a href="diagrams/architecture-overview.mmd" target="_blank">Mermaid Code</a>
+      </div>
+    </div>
+    <img src="diagrams/architecture-overview.svg" alt="Spid3rWeb 3-Tier Architecture Diagram" />
+    <p class="diagram-caption"><strong>Layer Breakdown:</strong> User application code (<code>app/</code>) builds on top of the Spid3rWeb framework core (<code>framework/</code>), which communicates directly with Spid3r's native multi-threaded HTTP/1.1 socket pool, cryptographic primitives, and native database drivers without third-party C or NPM packages.</p>
+  </div>
+
+  <div class="grid" style="grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));">
+    <div class="card">
+      <div class="c-icon">⚡</div>
+      <h4><a href="#lifecycle" class="inline">Request Lifecycle</a></h4>
+      <p>9-step end-to-end processing pipeline from TCP connection to keep-alive response.</p>
+    </div>
+    <div class="card">
+      <div class="c-icon">🧅</div>
+      <h4><a href="#middleware" class="inline">Onion Middleware</a></h4>
+      <p>Dual-pass <code>(req, next) =&gt; next(req)</code> pipeline wrapping controller execution.</p>
+    </div>
+    <div class="card">
+      <div class="c-icon">🛣️</div>
+      <h4><a href="#routing" class="inline">O(1) &amp; Prefix Router</a></h4>
+      <p>133,333 ops/sec routing pipeline with static hash lookup and 2-level prefix buckets.</p>
+    </div>
+    <div class="card">
+      <div class="c-icon">🗄️</div>
+      <h4><a href="#models" class="inline">MVC &amp; ORM Architecture</a></h4>
+      <p>1-line models, auto type casting, dirty tracking, QueryBuilder, and native drivers.</p>
+    </div>
+    <div class="card">
+      <div class="c-icon">🔐</div>
+      <h4><a href="#auth" class="inline">Dual Auth &amp; CSRF</a></h4>
+      <p>Zero-DB stateless HS256 JWT validation alongside session cookies and CSRF guards.</p>
+    </div>
+    <div class="card">
+      <div class="c-icon">🎨</div>
+      <h4><a href="diagrams/README.md" class="inline">Diagrams Directory</a></h4>
+      <p>Browse standalone SVGs, editable Mermaid source files, and developer specifications.</p>
+    </div>
+  </div>
+</section>
 <section id="barrel">
   <h2>Single-Import Barrel (<code>framework/Web</code>)</h2>
   <p>Spid3r imports are explicit and non-transitive. Instead of importing 8 separate files in every script, import <code>"framework/Web"</code> to get factory functions and subsystem accessors in one line:</p>
@@ -333,7 +448,23 @@ spid3r magic make:test post_api</code></pre>
 <!-- ============ LIFECYCLE ============ -->
 <section id="lifecycle">
   <h2>Request Lifecycle</h2>
-  <p>Every request flows through <code>Application.handle_request(raw_req)</code>:</p>
+  <p>Every request flows through <code>Application.handle_request(raw_req)</code> with thread-safe isolation, zero global mutation, and immediate short-circuiting for static files and preflight requests:</p>
+
+  <div class="diagram-box">
+    <div class="diagram-box-header">
+      <div class="diagram-box-title">
+        <span>⚡ 9-Step Request Execution Pipeline</span>
+        <span class="diagram-badge">Lifecycle</span>
+      </div>
+      <div class="diagram-actions">
+        <a href="diagrams/request-lifecycle.svg" target="_blank">Open Full SVG ↗</a>
+        <a href="diagrams/request-lifecycle.mmd" target="_blank">Mermaid Code</a>
+      </div>
+    </div>
+    <img src="diagrams/request-lifecycle.svg" alt="Spid3rWeb Request Lifecycle Diagram" />
+    <p class="diagram-caption"><strong>Execution Sequence:</strong> 1) Idempotent Provider Boot → 2) Request &amp; Method Spoofing → 3) Stateless JWT Auth (0 DB hits) → 4) 2-Layer CSRF → 5) Static Assets with ETag (304) → 6) Global Onion Pipeline → 7) O(1) &amp; Prefix Routing → 8) Route Middleware &amp; Handler → 9) Response Coercion &amp; Session Commit.</p>
+  </div>
+
   <pre><code>1. Boot service providers      // once, idempotently before the first request
 2. Construct Request           // parses query, JSON/form/multipart, cookies, and _method spoofing
 3. Per-request Auth &amp; JWT      // req.auth verifies stateless Bearer JWT (0 DB hits) or session token
@@ -413,6 +544,22 @@ SPID3R_DB_DRIVER=sqlite spid3r run --engine vm benchmarks/bench.matrix</code></p
 <section id="routing">
   <h2>O(1) &amp; Prefix-Indexed Routing</h2>
   <p>Register routes directly on <code>app</code> (or on the global <code>Route</code> facade in <code>routes/web.matrix</code> and <code>routes/api.matrix</code>). Both <code>:param</code> (Express-style) and <code>{param}</code> (Laravel-style) placeholders are supported, plus <code>*wildcard</code> catch-all suffixes:</p>
+
+  <div class="diagram-box">
+    <div class="diagram-box-header">
+      <div class="diagram-box-title">
+        <span>🛣️ Multi-Stage Route Matching Engine</span>
+        <span class="diagram-badge">133k ops/sec</span>
+      </div>
+      <div class="diagram-actions">
+        <a href="diagrams/router-architecture.svg" target="_blank">Open Full SVG ↗</a>
+        <a href="diagrams/router-architecture.mmd" target="_blank">Mermaid Code</a>
+      </div>
+    </div>
+    <img src="diagrams/router-architecture.svg" alt="Spid3rWeb Router Architecture Diagram" />
+    <p class="diagram-caption"><strong>Lookup Stages:</strong> 1) Static routes resolve in O(1) via hash table → 2) Dynamic routes resolve via segment count and 2-level literal prefix buckets (avoiding regex scans) → 3) Wildcard catch-alls (*filepath) → 4) Root static fallback / 405 Method Not Allowed / 404.</p>
+  </div>
+
   <pre><code>import "framework/Web";
 
 let app = web();
@@ -455,6 +602,22 @@ let url = route("users.posts.show", {"id": 42, "slug": "intro", "ref": "nav"});
 <section id="middleware">
   <h2>True Onion Middleware Pipeline</h2>
   <p>Spid3rWeb's <code>Pipeline</code> runs both global (<code>app.use(...)</code>) and route-level (<code>.middleware(...)</code>) middleware as a true Onion pipeline. Middleware can inspect/modify the request before calling <code>next(req)</code> and inspect/modify the <code>Response</code> after <code>next(req)</code> returns:</p>
+
+  <div class="diagram-box">
+    <div class="diagram-box-header">
+      <div class="diagram-box-title">
+        <span>🧅 Dual-Pass Onion Middleware Architecture</span>
+        <span class="diagram-badge">Pipeline</span>
+      </div>
+      <div class="diagram-actions">
+        <a href="diagrams/onion-middleware.svg" target="_blank">Open Full SVG ↗</a>
+        <a href="diagrams/onion-middleware.mmd" target="_blank">Mermaid Code</a>
+      </div>
+    </div>
+    <img src="diagrams/onion-middleware.svg" alt="Spid3rWeb Onion Middleware Pipeline Diagram" />
+    <p class="diagram-caption"><strong>Onion Execution Model:</strong> Inbound passes descend through outer layers (CORS, Logger, Throttle, Auth) to reach the route controller. Outbound passes bubble back up through each layer, allowing middleware to modify status codes, attach headers (e.g. <code>X-RateLimit-*</code>), and calculate execution latency.</p>
+  </div>
+
   <pre><code>// 1. Closure Onion middleware
 app.use((req, next) =&gt; {
     let start = now_ms();
@@ -624,6 +787,22 @@ res.clear_cookie("theme", "/");</code></pre>
 <section id="models">
   <h2>Zero-Boilerplate Active Record Models</h2>
   <p>Define full-featured models in a single line using <code>model(table, options)</code> (or <code>define_model</code> when importing <code>framework/Database/Model</code> directly):</p>
+
+  <div class="diagram-box">
+    <div class="diagram-box-header">
+      <div class="diagram-box-title">
+        <span>🗄️ MVC &amp; ORM Architecture Flow</span>
+        <span class="diagram-badge">ActiveRecord &amp; DB</span>
+      </div>
+      <div class="diagram-actions">
+        <a href="diagrams/mvc-orm-flow.svg" target="_blank">Open Full SVG ↗</a>
+        <a href="diagrams/mvc-orm-flow.mmd" target="_blank">Mermaid Code</a>
+      </div>
+    </div>
+    <img src="diagrams/mvc-orm-flow.svg" alt="Spid3rWeb MVC and ORM Flow Diagram" />
+    <p class="diagram-caption"><strong>ORM Subsystems:</strong> Single-line model definitions with automatic type casting (<code>bool</code>, <code>int</code>, <code>float</code>, <code>json</code>), hidden field filtering, and dirty tracking → Fluent QueryBuilder with joins, pagination, and whereIn → Mutex-serialized <code>DB.transaction()</code> → Native SQLite, PostgreSQL, and MySQL drivers.</p>
+  </div>
+
   <pre><code>import "framework/Web";
 
 public let Article = model("articles", {
@@ -805,6 +984,23 @@ abort(422, "Validation failed.", {"email": ["Already taken."]});</code></pre>
 <!-- ============ AUTH ============ -->
 <section id="auth">
   <h2>Authentication, Stateless JWT &amp; Sessions</h2>
+  <p>Spid3rWeb provides a hybrid authentication model: ultra-fast stateless Bearer JWT verification for APIs (0 database hits) and secure cookie-based session stores with dual-layer CSRF protection for browser applications:</p>
+
+  <div class="diagram-box">
+    <div class="diagram-box-header">
+      <div class="diagram-box-title">
+        <span>🔐 Dual Authentication Architecture (JWT vs Session)</span>
+        <span class="diagram-badge">Auth &amp; Security</span>
+      </div>
+      <div class="diagram-actions">
+        <a href="diagrams/auth-flow.svg" target="_blank">Open Full SVG ↗</a>
+        <a href="diagrams/auth-flow.mmd" target="_blank">Mermaid Code</a>
+      </div>
+    </div>
+    <img src="diagrams/auth-flow.svg" alt="Spid3rWeb Dual Authentication Architecture Diagram" />
+    <p class="diagram-caption"><strong>Auth Paths:</strong> 1) API Bearer Tokens are verified statelessly via HMAC-SHA256 signature and constant-time comparison with zero database queries → 2) Browser Session Cookies are validated against the session store with 2-layer CSRF defense (Origin check + per-session <code>_csrf</code> token).</p>
+  </div>
+
   <h3>1. Stateless JWT Authentication (HS256)</h3>
   <p>Mint and verify stateless HS256 JWTs using native <code>hmac_sha256</code> and constant-time <code>secure_compare</code>. When a client sends <code>Authorization: Bearer &lt;jwt&gt;</code>, <code>req.auth</code> and the <code>"auth"</code> middleware verify the signature and expiry with <strong>zero database queries</strong>:</p>
   <pre><code>import "framework/Web";

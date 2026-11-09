@@ -2,7 +2,44 @@
 
 A modern, lightweight, high-performance **MVC web framework** for the [Spid3r language](https://github.com/needyamin/spid3r). Zero external dependencies — O(1) indexed router, Onion middleware pipeline, zero-boilerplate ORM, SpiderBD v2 template engine, migrations, JWT & session auth, flash sessions, cache, queues, DI container, events, REST resources, `TestClient`, and CLI all run natively on Spid3r's interpreter and bytecode VM.
 
-📖 **Architecture & roadmap:** [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) · **Master Plan:** [plan.txt](plan.txt) · **Reference docs:** [docs/developer-docs.html](docs/developer-docs.html) · **Worked example:** [examples/task-api/main.matrix](examples/task-api/main.matrix)
+📖 **Architecture & roadmap:** [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) · **Visual Diagrams:** [docs/diagrams/](docs/diagrams/) · **Master Plan:** [plan.txt](plan.txt) · **Reference docs:** [docs/developer-docs.html](docs/developer-docs.html) · **Worked example:** [examples/task-api/main.matrix](examples/task-api/main.matrix)
+
+---
+
+## 🏛️ Architecture at a Glance
+
+Spid3rWeb is structured as a zero-dependency 3-tier MVC framework running directly on top of the native Spid3r Rust runtime:
+
+<p align="center">
+  <img src="docs/diagrams/architecture-overview.svg" alt="Spid3rWeb Architecture Overview" width="100%" />
+</p>
+
+### ⚡ Request Lifecycle & Onion Pipeline
+
+Every request flows through an idempotent boot, stateless JWT validation, true Onion middleware, and an O(1) + prefix-indexed router:
+
+```mermaid
+flowchart LR
+    Client(["HTTP Client"]) --> Boot["1. Provider Boot & Request"]
+    Boot --> Auth["2. Stateless JWT / Auth (0 DB Hits)"]
+    Auth --> CSRF{"3. Static / CSRF"}
+    CSRF --> GlobalMW["4. Onion Middleware Pipeline"]
+    GlobalMW --> Router{"5. O(1) & Prefix Router<br/>(133k ops/sec)"}
+    Router --> Handler["6. Controller / Handler"]
+    Handler --> ORM[("Zero-Boilerplate ORM<br/>(Model, QB, SQLite/PG/MySQL)")]
+    Handler --> Coerce["7. Return Auto-Coercion<br/>(Map->JSON, String->HTML)"]
+    Coerce --> Res(["HTTP Response"])
+
+    style Client fill:#1e1b4b,stroke:#4338ca,stroke-width:2px,color:#fff
+    style Auth fill:#eff6ff,stroke:#2563eb,stroke-width:2px,color:#1e40af
+    style Router fill:#f0fdf4,stroke:#16a34a,stroke-width:2px,color:#14532d
+    style ORM fill:#fff7ed,stroke:#ea580c,stroke-width:2px,color:#9a3412
+    style Res fill:#10b981,stroke:#047857,stroke-width:2px,color:#fff
+```
+
+> 📊 **Explore all technical diagrams:** [Request Lifecycle](docs/diagrams/request-lifecycle.svg) · [Onion Middleware](docs/diagrams/onion-middleware.svg) · [Router Architecture](docs/diagrams/router-architecture.svg) · [MVC ORM Flow](docs/diagrams/mvc-orm-flow.svg) · [Auth & JWT Flow](docs/diagrams/auth-flow.svg) in **[docs/diagrams/](docs/diagrams/)**.
+
+---
 
 ## Quick Start
 

@@ -1,0 +1,47 @@
+flowchart TD
+    classDef client fill:#f8fafc,stroke:#64748b,stroke-width:1.5px,color:#0f172a;
+    classDef dec fill:#fffbeb,stroke:#d97706,stroke-width:1.5px,color:#78350f;
+    classDef jwt fill:#f0fdf4,stroke:#16a34a,stroke-width:2px,color:#14532d;
+    classDef sess fill:#eff6ff,stroke:#2563eb,stroke-width:2px,color:#1e40af;
+    classDef err fill:#fef2f2,stroke:#dc2626,stroke-width:1.5px,color:#991b1b;
+    classDef ok fill:#10b981,stroke:#047857,stroke-width:2px,color:#ffffff;
+
+    Req(["Incoming HTTP Request"]):::client
+    Check{"Auth Header or Cookie?"}:::dec
+
+    subgraph JWTFlow ["Stateless JWT Flow (0 DB Hits)"]
+        Split["1. Split Token (header.payload.signature)"]:::jwt
+        HMAC["2. Calculate HMAC-SHA256 signature"]:::jwt
+        Comp{"3. secure_compare(sig, expected)?"}:::jwt
+        Exp{"4. exp > current_time()?"}:::jwt
+        JWTUser["Populate req.auth.user() from claims"]:::ok
+    end
+
+    subgraph SessFlow ["Stateful Session Flow"]
+        FindSess["1. Lookup session_id in Cache / DB"]:::sess
+        SessFound{"2. Session active?"}:::sess
+        Mutating{"3. POST / PUT / PATCH / DELETE?"}:::dec
+        CSRF{"4. Verify CSRF (Origin vs Host + _csrf)"}:::sess
+        SessUser["Populate req.auth.user() from session"]:::ok
+    end
+
+    AuthFail["401 Unauthorized / 403 Forbidden"]:::err
+    Handler["Proceed to Route Handler"]:::ok
+
+    Req --> Check
+    Check -- Bearer Token --> Split
+    Split --> HMAC --> Comp
+    Comp -- Match --> Exp
+    Exp -- Valid --> JWTUser --> Handler
+    Comp -- Fail --> AuthFail
+    Exp -- Expired --> AuthFail
+
+    Check -- Cookie spid3r_sid --> FindSess
+    FindSess --> SessFound
+    SessFound -- Yes --> Mutating
+    SessFound -- No --> AuthFail
+    Mutating -- Yes --> CSRF
+    Mutating -- No (GET/HEAD) --> SessUser --> Handler
+    CSRF -- Valid --> SessUser
+    CSRF -- Invalid --> AuthFail
+

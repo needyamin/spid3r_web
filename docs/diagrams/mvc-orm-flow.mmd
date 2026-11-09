@@ -1,0 +1,38 @@
+flowchart LR
+    classDef client fill:#f8fafc,stroke:#64748b,stroke-width:1.5px,color:#0f172a;
+    classDef mvc fill:#eff6ff,stroke:#2563eb,stroke-width:2px,color:#1e40af;
+    classDef orm fill:#f0fdf4,stroke:#16a34a,stroke-width:2px,color:#14532d;
+    classDef qb fill:#fdf4ff,stroke:#a855f7,stroke-width:2px,color:#6b21a8;
+    classDef db fill:#fff7ed,stroke:#ea580c,stroke-width:2px,color:#9a3412;
+
+    Client(["Client Request"]):::client
+    Controller["Controller / Handler<br/><code>app.get('/posts', ...)</code>"]:::mvc
+    ModelRepo["Model Repository<br/><code>Post = model('posts', opts)</code>"]:::orm
+
+    subgraph Features ["Model Features"]
+        Casts["Casts: int, bool, json"]:::orm
+        Hidden["Hidden Fields Filter"]:::orm
+        Dirty["Dirty Tracking: is_dirty()"]:::orm
+        Eager["Eager: load_has_many()"]:::orm
+    end
+
+    QB["QueryBuilder<br/><code>where, join, paginate</code>"]:::qb
+    DBMgr["DatabaseManager<br/><code>DB.transaction() [Mutex]</code>"]:::qb
+
+    subgraph Drivers ["Multi-DB Native Drivers"]
+        SQLite["SQLite Driver<br/>(Embedded, ? placeholders)"]:::db
+        PG["PostgreSQL Driver<br/>(Pool, $1, $2 placeholders)"]:::db
+        MySQL["MySQL / MariaDB<br/>(Backticks, ? placeholders)"]:::db
+    end
+
+    Client --> Controller
+    Controller --> ModelRepo
+    ModelRepo --> Features
+    ModelRepo --> QB
+    QB --> DBMgr
+    DBMgr --> Drivers
+    Drivers --> DBMgr
+    DBMgr --> ModelRepo
+    ModelRepo --> Controller
+    Controller --> Client
+

@@ -1,0 +1,35 @@
+flowchart TD
+    classDef startEnd fill:#1e1b4b,stroke:#4338ca,stroke-width:2px,color:#ffffff;
+    classDef step fill:#ffffff,stroke:#3b82f6,stroke-width:1.5px,color:#0f172a;
+    classDef success fill:#f0fdf4,stroke:#16a34a,stroke-width:2px,color:#14532d;
+    classDef branch fill:#fffbeb,stroke:#d97706,stroke-width:1.5px,color:#78350f;
+
+    ClientReq(["Incoming HTTP Request<br/>(TCP serve_listener worker)"]):::startEnd
+    S1["1. Idempotent Provider Boot<br/><code>app.boot()</code> runs register() / boot() once"]:::step
+    S2["2. Request & Method Spoofing<br/>Parses headers, cookies, query, body & _method"]:::step
+    S3["3. Request-Scoped Auth<br/>Stateless JWT (0 DB queries!) or DB session"]:::step
+    S4{"4. State-Changing Request?<br/>(POST / PUT / PATCH / DELETE)"}:::branch
+    CSRF["CSRF Defense-in-Depth<br/>Origin vs Host + session _csrf token"]:::step
+    S5{"5. Static Asset Match?<br/>(/css, /js, /images, /uploads)"}:::branch
+    StaticRes["Static File Handler<br/>Weak ETag check -> 304 Not Modified"]:::success
+    S6["6. Global Onion Pipeline<br/>CORS preflight, Logging, Security headers"]:::step
+    S7["7. O(1) & Prefix-Indexed Routing<br/>Static O(1) -> 2-level prefix buckets -> Wildcard"]:::step
+    S8["8. Route Middleware & Handler<br/>auth, throttle, validate_or_fail() & Controller"]:::step
+    S9["9. Response Coercion & Session Commit<br/>Map/List -> 200 JSON, String -> HTML, commit session"]:::step
+    ClientRes(["HTTP Client Response<br/>(Status, Headers, Body stream)"]):::success
+
+    ClientReq --> S1
+    S1 --> S2
+    S2 --> S3
+    S3 --> S4
+    S4 -- Yes --> CSRF
+    S4 -- No --> S5
+    CSRF --> S5
+    S5 -- Yes (Static file) --> StaticRes
+    S5 -- No (Dynamic route) --> S6
+    S6 --> S7
+    S7 --> S8
+    S8 --> S9
+    S9 --> ClientRes
+    StaticRes --> ClientRes
+

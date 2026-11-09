@@ -1,0 +1,35 @@
+graph TD
+    classDef runtime fill:#ffedd5,stroke:#ea580c,stroke-width:2px,color:#9a3412;
+    classDef framework fill:#dbeafe,stroke:#2563eb,stroke-width:2px,color:#1e40af;
+    classDef app fill:#dcfce7,stroke:#16a34a,stroke-width:2px,color:#14532d;
+    classDef core fill:#ffffff,stroke:#3b82f6,stroke-width:1.5px,color:#0f172a;
+
+    subgraph AppLayer ["Layer 3: User Application (app/)"]
+        Controllers["Controllers<br/><code>app/Controllers/</code>"]:::app
+        Models["Models & Casts<br/><code>app/Models/</code>"]:::app
+        Views["SpiderBD v2 Views<br/><code>resources/views/*.bd.html</code>"]:::app
+        Routes["Routes & Config<br/><code>routes/*.matrix</code>"]:::app
+        Providers["Providers & Tasks<br/><code>app/Providers/</code>"]:::app
+    end
+
+    subgraph FrameworkLayer ["Layer 2: Spid3rWeb Framework (framework/) — Single import: framework/Web"]
+        Kernel["Application Kernel<br/>(Lifecycle, ETag, CSRF, Spoofing)"]:::framework
+        Router["O(1) & Prefix Router<br/>(133k ops/sec on VM)"]:::framework
+        Pipeline["True Onion Pipeline<br/>(Global & Route Middleware)"]:::framework
+        ORM["Zero-Boilerplate ORM<br/>(Model, QueryBuilder, Schema)"]:::framework
+        AuthSys["Auth, JWT & Sessions<br/>(Stateless HS256, Zero-DB JWT)"]:::framework
+        ViewEngine["SpiderBD v2 Engine<br/>(Compiled Line Cache, 9.5k ops/sec)"]:::framework
+        Services["Core Systems<br/>(Cache, Log, Queue, Mail, Events, DI)"]:::framework
+        Testing["TestClient & Magic CLI<br/>(In-Memory Tests & Scaffolding)"]:::framework
+    end
+
+    subgraph RuntimeLayer ["Layer 1: Spid3r Native Runtime (Rust Binary) — Zero Dependencies"]
+        HttpServer["Multi-Threaded HTTP/1.1<br/><code>serve_listener</code> Worker Pool"]:::runtime
+        DbDrivers["Native DB Drivers<br/>(SQLite · PostgreSQL · MySQL)"]:::runtime
+        CryptoMutex["Crypto & Concurrency<br/>(bcrypt · HMAC · Mutex)"]:::runtime
+        VM["Bytecode VM & Stdlib<br/>(Regex NFA · JSON · Memory)"]:::runtime
+    end
+
+    AppLayer --> FrameworkLayer
+    FrameworkLayer --> RuntimeLayer
+
