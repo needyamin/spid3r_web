@@ -37,7 +37,7 @@ flowchart LR
     style Res fill:#10b981,stroke:#047857,stroke-width:2px,color:#fff
 ```
 
-> 📊 **Explore all technical diagrams:** [Request Lifecycle](docs/diagrams/request-lifecycle.svg) · [Onion Middleware](docs/diagrams/onion-middleware.svg) · [Router Architecture](docs/diagrams/router-architecture.svg) · [MVC ORM Flow](docs/diagrams/mvc-orm-flow.svg) · [Auth & JWT Flow](docs/diagrams/auth-flow.svg) in **[docs/diagrams/](docs/diagrams/)**.
+> 📊 **Explore all technical diagrams:** [Request Lifecycle](docs/diagrams/request-lifecycle.svg) · [Onion Middleware](docs/diagrams/onion-middleware.svg) · [Router Architecture](docs/diagrams/router-architecture.svg) · [MVC ORM Flow](docs/diagrams/mvc-orm-flow.svg) · [Auth & JWT Flow](docs/diagrams/auth-flow.svg) · [Fluent TestClient](docs/diagrams/testclient-flow.svg) in **[docs/diagrams/](docs/diagrams/)**.
 
 ---
 

@@ -94,6 +94,8 @@
     font-family: "Cascadia Code", "Fira Code", Consolas, monospace;
     font-size: 13px; background: var(--bg-code-inline);
     padding: 2px 6px; border-radius: 5px; color: #be185d;
+    overflow-wrap: anywhere;
+    word-break: break-word;
   }
   pre {
     background: var(--bg-code); color: #e2e8f0; border-radius: var(--radius);
@@ -112,7 +114,23 @@
   table { width: 100%; border-collapse: collapse; margin: 14px 0 22px; font-size: 13.5px; background: var(--bg); }
   th { text-align: left; background: var(--bg-soft); font-weight: 700; }
   th, td { border: 1px solid var(--border); padding: 9px 12px; vertical-align: top; }
-  td code { white-space: nowrap; }
+  td code {
+    white-space: normal;
+    word-break: break-word;
+    overflow-wrap: anywhere;
+    display: inline-block;
+    margin: 2px 1.5px;
+  }
+  td:first-child code {
+    white-space: nowrap;
+  }
+  .table-responsive {
+    width: 100%;
+    overflow-x: auto;
+    margin: 14px 0 22px;
+    border-radius: var(--radius);
+  }
+  .table-responsive table { margin: 0; }
   tr:nth-child(even) td { background: #fbfdff; }
 
   .callout {
@@ -130,6 +148,14 @@
   .card {
     background: var(--bg-soft); border: 1px solid var(--border);
     border-radius: var(--radius); padding: 16px 18px;
+    min-width: 0;
+    overflow-wrap: break-word;
+    word-break: break-word;
+  }
+  .card code {
+    white-space: normal;
+    word-break: break-word;
+    overflow-wrap: anywhere;
   }
   .card .c-icon { font-size: 20px; }
   .card h4 { margin: 8px 0 6px; }
@@ -293,7 +319,7 @@
     <div class="card"><div class="c-icon">✅</div><h4>1-Line Validation</h4><p><code>req.validate_or_fail(rules)</code> validates and coerces inputs to native <code>int</code>/<code>float</code>/<code>bool</code> types, or automatically aborts with a <code>422 Unprocessable Entity</code> response.</p></div>
     <div class="card"><div class="c-icon">🔐</div><h4>Stateless JWT + Sessions</h4><p>Zero-DB-query HS256 <code>Jwt.sign</code> / <code>Jwt.verify</code> Bearer authentication alongside CSPRNG DB sessions, HMAC-signed cookies, and <code>req.session()</code> flash messages.</p></div>
     <div class="card"><div class="c-icon">🧩</div><h4>SpiderBD v2 Views</h4><p>Pre-compiled template line cache with <code>file_mtime</code> invalidation, rich <code>@if(a == b and c &gt;= 10)</code> / <code>@elif</code> expressions, <code>loop</code> metadata in <code>@foreach</code>, <code>@csrf</code>, and <code>@method('PUT')</code>.</p></div>
-    <div class="card"><div class="c-icon">🧪</div><h4>Fluent TestClient</h4><p>Test your entire HTTP stack in-memory without opening sockets: <code>app.test_client().acting_as(user).post_json(...).assert_created().assert_json_path(...)</code>.</p></div>
+    <div class="card"><div class="c-icon">🧪</div><h4>Fluent TestClient</h4><p>Test your entire HTTP stack in-memory without opening sockets: <code>app.test_client()</code>, <code>acting_as(user)</code>, <code>post_json(...)</code>, and <code>assert_json_path(...)</code>.</p></div>
   </div>
 </section>
 
@@ -342,6 +368,11 @@
       <div class="c-icon">🔐</div>
       <h4><a href="#auth" class="inline">Dual Auth &amp; CSRF</a></h4>
       <p>Zero-DB stateless HS256 JWT validation alongside session cookies and CSRF guards.</p>
+    </div>
+    <div class="card">
+      <div class="c-icon">🧪</div>
+      <h4><a href="#testing" class="inline">Fluent TestClient</a></h4>
+      <p>In-memory integration testing with zero sockets, acting_as() JWT auth, and JSON assertions.</p>
     </div>
     <div class="card">
       <div class="c-icon">🎨</div>
@@ -1136,6 +1167,22 @@ ws.broadcast("System announcement");</code></pre>
   <pre><code>SPID3R_DB_DRIVER=sqlite spid3r magic test               // 17/17 suites (tree-walk)
 SPID3R_DB_DRIVER=sqlite spid3r magic test --engine=vm   // 17/17 suites (bytecode VM)
 SPID3R_DB_DRIVER=sqlite spid3r magic test --filter=modern_mvc</code></pre>
+
+  <div class="diagram-box">
+    <div class="diagram-box-header">
+      <div class="diagram-box-title">
+        <span>🧪 Fluent TestClient Architecture &amp; In-Memory Execution</span>
+        <span class="diagram-badge">In-Memory / 0 Sockets</span>
+      </div>
+      <div class="diagram-actions">
+        <a href="diagrams/testclient-flow.svg" target="_blank">Open Full SVG ↗</a>
+        <a href="diagrams/testclient-flow.mmd" target="_blank">Mermaid Code</a>
+      </div>
+    </div>
+    <img src="diagrams/testclient-flow.svg" alt="Spid3rWeb Fluent TestClient Architecture Diagram" />
+    <p class="diagram-caption"><strong>In-Memory Test Flow:</strong> 1) Fluent Request Builder with <code>acting_as(user)</code> (mints stateless HS256 JWT) → 2) Direct in-process kernel invocation through <code>Application.handle_request()</code> without opening sockets or binding ports → 3) Fluent assertions on <code>TestResponse</code> (status codes, headers, and nested JSON dot-paths).</p>
+  </div>
+
   <p>Use <code>app.test_client()</code> to write expressive integration tests with zero socket overhead:</p>
   <pre><code>import "framework/Web";
 
@@ -1204,20 +1251,22 @@ app.delete("/api/todos/:id", (req, res) =&gt; {
 <!-- ============ CHEAT SHEET ============ -->
 <section id="api-reference">
   <h2>API Cheat Sheet</h2>
-  <table>
-    <tr><th>Module / Helper</th><th>Key Methods &amp; Functions</th></tr>
-    <tr><td><code>framework/Web</code></td><td><code>web() router() model(table, opts) route(name, params) abort(status, msg) test_client(app) db(table) schema() cache() auth() jwt() hash() log() queue() mail() storage(disk) events() config(key, def) views()</code></td></tr>
-    <tr><td><code>Application</code> (<code>app</code>)</td><td><code>get post put patch delete options any match_any group fallback mount use middleware register boot handle_request test_client listen</code></td></tr>
-    <tr><td><code>Router</code> / <code>Route</code></td><td><code>get post put patch delete options any match_any group mount url fallback clear routes</code></td></tr>
-    <tr><td><code>Request</code> (<code>req</code>)</td><td><code>input string int float bool only except has all param query header cookie signed_cookie file has_file store_file session user bearer ip is_json wants_json page per_page validate validate_or_fail</code></td></tr>
-    <tr><td><code>Response</code> (<code>res</code>)</td><td><code>status header withHeaders cookie signed_cookie clear_cookie json html text send redirect to_http</code></td></tr>
-    <tr><td><code>ModelRepository</code></td><td><code>create find find_or_fail first first_or_fail all where whereIn orderBy latest oldest paginate update_or_create destroy count exists</code></td></tr>
-    <tr><td><code>Model</code> instance</td><td><code>get set save update delete to_map is_dirty sync_original reload touch hasMany belongsTo</code></td></tr>
-    <tr><td><code>QueryBuilder</code></td><td><code>select where orWhere whereIn whereNotIn whereNull whereNotNull whereGroup join leftJoin rightJoin crossJoin orderBy latest oldest limit offset get first first_or_fail find find_or_fail count exists value pluck increment decrement paginate insert update delete</code></td></tr>
-    <tr><td><code>SessionStore</code></td><td><code>get put has forget all flush flash get_flash has_flash</code></td></tr>
-    <tr><td><code>Jwt</code> / <code>Auth</code></td><td><code>Jwt.sign(payload, ttl) Jwt.verify(token)</code> / <code>Auth.attempt login jwt logout check guest user id csrf</code></td></tr>
-    <tr><td><code>TestClient</code></td><td><code>get post post_json put_json patch_json delete request with_header with_headers with_token with_cookie acting_as</code> &rarr; <code>assert_status assert_ok assert_created assert_no_content assert_not_found assert_unauthorized assert_forbidden assert_unprocessable assert_header assert_see assert_dont_see assert_json_path</code></td></tr>
-  </table>
+  <div class="table-responsive">
+    <table style="min-width: 680px;">
+      <tr><th style="width: 220px;">Module / Helper</th><th>Key Methods &amp; Functions</th></tr>
+      <tr><td><code>framework/Web</code></td><td><code>web()</code> <code>router()</code> <code>model(table, opts)</code> <code>route(name, params)</code> <code>abort(status, msg)</code> <code>test_client(app)</code> <code>db(table)</code> <code>schema()</code> <code>cache()</code> <code>auth()</code> <code>jwt()</code> <code>hash()</code> <code>log()</code> <code>queue()</code> <code>mail()</code> <code>storage(disk)</code> <code>events()</code> <code>config(key, def)</code> <code>views()</code></td></tr>
+      <tr><td><code>Application</code> (<code>app</code>)</td><td><code>get</code> <code>post</code> <code>put</code> <code>patch</code> <code>delete</code> <code>options</code> <code>any</code> <code>match_any</code> <code>group</code> <code>fallback</code> <code>mount</code> <code>use</code> <code>middleware</code> <code>register</code> <code>boot</code> <code>handle_request</code> <code>test_client</code> <code>listen</code></td></tr>
+      <tr><td><code>Router</code> / <code>Route</code></td><td><code>get</code> <code>post</code> <code>put</code> <code>patch</code> <code>delete</code> <code>options</code> <code>any</code> <code>match_any</code> <code>group</code> <code>mount</code> <code>url</code> <code>fallback</code> <code>clear</code> <code>routes</code></td></tr>
+      <tr><td><code>Request</code> (<code>req</code>)</td><td><code>input</code> <code>string</code> <code>int</code> <code>float</code> <code>bool</code> <code>only</code> <code>except</code> <code>has</code> <code>all</code> <code>param</code> <code>query</code> <code>header</code> <code>cookie</code> <code>signed_cookie</code> <code>file</code> <code>has_file</code> <code>store_file</code> <code>session</code> <code>user</code> <code>bearer</code> <code>ip</code> <code>is_json</code> <code>wants_json</code> <code>page</code> <code>per_page</code> <code>validate</code> <code>validate_or_fail</code></td></tr>
+      <tr><td><code>Response</code> (<code>res</code>)</td><td><code>status</code> <code>header</code> <code>withHeaders</code> <code>cookie</code> <code>signed_cookie</code> <code>clear_cookie</code> <code>json</code> <code>html</code> <code>text</code> <code>send</code> <code>redirect</code> <code>to_http</code></td></tr>
+      <tr><td><code>ModelRepository</code></td><td><code>create</code> <code>find</code> <code>find_or_fail</code> <code>first</code> <code>first_or_fail</code> <code>all</code> <code>where</code> <code>whereIn</code> <code>orderBy</code> <code>latest</code> <code>oldest</code> <code>paginate</code> <code>update_or_create</code> <code>destroy</code> <code>count</code> <code>exists</code></td></tr>
+      <tr><td><code>Model</code> instance</td><td><code>get</code> <code>set</code> <code>save</code> <code>update</code> <code>delete</code> <code>to_map</code> <code>is_dirty</code> <code>sync_original</code> <code>reload</code> <code>touch</code> <code>hasMany</code> <code>belongsTo</code></td></tr>
+      <tr><td><code>QueryBuilder</code></td><td><code>select</code> <code>where</code> <code>orWhere</code> <code>whereIn</code> <code>whereNotIn</code> <code>whereNull</code> <code>whereNotNull</code> <code>whereGroup</code> <code>join</code> <code>leftJoin</code> <code>rightJoin</code> <code>crossJoin</code> <code>orderBy</code> <code>latest</code> <code>oldest</code> <code>limit</code> <code>offset</code> <code>get</code> <code>first</code> <code>first_or_fail</code> <code>find</code> <code>find_or_fail</code> <code>count</code> <code>exists</code> <code>value</code> <code>pluck</code> <code>increment</code> <code>decrement</code> <code>paginate</code> <code>insert</code> <code>update</code> <code>delete</code></td></tr>
+      <tr><td><code>SessionStore</code></td><td><code>get</code> <code>put</code> <code>has</code> <code>forget</code> <code>all</code> <code>flush</code> <code>flash</code> <code>get_flash</code> <code>has_flash</code></td></tr>
+      <tr><td><code>Jwt</code> / <code>Auth</code></td><td><code>Jwt.sign(payload, ttl)</code> <code>Jwt.verify(token)</code> / <code>Auth.attempt</code> <code>login</code> <code>jwt</code> <code>logout</code> <code>check</code> <code>guest</code> <code>user</code> <code>id</code> <code>csrf</code></td></tr>
+      <tr><td><code>TestClient</code></td><td><code>get</code> <code>post</code> <code>post_json</code> <code>put_json</code> <code>patch_json</code> <code>delete</code> <code>request</code> <code>with_header</code> <code>with_headers</code> <code>with_token</code> <code>with_cookie</code> <code>acting_as</code> &rarr; <code>assert_status</code> <code>assert_ok</code> <code>assert_created</code> <code>assert_no_content</code> <code>assert_not_found</code> <code>assert_unauthorized</code> <code>assert_forbidden</code> <code>assert_unprocessable</code> <code>assert_header</code> <code>assert_see</code> <code>assert_dont_see</code> <code>assert_json_path</code></td></tr>
+    </table>
+  </div>
 </section>
 
 </main>

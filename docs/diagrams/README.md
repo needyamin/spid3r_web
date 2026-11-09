@@ -14,6 +14,7 @@ This directory contains visual architecture diagrams and technical schematics fo
 | **4. O(1) & Prefix Router** | [router-architecture.svg](router-architecture.svg) | [router-architecture.mmd](router-architecture.mmd) | 133k ops/sec routing pipeline: static hash map, 2-level prefix buckets, and wildcards. |
 | **5. MVC & Zero-Boilerplate ORM** | [mvc-orm-flow.svg](mvc-orm-flow.svg) | [mvc-orm-flow.mmd](mvc-orm-flow.mmd) | Models, auto-casts, QueryBuilder, mutex-serialized transactions, and native DB drivers. |
 | **6. Dual Authentication** | [auth-flow.svg](auth-flow.svg) | [auth-flow.mmd](auth-flow.mmd) | Stateless HS256 JWT (0 DB queries) vs Stateful Session Cookies and 2-layer CSRF protection. |
+| **7. Fluent TestClient** | [testclient-flow.svg](testclient-flow.svg) | [testclient-flow.mmd](testclient-flow.mmd) | In-memory integration testing, stateless `acting_as()` JWT auth, and chainable JSON dot-path assertions. |
 
 ---
 
@@ -56,4 +57,12 @@ Illustrates model definitions, automatic type casting, dirty tracking, QueryBuil
 Contrasts zero-database-hit stateless JWT Bearer token authentication with stateful session cookies and CSRF protection:
 
 ![Dual Authentication Flow](auth-flow.svg)
+
+---
+
+## 7. Fluent TestClient Architecture
+Details the in-process HTTP execution flow bypassing TCP sockets, fluent request construction with `acting_as(user)`, full kernel traversal, and chained JSON assertions:
+
+![Fluent TestClient Flow](testclient-flow.svg)
+
 
