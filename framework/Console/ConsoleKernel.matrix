@@ -38,6 +38,9 @@ public class ConsoleKernel {
         if command == "serve" {
             let port = "8000";
             let dry_run = false;
+            let use_tls = false;
+            let cert_path = "";
+            let key_path = "";
             let i = 1;
             while i < cli_args.len() {
                 let p_arg = cli_args[i];
@@ -46,6 +49,22 @@ public class ConsoleKernel {
                 } elif p_arg == "--port" and i + 1 < cli_args.len() {
                     i = i + 1;
                     port = cli_args[i];
+                } elif p_arg == "--tls" {
+                    use_tls = true;
+                } elif p_arg.starts_with("--cert=") {
+                    cert_path = p_arg.replace("--cert=", "");
+                    use_tls = true;
+                } elif p_arg == "--cert" and i + 1 < cli_args.len() {
+                    i = i + 1;
+                    cert_path = cli_args[i];
+                    use_tls = true;
+                } elif p_arg.starts_with("--key=") {
+                    key_path = p_arg.replace("--key=", "");
+                    use_tls = true;
+                } elif p_arg == "--key" and i + 1 < cli_args.len() {
+                    i = i + 1;
+                    key_path = cli_args[i];
+                    use_tls = true;
                 } elif p_arg == "--dry-run" or p_arg == "--check" {
                     dry_run = true;
                 } else {
@@ -53,7 +72,9 @@ public class ConsoleKernel {
                 }
                 i = i + 1;
             }
-            return self.command_serve(int(port), dry_run);
+            return self.command_serve(int(port), dry_run, use_tls, cert_path, key_path);
+        } elif command == "build" {
+            return self.command_build(cli_args);
         } elif command == "test" {
             return self.command_test(cli_args);
         } elif command == "route:list" {
@@ -127,15 +148,16 @@ public class ConsoleKernel {
         println("Usage:");
         println("  spid3r magic <command> [arguments] [options]\n");
         println("Available commands:");
-        println("  serve [--port N]          Start the Spid3rWeb local development server");
-        println("  test [options]            Run the Spid3rWeb automated test suite");
-        println("  route:list                List all registered application routes");
-        println("  migrate                   Run outstanding database migrations");
-        println("  migrate:sync              Re-scan database/migrations and rebuild the registry");
-        println("  migrate:rollback          Rollback the last database migration batch");
-        println("  migrate:status            Show the status of each migration");
-        println("  db:seed                   Seed the database with records");
-        println("  queue:work [--once]       Process queued jobs (--once = drain and exit)");
+        println("  serve [--port N] [--tls --cert C --key K]  Start HTTP/HTTPS server");
+        println("  build [--release] [-o OUT] [entry]         Compile AOT native binary");
+        println("  test [options]                             Run the Spid3rWeb automated test suite");
+        println("  route:list                                 List all registered application routes");
+        println("  migrate                                    Run outstanding database migrations");
+        println("  migrate:sync                               Re-scan database/migrations and rebuild the registry");
+        println("  migrate:rollback                           Rollback the last database migration batch");
+        println("  migrate:status                             Show the status of each migration");
+        println("  db:seed                                    Seed the database with records");
+        println("  queue:work [--once|--daemon] [--sleep=MS]  Process queued jobs");
         println("  cache:clear               Flush the application cache store");
         println("  key:generate              Generate a random 256-bit APP_KEY in .env");
         println("  make:controller <Name>    Create a new MVC controller class");
@@ -151,17 +173,168 @@ public class ConsoleKernel {
     // Command Implementations
     // ------------------------------------------------------------------------
 
-    fn command_serve(self, port: int, dry_run: bool = false) -> int {
-        println("Starting Spid3rWeb development server: http://127.0.0.1:" + string(port));
+    fn command_serve(self, port: int, dry_run: bool = false, use_tls: bool = false, cert_path: string = "", key_path: string = "") -> int {
+        let scheme = "http";
+        if use_tls {
+            scheme = "https";
+            if cert_path == "" or key_path == "" {
+                println("Error: --tls requires both --cert <path> and --key <path>.");
+                DB.close();
+                return 1;
+            }
+        }
+        println("Starting Spid3rWeb development server: " + scheme + "://127.0.0.1:" + string(port));
         println("Press Ctrl+C to stop the server.");
         if dry_run {
             DB.close();
             return 0;
         }
         let app = new Application();
-        app.listen(port);
+        if use_tls {
+            app.listen_tls(port, cert_path, key_path);
+        } else {
+            app.listen(port);
+        }
         DB.close();
         return 0;
+    }
+
+    fn copy_tree_recursive(self, src: string, dst: string) {
+        if not file_exists(src) {
+            return;
+        }
+        let entries_r = list_dir(src);
+        if entries_r.is_err() {
+            copy_file(src, dst);
+            return;
+        }
+        if not file_exists(dst) {
+            dir_create(dst);
+        }
+        let entries = entries_r.unwrap();
+        let i = 0;
+        while i < entries.len() {
+            let name = string(entries[i]);
+            if name == "." or name == ".." {
+                i = i + 1;
+                continue;
+            }
+            let s_child = src + "/" + name;
+            let d_child = dst + "/" + name;
+            let sub = list_dir(s_child);
+            if sub.is_ok() {
+                self.copy_tree_recursive(s_child, d_child);
+            } else {
+                copy_file(s_child, d_child);
+            }
+            i = i + 1;
+        }
+    }
+
+    fn command_build(self, cli_args) -> int {
+        let release = false;
+        let bundle = false;
+        let out_path = "";
+        let entry = "server.matrix";
+        let i = 1;
+        while i < cli_args.len() {
+            let a = string(cli_args[i]);
+            if a == "--release" {
+                release = true;
+            } elif a == "--bundle" {
+                bundle = true;
+            } elif a == "-o" and i + 1 < cli_args.len() {
+                i = i + 1;
+                out_path = string(cli_args[i]);
+            } elif a.starts_with("--out=") {
+                out_path = a.slice(6, a.len());
+            } elif not a.starts_with("-") {
+                entry = a;
+            }
+            i = i + 1;
+        }
+
+        let spid3r_bin = "spid3r";
+        let exe_r = exe_path();
+        if exe_r.is_ok() {
+            spid3r_bin = string(exe_r.unwrap());
+        }
+
+        let build_args = list("build");
+        if release {
+            build_args.push("--release");
+        }
+        build_args.push(entry);
+        if out_path != "" {
+            // Ensure parent directory chain exists so MSVC link.exe / ld never fails with LNK1104.
+            let parts = out_path.replace("\\", "/").split("/");
+            if parts.len() > 1 {
+                let dir = parts[0];
+                if dir != "" and not file_exists(dir) {
+                    dir_create(dir);
+                }
+                let pi = 1;
+                while pi < parts.len() - 1 {
+                    if dir != "" {
+                        dir = dir + "/" + parts[pi];
+                    } else {
+                        dir = "/" + parts[pi];
+                    }
+                    if not file_exists(dir) {
+                        dir_create(dir);
+                    }
+                    pi = pi + 1;
+                }
+            }
+            build_args.push("-o");
+            build_args.push(out_path);
+        }
+
+        println("[Magic] Building native AOT binary from " + entry + "...");
+        let res = exec_capture(spid3r_bin, build_args, null);
+        if res.is_err() {
+            println("[Magic] AOT build failed to launch: " + string(res.unwrap_err()));
+            DB.close();
+            return 1;
+        }
+        let info = res.unwrap();
+        if info.has("stdout") and string(info["stdout"]).trim() != "" {
+            println(string(info["stdout"]).trim());
+        }
+        if info.has("stderr") and string(info["stderr"]).trim() != "" {
+            println(string(info["stderr"]).trim());
+        }
+        let code = int(info["code"]);
+        if code == 0 and bundle and out_path != "" {
+            let out_dir = ".";
+            let norm = out_path.replace("\\", "/");
+            let parts = norm.split("/");
+            if parts.len() > 1 {
+                out_dir = parts[0];
+                let bi = 1;
+                while bi < parts.len() - 1 {
+                    if out_dir != "" {
+                        out_dir = out_dir + "/" + parts[bi];
+                    } else {
+                        out_dir = "/" + parts[bi];
+                    }
+                    bi = bi + 1;
+                }
+            }
+            if out_dir != "." and out_dir != "" {
+                println("[Magic] Bundling runtime assets (public/, resources/, .env.example) into " + out_dir + "/ ...");
+                self.copy_tree_recursive("public", out_dir + "/public");
+                self.copy_tree_recursive("resources", out_dir + "/resources");
+                if file_exists(".env.example") {
+                    self.copy_tree_recursive(".env.example", out_dir + "/.env.example");
+                }
+            }
+        }
+        if code == 0 and out_path != "" {
+            println("[Magic] Ready — run: " + out_path + " 8000");
+        }
+        DB.close();
+        return code;
     }
 
     fn command_test(self, cli_args = null) -> int {
@@ -245,12 +418,18 @@ public class ConsoleKernel {
 
     fn command_queue_work(self, cli_args) -> int {
         let once = false;
+        let daemon = false;
+        let sleep_ms_val = 500;
         let queue = "";
         let i = 0;
         while i < cli_args.len() {
             let a = string(cli_args[i]);
             if a == "--once" {
                 once = true;
+            } elif a == "--daemon" {
+                daemon = true;
+            } elif a.starts_with("--sleep=") {
+                sleep_ms_val = int(a.slice(8, a.len()));
             } elif a.starts_with("--queue=") {
                 queue = a.slice(8, a.len());
             }
@@ -269,6 +448,9 @@ public class ConsoleKernel {
             if Queue.run_next(queue) {
                 processed = processed + 1;
             }
+        } elif daemon {
+            println("[Queue] daemon mode active (poll " + string(sleep_ms_val) + " ms, Ctrl+C to stop)");
+            processed = Queue.work_daemon(sleep_ms_val, queue);
         } else {
             processed = Queue.work(0, queue);
         }

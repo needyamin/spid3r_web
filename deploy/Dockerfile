@@ -1,30 +1,22 @@
 # ============================================================================
 # Spid3rWeb production-style container image.
 #
-# Multi-stage build:
-#   builder  - compiles the Spid3r toolchain from source using the official
-#              installer's documented fallback (`install.sh --source --core`,
-#              the same path CI uses). No LLVM/WebKit needed: core-only build.
-#   runtime  - slim Debian with the framework code + the compiled binary.
+# Installs the prebuilt Spid3r v1.1.1+ Linux release tarball (x86_64 / aarch64,
+# shipping both `spid3r` VM/interpreter and `spid3r-self` AOT compiler) directly
+# into debian:bookworm-slim — no Rust build stage required.
 #
 # The server binds 0.0.0.0 when SPID3R_HOST=0.0.0.0 (framework default stays
 # loopback for local dev — see framework/Application.matrix listen()).
 # ============================================================================
-FROM rust:bookworm AS builder
-
-ENV CARGO_BUILD_JOBS=2
-RUN apt-get update -qq && apt-get install -y -qq curl git >/dev/null \
-    && rm -rf /var/lib/apt/lists/*
-
-# Install the Spid3r language toolchain (core only: VM + interpreter).
-ENV SPID3R_INSTALL_DIR=/opt/spid3r/bin
-RUN curl -fsSL https://raw.githubusercontent.com/needyamin/spid3r/main/install.sh \
-      | sh -s -- --source --core --no-modify-path
-
-# ---------------------------------------------------------------------------
 FROM debian:bookworm-slim AS runtime
 
-COPY --from=builder /opt/spid3r/bin/spid3r /usr/local/bin/spid3r
+RUN apt-get update -qq && apt-get install -y -qq curl ca-certificates >/dev/null \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install prebuilt Spid3r toolchain (spid3r + spid3r-self) into /usr/local/bin
+ENV SPID3R_INSTALL_DIR=/usr/local/bin
+RUN curl -fsSL https://raw.githubusercontent.com/needyamin/spid3r/main/install.sh \
+      | sh -s -- --no-modify-path
 
 WORKDIR /var/www/app
 

@@ -1,6 +1,6 @@
 # Spid3rWeb — Architecture & Technical Reference
 
-**Status:** Authoritative engineering document (verified 2026-11-07 against Spid3r v1.0.0 and the 17-suite test harness).
+**Status:** Authoritative engineering document (verified 2026-11-20 against Spid3r `v1.1.1` / Language `1.1.1`, Bytecode VM default + LLVM 23.1.0 AOT, and the 17-suite test harness).
 
 ---
 
@@ -10,7 +10,7 @@ Spid3rWeb builds a clean, zero-dependency MVC architecture on top of Spid3r's na
 
 | Layer | Owner | Responsibilities |
 |---|---|---|
-| **Runtime Natives (Rust)** | `spid3r` binary | Multi-threaded HTTP/1.1 `serve_listener` worker pool, TCP sockets, RFC 6455 WebSocket (`ws_*`), SQLite / PostgreSQL / MySQL native drivers, `bcrypt_hash` / `bcrypt_verify`, `sha256` / `hmac_sha256` / `secure_compare`, `mutex`, Thompson NFA `regex_match`, `json_parse` / `json_write` |
+| **Runtime Natives (Rust)** | `spid3r` / `spid3r-self` | Multi-threaded HTTP/1.1 `serve_listener` worker pool (keep-alive, native TLS `tls_listen`, chunked `http_stream`), TCP sockets (`tcp_connect`/`tcp_listen`), RFC 6455 WebSocket (`ws_*`), streaming file I/O & OS locking (`file_open`/`file_lock`), SQLite / PostgreSQL / MySQL native drivers, `bcrypt_hash` / `bcrypt_verify`, `sha256` / `hmac_sha256` / `secure_compare`, `mutex`, Thompson NFA `regex_match`, `json_parse` / `json_write`, `spid3r.ini` runtime guardrails |
 | **Spid3rWeb Framework** | `framework/` | Single-import barrel (`framework/Web`), HTTP kernel (`Application`), O(1) + prefix-indexed `Router`, true Onion `Middleware` pipeline, zero-boilerplate ORM (`DB`, `QueryBuilder`, `Schema`, `Model`, `ModelRepository`), `Validator` with type coercion, `Auth` + stateless `Jwt`, `SessionStore` + flash messages, thread-safe `Cache`, `Config` / `Env`, thread-safe `Log`, `Storage`, `Mail`, `Queue`, SpiderBD v2 (`BD`), `ServiceContainer`, `Event` bus, `TestClient`, Magic CLI, and auto-discovering `TestRunner` |
 
 ---

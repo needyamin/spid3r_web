@@ -34,7 +34,7 @@ die()  { printf "%b\n" "${RED}error:${OFF} $*" >&2; exit 1; }
 # ---------- repo constants ----------
 SPID3R_REPO="needyamin/spid3r"
 SPID3R_INSTALL_SH="https://raw.githubusercontent.com/$SPID3R_REPO/main/install.sh"
-SPID3R_SETUP_FALLBACK="https://github.com/$SPID3R_REPO/releases/download/v1.0.0/Spid3r-Setup-1.0.0.exe"
+SPID3R_SETUP_FALLBACK="https://github.com/$SPID3R_REPO/releases/download/v1.1.1/Spid3r-Setup-1.1.1.exe"
 APP_PORT="${SPID3R_PORT:-8000}"
 
 # ---------- locate the project root (this script's directory) ----------

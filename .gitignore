@@ -90,3 +90,6 @@ actionlint
 actionlint.exe
 shellcheck.exe
 
+
+# Compiled AOT distribution binaries
+dist/

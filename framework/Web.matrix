@@ -81,6 +81,14 @@ public fn redirect_to(url: string, status: int = 302) {
     return redirect(url, status);
 }
 
+public fn send_stream(source, content_type: string = "application/octet-stream", status: int = 200) {
+    return stream(source, content_type, status);
+}
+
+public fn send_sse(source, status: int = 200) {
+    return sse(source, status);
+}
+
 public fn render_view(view_name: string, data = null) {
     return view(view_name, data);
 }

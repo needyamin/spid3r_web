@@ -313,7 +313,7 @@
 
   <div class="grid">
     <div class="card"><div class="c-icon">⚡</div><h4>Single-Import DX</h4><p>Import <code>"framework/Web"</code> once to access <code>web()</code>, <code>model()</code>, <code>router()</code>, <code>route()</code>, <code>abort()</code>, <code>db()</code>, <code>schema()</code>, <code>auth()</code>, <code>jwt()</code>, <code>cache()</code>, and <code>test_client()</code>.</p></div>
-    <div class="card"><div class="c-icon">🛣️</div><h4>133k ops/sec Router</h4><p>O(1) hash lookup for static routes, 2-level segment &amp; prefix indexing for <code>:param</code> / <code>{param}</code> routes, <code>*wildcard</code> catch-alls, sub-router <code>mount()</code>, and named <code>route()</code> URL generation.</p></div>
+    <div class="card"><div class="c-icon">🛣️</div><h4>153k VM / 200k AOT Router</h4><p>O(1) hash lookup for static routes, 2-level segment &amp; prefix indexing for <code>:param</code> / <code>{param}</code> routes, <code>*wildcard</code> catch-alls, sub-router <code>mount()</code>, and named <code>route()</code> URL generation.</p></div>
     <div class="card"><div class="c-icon">🧅</div><h4>True Onion Middleware</h4><p>Write <code>(req, next) =&gt; { let res = next(req); ... return res; }</code> closures or classes. Includes <code>auth</code>, <code>guest</code>, <code>cors</code>, <code>logger</code>, <code>etag</code>, <code>request_id</code>, and <code>throttle</code>.</p></div>
     <div class="card"><div class="c-icon">🗂️</div><h4>1-Line Models &amp; Casts</h4><p>Define models in 1 line with <code>model("posts", opts)</code>: automatic <code>bool</code>/<code>int</code>/<code>float</code>/<code>json</code> casts, <code>hidden</code> field stripping, dirty tracking, <code>find_or_fail()</code>, and batched eager loading.</p></div>
     <div class="card"><div class="c-icon">✅</div><h4>1-Line Validation</h4><p><code>req.validate_or_fail(rules)</code> validates and coerces inputs to native <code>int</code>/<code>float</code>/<code>bool</code> types, or automatically aborts with a <code>422 Unprocessable Entity</code> response.</p></div>
@@ -357,7 +357,7 @@
     <div class="card">
       <div class="c-icon">🛣️</div>
       <h4><a href="#routing" class="inline">O(1) &amp; Prefix Router</a></h4>
-      <p>133,333 ops/sec routing pipeline with static hash lookup and 2-level prefix buckets.</p>
+      <p>153,846 ops/sec (VM) / 200,000 ops/sec (AOT) routing pipeline with static hash lookup and 2-level prefix buckets.</p>
     </div>
     <div class="card">
       <div class="c-icon">🗄️</div>
@@ -422,7 +422,7 @@ app.listen(8000);</code></pre>
 <!-- ============ TECH STACK ============ -->
 <section id="stack">
   <h2>Tech Stack</h2>
-  <p>Spid3rWeb runs entirely on the Spid3r v1.0.0 runtime — <strong>zero external dependencies</strong>.</p>
+  <p>Spid3rWeb runs entirely on the Spid3r v1.1.1 (Language 1.1.1) runtime — <strong>zero external dependencies</strong>.</p>
   <table>
     <tr><th>Layer</th><th>Provides</th></tr>
     <tr><td>Spid3r Runtime (Rust)</td><td>Multi-threaded HTTP/1.1 <code>serve_listener</code> worker pool, TCP sockets, RFC 6455 WebSocket (<code>ws_*</code>), SQLite / MySQL / PostgreSQL native drivers, bcrypt, SHA-256 / HMAC-SHA256 / constant-time <code>secure_compare</code>, <code>mutex</code>, Thompson NFA regex, JSON parser/writer</td></tr>
@@ -472,7 +472,7 @@ spid3r magic make:middleware EnsureSubscribed
 spid3r magic make:test post_api</code></pre>
   <div class="callout tip">
     <div class="co-title">💡 Runnable Full-Stack Example</div>
-    <p>Run <code>SPID3R_DB_DRIVER=sqlite spid3r run --engine vm examples/task-api/main.matrix</code> to see <code>framework/Web</code>, <code>model()</code>, <code>ServiceProvider</code>, model events, <code>req.validate_or_fail()</code>, <code>find_or_fail()</code>, REST resources, pagination, and <code>TestClient</code> working end to end without opening a port.</p>
+    <p>Run <code>SPID3R_PATH=. SPID3R_DB_DRIVER=sqlite spid3r run examples/task-api/main.matrix</code> (Bytecode VM is default in Spid3r v1.1.1+, or compile AOT with <code>spid3r magic build --release examples/task-api/main.matrix</code>) to see <code>framework/Web</code>, <code>model()</code>, <code>ServiceProvider</code>, model events, <code>req.validate_or_fail()</code>, <code>find_or_fail()</code>, REST resources, pagination, and <code>TestClient</code> working end to end without opening a port.</p>
   </div>
 </section>
 
@@ -534,15 +534,16 @@ config().set("app.name", "My Spid3r App");</code></pre>
 <!-- ============ CLI ============ -->
 <section id="cli">
   <h2>Magic CLI</h2>
-  <pre><code>spid3r magic serve                    // start dev server (--port N, --dry-run)
-spid3r magic test                     // auto-discover &amp; run all 17 test suites (--filter=X, --engine=vm)
+  <pre><code>spid3r magic serve                    // start HTTP/HTTPS server (--port N, --tls --cert C --key K, --dry-run)
+spid3r magic build --release          // compile LLVM-23 AOT native binary (-o dist/server.exe, --bundle)
+spid3r magic test                     // auto-discover &amp; run all 17 test suites (--filter=X, --engine=tree)
 spid3r magic route:list               // table of all registered routes and names
 spid3r magic migrate                  // auto-sync &amp; run pending migrations
 spid3r magic migrate:sync             // rebuild database/migrations/registry.matrix
 spid3r magic migrate:rollback         // roll back the last migration batch
 spid3r magic migrate:status           // show migration status table
 spid3r magic db:seed                  // run database seeders
-spid3r magic queue:work               // drain queued jobs (--once = single job, --queue=name)
+spid3r magic queue:work               // drain queued jobs (--once, --daemon, --sleep=500, --queue=name)
 spid3r magic cache:clear              // flush the application cache store
 spid3r magic key:generate             // generate a 256-bit random APP_KEY in .env
 spid3r magic make:controller &lt;Name&gt;   // scaffold an MVC controller in app/Controllers/
@@ -555,20 +556,22 @@ spid3r magic make:migration &lt;name&gt;    // scaffold + auto-register a migrat
 
 <!-- ============ TOOLCHAIN ============ -->
 <section id="toolchain">
-  <h2>Bytecode VM &amp; Benchmarks</h2>
-  <p>Spid3r runs the same code on both the tree-walk interpreter and the bytecode VM (<code>--engine vm</code>). Reproduce the benchmarks with:</p>
-  <pre><code>SPID3R_DB_DRIVER=sqlite spid3r run benchmarks/bench.matrix
-SPID3R_DB_DRIVER=sqlite spid3r run --engine vm benchmarks/bench.matrix</code></pre>
-  <p>Recorded results (<code>benchmarks/RESULTS.md</code>):</p>
+  <h2>Bytecode VM, LLVM-23 AOT &amp; Benchmarks</h2>
+  <p>Spid3r v1.1.1 runs on the bytecode VM by default (with <code>--engine tree</code> as the semantic oracle) and compiles directly to standalone native executables with LLVM 23.1.0 AOT (<code>spid3r magic build --release</code>). Reproduce the benchmarks with:</p>
+  <pre><code>SPID3R_PATH=. SPID3R_DB_DRIVER=sqlite spid3r run benchmarks/bench.matrix
+SPID3R_PATH=. SPID3R_DB_DRIVER=sqlite spid3r build --release benchmarks/bench.matrix -o bench_aot &amp;&amp; ./bench_aot</code></pre>
+  <p>Recorded results (<code>benchmarks/RESULTS.md</code>, 2026-11-20 on Spid3r v1.1.1):</p>
   <table>
-    <tr><th>Benchmark</th><th>Tree-Walk</th><th>Bytecode VM (<code>--engine vm</code>)</th><th>Notes</th></tr>
-    <tr><td>Route matching (200 routes, <code>:param</code> capture)</td><td>55,555 ops/s</td><td><strong>133,333 ops/s</strong></td><td><strong>153× faster</strong> than legacy linear router via O(1) static + prefix-indexed buckets</td></tr>
-    <tr><td>JSON write + parse round-trip (nested)</td><td>250,000 ops/s</td><td><strong>333,333 ops/s</strong></td><td>+33% on VM</td></tr>
-    <tr><td>Query compilation (4 clauses + whereIn + orderBy)</td><td>13,888 ops/s</td><td><strong>20,547 ops/s</strong></td><td>+48% on VM</td></tr>
-    <tr><td>SpiderBD v2 template render (interpolation + loop)</td><td>6,153 ops/s</td><td><strong>9,569 ops/s</strong></td><td>Pre-compiled line cache with <code>file_mtime</code> invalidation</td></tr>
+    <tr><th>Benchmark</th><th>v1.1.1 VM (default)</th><th>v1.1.1 LLVM-23 AOT</th><th>Notes</th></tr>
+    <tr><td>Route matching (200 routes, <code>:param</code> capture)</td><td>153,846 ops/s</td><td><strong>200,000 ops/s</strong></td><td>O(1) static + 2-level prefix-indexed buckets (3.60× vs v1.0.0 tree)</td></tr>
+    <tr><td>JSON write + parse round-trip (nested)</td><td>666,666 ops/s</td><td><strong>1,000,000 ops/s</strong></td><td>4.00× vs v1.0.0 tree (Track 3 <code>Vec&lt;u8&gt;</code> JSON + SSO)</td></tr>
+    <tr><td>Query compilation (4 clauses + whereIn + orderBy)</td><td>21,428 ops/s</td><td><strong>27,027 ops/s</strong></td><td>1.95× vs v1.0.0 tree</td></tr>
+    <tr><td>SpiderBD v2 template render (interpolation + loop)</td><td>9,661 ops/s</td><td><strong>12,500 ops/s</strong></td><td>Pre-compiled line cache with <code>file_mtime</code> invalidation</td></tr>
   </table>
-  <p>Run in production under the bytecode VM:</p>
-  <pre><code>SPID3R_HOST=0.0.0.0 spid3r run --engine vm server.matrix</code></pre>
+  <p>Run in production (VM default, native HTTPS via <code>--tls</code>, or compiled AOT binary):</p>
+  <pre><code>SPID3R_HOST=0.0.0.0 spid3r magic serve --port 8000
+SPID3R_HOST=0.0.0.0 spid3r magic serve --port 8443 --tls --cert cert.pem --key key.pem
+spid3r magic build --release --bundle -o dist/server.exe server.matrix &amp;&amp; ./dist/server.exe --port 8000</code></pre>
 </section>
 
 <!-- ============ ROUTING ============ -->
@@ -580,7 +583,7 @@ SPID3R_DB_DRIVER=sqlite spid3r run --engine vm benchmarks/bench.matrix</code></p
     <div class="diagram-box-header">
       <div class="diagram-box-title">
         <span>🛣️ Multi-Stage Route Matching Engine</span>
-        <span class="diagram-badge">133k ops/sec</span>
+        <span class="diagram-badge">153k VM / 200k AOT</span>
       </div>
       <div class="diagram-actions">
         <a href="diagrams/router-architecture.svg" target="_blank">Open Full SVG ↗</a>
@@ -811,7 +814,11 @@ let is_api = req.wants_json();</code></pre>
 });
 
 // Clear a cookie:
-res.clear_cookie("theme", "/");</code></pre>
+res.clear_cookie("theme", "/");
+
+// Chunked HTTP/1.1 streaming &amp; Server-Sent Events (SSE):
+app.get("/stream", (req, res) =&gt; res.stream(list("part 1\n", "part 2\n"), "text/plain; charset=utf-8"));
+app.get("/events", req =&gt; send_sse(fn() { return null; }));</code></pre>
 </section>
 
 <!-- ============ MODELS ============ -->
@@ -1129,17 +1136,21 @@ events().dispatch("order.paid", {"order_id": 99});</code></pre>
 <!-- ============ SYSTEMS ============ -->
 <section id="systems">
   <h2>Log · Storage · Mail · Queue</h2>
-  <pre><code>// Thread-safe appending logger (storage/logs/)
+  <pre><code>// O(1) locked streaming logger (file_open + file_lock -&gt; storage/logs/)
 log().info("User signed in", {"user_id": 7});
 
-// Traversal-guarded local &amp; public disks
+// Traversal-guarded local &amp; public disks (O(1) streaming append)
 storage("public").put("hello.txt", "Hello World");
+storage("public").append("hello.txt", "\nLine 2");
 let url = storage("public").url("hello.txt"); // "/uploads/hello.txt"
 
-// Mail &amp; background queues
+// Mail (log driver + plain-TCP SMTP via tcp_connect) &amp; background queues
 mail().send({"to": "ada@example.com", "subject": "Hi", "body": "Welcome!"});
-queue().job("emails.send", fn(data) { mail().send(data); return true; });
-queue().push("emails.send", {"to": "ada@example.com", "subject": "Async", "body": "Fast!"});</code></pre>
+import "framework/Queue/Queue";
+Queue.job("emails.send", fn(data) { mail().send(data); return true; });
+Queue.push("emails.send", {"to": "ada@example.com", "subject": "Async", "body": "Fast!"});
+// Run daemon worker (graceful Ctrl+C / SIGTERM via shutdown_requested()):
+// spid3r magic queue:work --daemon --sleep=500</code></pre>
 </section>
 
 <!-- ============ WEBSOCKET ============ -->
@@ -1164,8 +1175,8 @@ ws.broadcast("System announcement");</code></pre>
 <section id="testing">
   <h2>Testing &amp; Fluent <code>TestClient</code></h2>
   <p>Run all auto-discovered <code>tests/test_*.matrix</code> suites on either engine:</p>
-  <pre><code>SPID3R_DB_DRIVER=sqlite spid3r magic test               // 17/17 suites (tree-walk)
-SPID3R_DB_DRIVER=sqlite spid3r magic test --engine=vm   // 17/17 suites (bytecode VM)
+  <pre><code>SPID3R_DB_DRIVER=sqlite spid3r magic test                 // 17/17 suites (bytecode VM default)
+SPID3R_DB_DRIVER=sqlite spid3r magic test --engine=tree   // 17/17 suites (tree-walk oracle)
 SPID3R_DB_DRIVER=sqlite spid3r magic test --filter=modern_mvc</code></pre>
 
   <div class="diagram-box">
@@ -1209,12 +1220,18 @@ fn main() {
 
 <!-- ============ DEPLOYMENT ============ -->
 <section id="deployment">
-  <h2>Deployment</h2>
+  <h2>Deployment (VM or Standalone Native AOT Binary)</h2>
   <pre><code>APP_ENV=production
 SPID3R_HOST=0.0.0.0
+cp spid3r.ini.example spid3r.ini
 spid3r magic key:generate
 spid3r magic migrate
-spid3r run --engine vm server.matrix</code></pre>
+
+# Compile standalone LLVM-23 AOT binary + bundle runtime assets into dist/
+spid3r magic build --release --bundle -o dist/server.exe server.matrix
+./dist/server.exe --port 8000 --host 0.0.0.0
+# (or HTTPS: ./dist/server.exe --port 8443 --tls --cert cert.pem --key key.pem)</code></pre>
+  <p><code>server.exe</code> automatically resolves the project root (walking up from its own directory for <code>spider.toml</code> / <code>resources/views</code>, or pass <code>--root &lt;dir&gt;</code>), so launching it from <code>dist/</code> works out of the box.</p>
 </section>
 
 <!-- ============ RECIPES ============ -->

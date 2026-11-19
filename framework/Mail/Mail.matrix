@@ -99,10 +99,87 @@ public class Mailer {
         }
 
         if driver == "smtp" {
-            throw "mail: the smtp driver needs an outbound TCP API that the Spid3r runtime does not expose yet — set SPID3R_MAIL_MAILER=log (or remove the override) and read storage/logs/mail.log";
+            return self.send_smtp(cfg, from_address, from_name, string(message["to"]), subject, body);
         }
 
         throw "mail: unsupported mail driver '" + driver + "'";
+    }
+
+    fn smtp_expect(self, conn, expected_prefix: string, stage: string) {
+        let r = tcp_read(conn, 4096);
+        if r.is_err() {
+            throw "mail(smtp): read failed during " + stage + ": " + string(r.unwrap_err());
+        }
+        let reply = string(r.unwrap());
+        if not reply.starts_with(expected_prefix) {
+            throw "mail(smtp): unexpected reply at " + stage + ": " + reply.trim();
+        }
+        return reply;
+    }
+
+    fn smtp_cmd(self, conn, cmd: string, expected_prefix: string, stage: string) {
+        let w = tcp_write(conn, cmd + "\r\n");
+        if w.is_err() {
+            throw "mail(smtp): write failed during " + stage + ": " + string(w.unwrap_err());
+        }
+        return self.smtp_expect(conn, expected_prefix, stage);
+    }
+
+    fn send_smtp(self, cfg, from_address: string, from_name: string, to_address: string, subject: string, body: string) -> bool {
+        let encryption = "";
+        if cfg.has("encryption") and cfg["encryption"] != null {
+            encryption = string(cfg["encryption"]).trim().lower();
+        }
+        if encryption == "tls" or encryption == "ssl" or encryption == "starttls" {
+            throw "mail(smtp): outbound TLS/STARTTLS requires tls_connect (not yet exposed by Spid3r net stdlib) — use plain SMTP to a local relay/Mailpit or set SPID3R_MAIL_MAILER=log";
+        }
+        // Reject CRLF header injection in SMTP envelope/headers
+        if from_address.contains("\r") or from_address.contains("\n") or to_address.contains("\r") or to_address.contains("\n") or subject.contains("\r") or subject.contains("\n") {
+            throw "mail(smtp): illegal CR/LF in envelope or subject";
+        }
+        let host = "127.0.0.1";
+        if cfg.has("host") and string(cfg["host"]).trim() != "" {
+            host = string(cfg["host"]).trim();
+        }
+        let port = 1025;
+        if cfg.has("port") and int(cfg["port"]) > 0 {
+            port = int(cfg["port"]);
+        }
+        let timeout_ms = 10000;
+        if cfg.has("timeout_ms") and int(cfg["timeout_ms"]) > 0 {
+            timeout_ms = int(cfg["timeout_ms"]);
+        }
+
+        let cr = tcp_connect(host + ":" + string(port));
+        if cr.is_err() {
+            throw "mail(smtp): failed to connect to " + host + ":" + string(port) + ": " + string(cr.unwrap_err());
+        }
+        let conn = cr.unwrap();
+        try {
+            tcp_set_timeout(conn, timeout_ms);
+            self.smtp_expect(conn, "220", "greeting");
+            self.smtp_cmd(conn, "EHLO spid3rweb.local", "250", "EHLO");
+            self.smtp_cmd(conn, "MAIL FROM:<" + from_address + ">", "250", "MAIL FROM");
+            self.smtp_cmd(conn, "RCPT TO:<" + to_address + ">", "250", "RCPT TO");
+            self.smtp_cmd(conn, "DATA", "354", "DATA");
+            // Dot-stuff lines beginning with '.' per RFC 5321 §4.5.2
+            let safe_body = body.replace("\r\n", "\n").replace("\n.", "\n..").replace("\n", "\r\n");
+            let from_hdr = from_address;
+            if from_name != "" and not from_name.contains("\r") and not from_name.contains("\n") {
+                from_hdr = from_name + " <" + from_address + ">";
+            }
+            let payload = "From: " + from_hdr + "\r\n"
+                + "To: " + to_address + "\r\n"
+                + "Subject: " + subject + "\r\n"
+                + "Content-Type: text/plain; charset=utf-8\r\n"
+                + "\r\n"
+                + safe_body + "\r\n.";
+            self.smtp_cmd(conn, payload, "250", "DATA body");
+            tcp_write(conn, "QUIT\r\n");
+        } finally {
+            tcp_close(conn);
+        }
+        return true;
     }
 }
 

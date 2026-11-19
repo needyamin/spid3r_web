@@ -111,10 +111,9 @@ jobs:
           key: cargo-spid3r-${{ runner.os }}-${{ github.run_id }}
           restore-keys: cargo-spid3r-${{ runner.os }}-
 
-      # Prefer the prebuilt release tarball; fall back to a core-only
-      # source build (needs just cargo + cc, both preinstalled) while the
-      # spid3r release only ships the Windows installer. Both paths
-      # install into ~/.spid3r/bin.
+      # Prefer the prebuilt v1.1.1+ release tarball (Linux x86_64/aarch64,
+      # macOS, Windows); fall back to a core-only source build if unavailable.
+      # Both paths install into ~/.spid3r/bin.
       - name: Install Spid3r toolchain
         run: |
           if ! curl -fsSL https://raw.githubusercontent.com/needyamin/spid3r/main/install.sh | sh -s -- --no-modify-path; then
@@ -193,15 +192,17 @@ jobs:
 
       # The remaining checks only need SQLite (the matrix leg that always
       # has a working engine) — run them once, on the sqlite leg.
-      # NOTE: run_all.matrix spawns its suites without an engine flag, so
-      # to genuinely exercise the bytecode VM we run key suites under
-      # --engine vm directly.
-      - name: Bytecode VM engine runs (sqlite leg)
+      # NOTE: Since Spid3r v1.1+, the bytecode VM is the default engine, so
+      # `magic test` already exercises the VM. Here we run key suites under
+      # `--engine tree` to verify parity against the tree-walk semantic oracle
+      # and run `spid3r check` on the server entrypoint.
+      - name: Static check & Tree-walk oracle parity (sqlite leg)
         if: matrix.engine == 'sqlite'
         run: |
           set -e
-          for t in test_router test_container test_events test_model test_resource test_websocket; do
-            spid3r run --engine vm "tests/$t.matrix"
+          spid3r check server.matrix
+          for t in test_router test_container test_events test_model test_resource test_modern_mvc test_websocket; do
+            spid3r run --engine tree "tests/$t.matrix"
           done
 
       - name: Full-stack example (sqlite leg)

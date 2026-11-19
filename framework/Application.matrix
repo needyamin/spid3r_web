@@ -576,19 +576,36 @@ public class Application {
         return string(provided) == expected;
     }
 
-    public fn listen(self, port: int = 8000, host: string = "") {
+    fn resolve_bind_host(self, host: string) -> string {
+        let bind_host = string(host).trim();
+        if bind_host != "" {
+            return bind_host;
+        }
+        let env_host = env("SPID3R_HOST");
+        if env_host.is_some() and string(env_host.unwrap()).trim() != "" {
+            return string(env_host.unwrap()).trim();
+        }
+        return "127.0.0.1";
+    }
+
+    fn build_server_opts(self, server_opts, is_tls: bool) {
+        let opts = map("access_log", false, "keep_alive", true);
+        if is_tls {
+            opts["tls"] = true;
+        }
+        if server_opts != null and type_of(server_opts) == "map" {
+            for k in server_opts.keys() {
+                opts[string(k)] = server_opts[k];
+            }
+        }
+        return opts;
+    }
+
+    public fn listen(self, port: int = 8000, host: string = "", server_opts = null) {
         // Bind address: explicit argument wins, then SPID3R_HOST env.
         // Default stays loopback (safe for local dev); production behind a
         // reverse proxy or in a container sets SPID3R_HOST=0.0.0.0.
-        let bind_host = string(host).trim();
-        if bind_host == "" {
-            let env_host = env("SPID3R_HOST");
-            if env_host.is_some() and string(env_host.unwrap()).trim() != "" {
-                bind_host = string(env_host.unwrap()).trim();
-            } else {
-                bind_host = "127.0.0.1";
-            }
-        }
+        let bind_host = self.resolve_bind_host(host);
         // Boot service providers before the first connection arrives.
         self.boot();
         let r = tcp_listen(bind_host + ":" + string(port));
@@ -598,8 +615,27 @@ public class Application {
         let listener = r.unwrap();
         let real_addr = tcp_local_addr(listener).unwrap();
         let app = self;
-        let opts = map("access_log", false);
+        let opts = self.build_server_opts(server_opts, false);
         println("[Spid3rWeb] Development server running on http://" + real_addr);
+        println("[Spid3rWeb] Press Ctrl+C to stop the server\n");
+
+        let _count = serve_listener(listener, fn(raw_req) {
+            return app.handle_request(raw_req);
+        }, opts, -1);
+    }
+
+    public fn listen_tls(self, port: int, cert_path: string, key_path: string, host: string = "", server_opts = null) {
+        let bind_host = self.resolve_bind_host(host);
+        self.boot();
+        let r = tls_listen(cert_path, key_path, bind_host + ":" + string(port));
+        if r.is_err() {
+            throw r.unwrap_err();
+        }
+        let listener = r.unwrap();
+        let real_addr = tcp_local_addr(listener).unwrap();
+        let app = self;
+        let opts = self.build_server_opts(server_opts, true);
+        println("[Spid3rWeb] HTTPS server running on https://" + real_addr);
         println("[Spid3rWeb] Press Ctrl+C to stop the server\n");
 
         let _count = serve_listener(listener, fn(raw_req) {

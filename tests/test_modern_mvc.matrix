@@ -2,6 +2,7 @@
 // Comprehensive Test Suite for Spid3rWeb Modern MVC Evolution (Phases 1-5)
 
 import "framework/Web";
+import "framework/Queue/Queue";
 
 fn assert_eq(actual, expected, label: string) {
     if string(actual) != string(expected) {
@@ -371,6 +372,38 @@ fn main() {
     assert_true(rendered.contains("Shared: Spid3rCloud"), "SpiderBD global share()");
 
     println("  [PASS] test_spiderbd_v2_directives_and_expressions");
+
+    // ------------------------------------------------------------------------
+    // 10. Spid3r v1.1.1 Features: Streaming/SSE Responses & Graceful Queue Daemon
+    // ------------------------------------------------------------------------
+    let st_res = send_stream(list("chunk-1", "chunk-2"), "text/plain; charset=utf-8", 200);
+    let st_http = st_res.to_http();
+    assert_eq(st_http["status"], 200, "stream response status is 200");
+    assert_true(st_http.has("stream"), "stream response emits http_stream map");
+    assert_eq(st_http["headers"]["content-type"], "text/plain; charset=utf-8", "stream content-type preserved");
+
+    let sse_res = send_sse(fn() { return null; });
+    let sse_http = sse_res.to_http();
+    assert_true(sse_http.has("stream"), "SSE response emits http_stream map");
+    assert_eq(sse_http["headers"]["content-type"], "text/event-stream; charset=utf-8", "SSE content-type");
+    assert_eq(sse_http["headers"]["cache-control"], "no-cache", "SSE cache-control");
+
+    request_shutdown();
+    let daemon_done = Queue.work_daemon(10);
+    reset_shutdown();
+    assert_eq(daemon_done, 0, "work_daemon exits immediately when shutdown_requested()");
+
+    // Missing view must throw (visible HTTP 500 via ErrorRenderer) instead of
+    // silently returning an invisible HTML comment with HTTP 200.
+    let missing_threw = false;
+    try {
+        views().render("definitely_does_not_exist_xyz", {});
+    } catch (ve) {
+        missing_threw = string(ve).contains("not found");
+    }
+    assert_true(missing_threw, "missing BD view throws diagnostic error");
+
+    println("  [PASS] test_v111_streaming_sse_and_graceful_daemon");
 
     db().close();
     println("=== All Modern MVC & DX Tests Passed! ===\n");

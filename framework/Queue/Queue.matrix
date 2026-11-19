@@ -256,6 +256,25 @@ public class QueueManager {
         return done;
     }
 
+    // Long-running worker loop: drains jobs continuously and sleeps `poll_ms`
+    // while idle, exiting cleanly when SIGINT/SIGTERM triggers shutdown_requested().
+    public fn work_daemon(self, poll_ms: int = 500, queue: string = "") -> int {
+        let interval = poll_ms;
+        if interval < 10 {
+            interval = 10;
+        }
+        let done = 0;
+        while not shutdown_requested() {
+            let ran = self.run_next(queue);
+            if ran {
+                done = done + 1;
+            } else {
+                sleep_ms(interval);
+            }
+        }
+        return done;
+    }
+
     // Invoke a registered handler.
     fn dispatch(self, handler: string, data) -> bool {
         if not self.handlers.has(handler) {

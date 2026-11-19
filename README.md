@@ -24,7 +24,7 @@ flowchart LR
     Boot --> Auth["2. Stateless JWT / Auth (0 DB Hits)"]
     Auth --> CSRF{"3. Static / CSRF"}
     CSRF --> GlobalMW["4. Onion Middleware Pipeline"]
-    GlobalMW --> Router{"5. O(1) & Prefix Router<br/>(133k ops/sec)"}
+    GlobalMW --> Router{"5. O(1) & Prefix Router<br/>(153k VM / 200k AOT)"}
     Router --> Handler["6. Controller / Handler"]
     Handler --> ORM[("Zero-Boilerplate ORM<br/>(Model, QB, SQLite/PG/MySQL)")]
     Handler --> Coerce["7. Return Auto-Coercion<br/>(Map->JSON, String->HTML)"]
@@ -97,23 +97,27 @@ app.post("/api/posts", (req, res) => {
 app.listen(8000);
 ```
 
-Run the self-contained full-stack Task API example with zero setup:
+Run the self-contained full-stack Task API example with zero setup (Bytecode VM is default in Spid3r v1.1.1+):
 
 ```bash
-SPID3R_DB_DRIVER=sqlite spid3r run --engine vm examples/task-api/main.matrix
+SPID3R_PATH=. SPID3R_DB_DRIVER=sqlite spid3r run examples/task-api/main.matrix
+# Or compile to a standalone native binary with LLVM 23 AOT:
+SPID3R_PATH=. spid3r build --release examples/task-api/main.matrix -o task-api && ./task-api
 ```
 
 ## Magic CLI
 
 ```bash
-spid3r magic serve                    # start the server (optional --port N)
+spid3r magic serve                    # start HTTP/HTTPS server (--port N, --tls --cert C --key K)
+spid3r magic build --release          # compile standalone LLVM-23 AOT native binary (-o dist/server, --bundle)
 spid3r magic test                     # auto-discover and run all 17 test suites
 spid3r magic route:list               # list registered routes and names
 spid3r magic migrate                  # run pending migrations (auto-synced)
+spid3r magic migrate:sync             # rebuild database/migrations/registry.matrix
 spid3r magic migrate:rollback         # roll back the last batch
 spid3r magic migrate:status           # show migration status
 spid3r magic db:seed                  # seed the database
-spid3r magic queue:work               # drain queued jobs (queue:work --once = a single job)
+spid3r magic queue:work               # drain queued jobs (--once = 1 job, --daemon = graceful loop)
 spid3r magic cache:clear              # flush the application cache store
 spid3r magic key:generate             # generate a random 256-bit APP_KEY in .env
 spid3r magic make:controller <Name>   # scaffold a modern MVC controller
@@ -128,37 +132,39 @@ spid3r magic make:migration <name>    # scaffold a migration (auto-registered)
 
 | Area | Highlights |
 |---|---|
-| **Single-import barrel** | `import "framework/Web";` exports `web()`, `router()`, `model()`, `route()`, `abort()`, `db()`, `schema()`, `cache()`, `auth()`, `jwt()`, `views()`, `test_client()` |
-| **HTTP kernel** | keep-alive server loop, graceful shutdown (Ctrl+C), static asset ETag (`304 Not Modified`), method spoofing (`_method` / `X-HTTP-Method-Override`), auto-coercion of map/list/string returns |
-| **O(1) & Prefix-Indexed Router** | **133,333 ops/sec** on VM; O(1) hash lookup for static routes, 2-level segment + literal-prefix indexing for `:param` / `{param}` routes, `*wildcard` catch-alls, `app.mount(prefix, sub_router)`, reverse routing via `route(name, params)` |
+| **Single-import barrel** | `import "framework/Web";` exports `web()`, `router()`, `model()`, `route()`, `abort()`, `send_stream()`, `send_sse()`, `db()`, `schema()`, `cache()`, `auth()`, `jwt()`, `views()`, `test_client()` |
+| **HTTP/HTTPS kernel** | HTTP/1.1 keep-alive server loop, native TLS (`app.listen_tls` / `magic serve --tls`), chunked streaming &amp; SSE (`res.stream` / `res.sse`), graceful shutdown (Ctrl+C), static asset ETag (`304 Not Modified`), method spoofing, auto-coercion, and auto project-root detection for AOT binaries |
+| **O(1) & Prefix-Indexed Router** | **153,846 ops/sec** (VM) / **200,000 ops/sec** (AOT); O(1) hash lookup for static routes, 2-level segment + literal-prefix indexing for `:param` / `{param}` routes, `*wildcard` catch-alls, `app.mount(prefix, sub_router)`, reverse routing via `route(name, params)` |
 | **True Onion Middleware** | `(req, next) => { let res = next(req); ... return res; }` closures and class middleware; built-ins: `auth`, `guest`, `cors`, `logger`, `etag`, `request_id`, `throttle:60,60` (with `X-RateLimit-*` headers) |
 | **Zero-Boilerplate ORM** | `model("table", opts)` repository + `Model` base class, `casts` (`int`, `float`, `bool`, `string`, `json`), `hidden` column stripping, dirty tracking (`is_dirty()`), `find_or_fail()`, `first_or_fail()`, `update_or_create()`, batched eager loading (`load_has_many` / `load_belongs_to`), mutex-serialized transactions |
 | **Validation & Coercion** | `req.validate_or_fail(rules)` returns coerced values or aborts with 422 JSON; rules include `required`, `nullable`, `int`, `float`, `bool`, `email`, `url`, `uuid`, `regex`, `between`, `in`, `unique:table,col`, `exists:table,col` |
 | **Auth, JWT & Sessions** | DB-backed sessions + stateless HS256 `Jwt.sign` / `Jwt.verify` (`Bearer` tokens verified with zero DB hits), `req.session()` key-value store + one-time `flash()` messages, HMAC-signed cookies (`res.signed_cookie` / `req.signed_cookie`), multipart file uploads (`req.file()`, `req.store_file()`) |
 | **SpiderBD v2 Views** | Pre-compiled template line cache with `file_mtime` invalidation, `@if(a == b and c >= 10)` / `@elif(...)` / `@else`, inline `@if(...)...@endif`, `@foreach` with `loop` metadata (`index`, `iteration`, `first`, `last`, `count`), `@csrf`, `@method('PUT')`, `views().share(k, v)` |
 | **Testing (`TestClient`)** | Fluent integration client (`app.test_client().acting_as(user).post_json(...).assert_created().assert_json_path(...)`) |
-| **Thread-Safe Core** | Mutex-guarded `MemoryCacheStore` (with bounded capacity eviction), mutex-guarded `Log` file appends, and mutex-serialized `DatabaseManager.transaction()` |
+| **Thread-Safe Core** | Mutex-guarded `MemoryCacheStore` (bounded eviction), O(1) locked streaming appends in `Log` (`file_open` + `file_lock`) and `Storage.append()`, plain-TCP SMTP in `Mail`, graceful `Queue.work_daemon()`, mutex-serialized `DatabaseManager.transaction()`, and `spid3r.ini.example` runtime guardrails |
 
 ## Performance
 
-See [benchmarks/RESULTS.md](benchmarks/RESULTS.md) for methodology and full breakdown:
+See [benchmarks/RESULTS.md](benchmarks/RESULTS.md) for methodology and full breakdown (measured 2026-11-20 on Spid3r `v1.1.1`):
 
-- **Route matching (200 routes, `:param` capture):** **133,333 ops/sec** on `--engine vm` (153× faster than the legacy linear router).
-- **JSON round-trip:** **333,333 ops/sec** on `--engine vm`.
-- **Query compilation:** **20,547 ops/sec** on `--engine vm`.
-- **SpiderBD v2 template rendering:** **9,569 ops/sec** on `--engine vm`.
+- **Route matching (200 routes, `:param` capture):** **153,846 ops/sec** (VM default) / **200,000 ops/sec** (LLVM-23 AOT `--release`).
+- **JSON round-trip:** **666,666 ops/sec** (VM) / **1,000,000 ops/sec** (AOT).
+- **Query compilation:** **21,428 ops/sec** (VM) / **27,027 ops/sec** (AOT).
+- **SpiderBD v2 template rendering:** **9,661 ops/sec** (VM) / **12,500 ops/sec** (AOT).
 
-Serve under the bytecode VM in production:
+Serve in production (Bytecode VM is default in Spid3r v1.1.1+, or compile to a native AOT binary):
 
 ```bash
-spid3r run --engine vm server.matrix
+SPID3R_HOST=0.0.0.0 spid3r magic serve --port 8000
+SPID3R_HOST=0.0.0.0 spid3r magic serve --port 8443 --tls --cert cert.pem --key key.pem
+spid3r magic build --release --bundle -o dist/server.exe server.matrix && ./dist/server.exe --port 8000
 ```
 
 ## Testing
 
 ```bash
-SPID3R_DB_DRIVER=sqlite spid3r magic test               # 17/17 suites (tree-walk)
-SPID3R_DB_DRIVER=sqlite spid3r magic test --engine=vm   # 17/17 suites (bytecode VM)
+SPID3R_DB_DRIVER=sqlite spid3r magic test                 # 17/17 suites (bytecode VM default)
+SPID3R_DB_DRIVER=sqlite spid3r magic test --engine=tree   # 17/17 suites (tree-walk oracle)
 ```
 
 ## License

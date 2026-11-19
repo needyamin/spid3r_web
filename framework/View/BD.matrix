@@ -157,7 +157,12 @@ public class BD {
         let file_path = self.resolve_view_path(view_name);
         let lines = self.get_compiled_lines(file_path);
         if lines == null {
-            return "<!-- BD Error: View '" + view_name + "' not found at '" + file_path + "' -->";
+            let cur_dir = ".";
+            let cr = cwd();
+            if cr.is_ok() {
+                cur_dir = string(cr.unwrap());
+            }
+            throw "BD Error: View '" + view_name + "' not found at '" + file_path + "' (cwd: " + cur_dir + ")";
         }
 
         let out_lines = list();

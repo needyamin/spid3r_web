@@ -28,10 +28,12 @@ public class Response {
     public let status_code;
     public let headers;
     public let body;
+    public let stream_source;
 
     fn new(body = "", status_code: int = 200) {
         self.body = string(body);
         self.status_code = status_code;
+        self.stream_source = null;
         // Sensible security headers on every response. CORS headers are
         // intentionally NOT global defaults: blanket access-control-allow-*
         // should only be set by CorsMiddleware / API routing, never on
@@ -180,7 +182,32 @@ public class Response {
         return self;
     }
 
+    public fn stream(self, source, content_type: string = "application/octet-stream", status: int = 0) {
+        if status > 0 {
+            self.status_code = status;
+        }
+        self.body = "";
+        self.stream_source = source;
+        self.header("content-type", content_type);
+        return self;
+    }
+
+    public fn sse(self, source, status: int = 0) {
+        if status > 0 {
+            self.status_code = status;
+        }
+        self.body = "";
+        self.stream_source = source;
+        self.header("content-type", "text/event-stream; charset=utf-8");
+        self.header("cache-control", "no-cache");
+        self.header("connection", "keep-alive");
+        return self;
+    }
+
     public fn to_http(self) {
+        if self.stream_source != null {
+            return http_stream(self.status_code, self.headers, self.stream_source);
+        }
         return http_response(self.status_code, self.headers, self.body);
     }
 }
@@ -222,4 +249,14 @@ public fn redirect(url: string, status: int = 302) {
     let res = new Response("", status);
     res.header("location", url);
     return res;
+}
+
+public fn stream(source, content_type: string = "application/octet-stream", status: int = 200) {
+    let res = new Response("", status);
+    return res.stream(source, content_type);
+}
+
+public fn sse(source, status: int = 200) {
+    let res = new Response("", status);
+    return res.sse(source);
 }

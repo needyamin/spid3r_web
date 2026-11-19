@@ -134,15 +134,20 @@ public class LocalDisk {
         let path = self.full(rel);
         self.ensure_root();
         self.ensure_parent(path);
-        let existing = "";
-        if file_exists(path) {
-            let res = read_file(path);
-            if res.is_ok() {
-                existing = res.unwrap();
-            }
+        let open_res = file_open(path, "a");
+        if open_res.is_err() {
+            return false;
         }
-        let res2 = write_file(path, existing + string(contents));
-        return res2.is_ok();
+        let fh = open_res.unwrap();
+        let ok = false;
+        try {
+            let w = file_write(fh, string(contents));
+            file_flush(fh);
+            ok = w.is_ok();
+        } finally {
+            file_close(fh);
+        }
+        return ok;
     }
 
     // Read; returns null when missing/unreadable.
