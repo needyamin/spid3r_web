@@ -15,7 +15,7 @@
   <!-- Title Banner -->
   <rect x="20" y="18" width="940" height="60" rx="10" fill="url(#dbHeaderGrad)"/>
   <text x="45" y="54" fill="#a5f3fc" font-size="22" font-weight="800">🗄️ MVC &amp; Zero-Boilerplate ORM Architecture</text>
-  <text x="500" y="54" fill="#e0f2fe" font-size="14" font-weight="500">1-Line Model Repositories · Multi-DB Dialects</text>
+  <text x="555" y="54" fill="#e0f2fe" font-size="14" font-weight="500">1-Line Model Repositories · Multi-DB Dialects</text>
 
   <!-- Column 1: Controller & Model Definition -->
   <g filter="url(#dbShadow)">
@@ -35,13 +35,13 @@
 
     <!-- Model Features -->
     <text x="45" y="325" fill="#0f172a" font-size="12" font-weight="700">Model Features:</text>
-    <text x="45" y="348" fill="#475569" font-size="11.5">• <strong>Casts:</strong> auto string/int/bool/json</text>
-    <text x="45" y="370" fill="#475569" font-size="11.5">• <strong>Hidden:</strong> auto-stripped on to_map()</text>
-    <text x="45" y="392" fill="#475569" font-size="11.5">• <strong>Dirty Tracking:</strong> is_dirty(), get_dirty()</text>
-    <text x="45" y="414" fill="#475569" font-size="11.5">• <strong>Eager Loading:</strong> load_has_many()</text>
-    <text x="45" y="436" fill="#475569" font-size="11.5">• <strong>CRUD Helpers:</strong> find_or_fail(id)</text>
-    <text x="45" y="458" fill="#475569" font-size="11.5">• <strong>Pagination:</strong> paginate(page, per_page)</text>
-    <text x="45" y="480" fill="#475569" font-size="11.5">• <strong>Upsert:</strong> update_or_create()</text>
+    <text x="45" y="348" fill="#475569" font-size="11.5">• <tspan font-weight="700">Casts:</tspan> auto string/int/bool/json</text>
+    <text x="45" y="370" fill="#475569" font-size="11.5">• <tspan font-weight="700">Hidden:</tspan> auto-stripped on to_map()</text>
+    <text x="45" y="392" fill="#475569" font-size="11.5">• <tspan font-weight="700">Dirty Tracking:</tspan> is_dirty(), get_dirty()</text>
+    <text x="45" y="414" fill="#475569" font-size="11.5">• <tspan font-weight="700">Eager Loading:</tspan> load_has_many()</text>
+    <text x="45" y="436" fill="#475569" font-size="11.5">• <tspan font-weight="700">CRUD Helpers:</tspan> find_or_fail(id)</text>
+    <text x="45" y="458" fill="#475569" font-size="11.5">• <tspan font-weight="700">Pagination:</tspan> paginate(page, per_page)</text>
+    <text x="45" y="480" fill="#475569" font-size="11.5">• <tspan font-weight="700">Upsert:</tspan> update_or_create()</text>
     <text x="45" y="502" fill="#15803d" font-size="11.5" font-weight="700">✓ Zero boiler-plate schema mapping</text>
   </g>
 
@@ -57,10 +57,10 @@
     <!-- QueryBuilder Box -->
     <rect x="357" y="145" width="266" height="135" rx="6" fill="#ffffff" stroke="#7dd3fc" stroke-width="1.2"/>
     <text x="370" y="170" fill="#0369a1" font-size="12" font-weight="700">Fluent QueryBuilder API</text>
-    <text x="370" y="195" fill="#334155" font-size="11.5">• <code>DB.table("posts")</code></text>
-    <text x="370" y="215" fill="#334155" font-size="11.5">• <code>.where("active", 1)</code></text>
-    <text x="370" y="235" fill="#334155" font-size="11.5">• <code>.whereIn("cat_id", [1,2,3])</code></text>
-    <text x="370" y="255" fill="#334155" font-size="11.5">• <code>.join("users", "posts.uid", "users.id")</code></text>
+    <text x="370" y="195" fill="#334155" font-size="11.5">• <tspan font-family="Cascadia Code, Consolas, monospace" font-size="10.5" font-weight="600">DB.table("posts")</tspan></text>
+    <text x="370" y="215" fill="#334155" font-size="11.5">• <tspan font-family="Cascadia Code, Consolas, monospace" font-size="10.5" font-weight="600">.where("active", 1)</tspan></text>
+    <text x="370" y="235" fill="#334155" font-size="11.5">• <tspan font-family="Cascadia Code, Consolas, monospace" font-size="10.5" font-weight="600">.whereIn("cat_id", [1,2,3])</tspan></text>
+    <text x="370" y="255" fill="#334155" font-size="11.5">• <tspan font-family="Cascadia Code, Consolas, monospace" font-size="10.5" font-weight="600">.join("users", "posts.uid", "users.id")</tspan></text>
 
     <!-- Mutex Transactions -->
     <rect x="357" y="295" width="266" height="110" rx="6" fill="#ffffff" stroke="#7dd3fc" stroke-width="1.2"/>
@@ -73,7 +73,7 @@
     <!-- Schema Builder -->
     <rect x="357" y="420" width="266" height="105" rx="6" fill="#ffffff" stroke="#7dd3fc" stroke-width="1.2"/>
     <text x="370" y="445" fill="#0369a1" font-size="12" font-weight="700">Schema &amp; Migrations</text>
-    <text x="370" y="467" fill="#475569" font-size="11">• <code>Schema.create("posts", t =&gt; ...)</code></text>
+    <text x="370" y="467" fill="#475569" font-size="11">• <tspan font-family="Cascadia Code, Consolas, monospace" font-size="10.5" font-weight="600">Schema.create("posts", t =&gt; ...)</tspan></text>
     <text x="370" y="485" fill="#475569" font-size="11">• Auto-discovering migration runner</text>
     <text x="370" y="503" fill="#475569" font-size="11">• Rollback batches tracking</text>
   </g>

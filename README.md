@@ -29,7 +29,7 @@ spid3r magic migrate
 spid3r magic serve          # http://127.0.0.1:8000 (health: /health)
 ```
 
-```spid3r
+```js
 import "framework/Web";
 
 let app = web();
@@ -43,6 +43,12 @@ app.post("/api/posts", (req, res) => {
 
 app.listen(8000);
 ```
+
+> [!TIP]
+> New here? The full guide — [docs/developer-docs.html](docs/developer-docs.html) — covers routing, models, auth, views and testing with copy-paste examples. Or run a complete task API without opening a port: `SPID3R_PATH=. spid3r run examples/task-api/main.matrix`
+
+> [!WARNING]
+> Never commit `.env` — it holds your `APP_KEY` signing secret. Generate one with `spid3r magic key:generate`; production boot fails closed without it.
 
 ## Features
 

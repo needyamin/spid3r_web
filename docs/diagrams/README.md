@@ -1,68 +1,35 @@
 # Spid3rWeb — Architectural Diagrams 🎨
 
-This directory contains visual architecture diagrams and technical schematics for the **Spid3rWeb MVC Framework**. Each diagram is available as an optimized, standalone vector SVG (`.svg`) and as editable Mermaid source code (`.mmd`).
+Seven technical schematics for the Spid3rWeb MVC framework. Every diagram ships as a standalone vector **SVG** (used on this page and in `developer-docs.html`) plus an editable **Mermaid** source (`.mmd`). All numbers match `benchmarks/RESULTS.md` and `developer-docs.html` — update both together if they change.
 
----
+| # | Diagram | SVG | Mermaid | What it shows |
+|---|---------|-----|---------|---------------|
+| 1 | Architecture Overview | [architecture-overview.svg](architecture-overview.svg) | [.mmd](architecture-overview.mmd) | 3-tier separation: `app/` → `framework/` → Spid3r Rust runtime |
+| 2 | Request Lifecycle | [request-lifecycle.svg](request-lifecycle.svg) | [.mmd](request-lifecycle.mmd) | 9 steps from TCP socket to HTTP response (`Application.handle_request`) |
+| 3 | Onion Middleware | [onion-middleware.svg](onion-middleware.svg) | [.mmd](onion-middleware.mmd) | Dual-pass wrapping: `(req, next) => next(req)` |
+| 4 | O(1) & Prefix Router | [router-architecture.svg](router-architecture.svg) | [.mmd](router-architecture.mmd) | Static hash → prefix buckets → wildcards · 153,846 ops/s VM / 200k AOT |
+| 5 | MVC & ORM Flow | [mvc-orm-flow.svg](mvc-orm-flow.svg) | [.mmd](mvc-orm-flow.mmd) | 1-line models, auto-casts, QueryBuilder, transactions, native drivers |
+| 6 | Dual Authentication | [auth-flow.svg](auth-flow.svg) | [.mmd](auth-flow.mmd) | Stateless JWT (0 DB queries) vs session cookies + 2-layer CSRF |
+| 7 | Fluent TestClient | [testclient-flow.svg](testclient-flow.svg) | [.mmd](testclient-flow.mmd) | In-memory testing: `acting_as()`, kernel traversal, JSON assertions |
 
-## Diagram Index
+## Preview
 
-| Diagram | SVG File | Mermaid Source | Description |
-|---|---|---|---|
-| **1. Architecture Overview** | [architecture-overview.svg](architecture-overview.svg) | [architecture-overview.mmd](architecture-overview.mmd) | 3-tier separation: Spid3r Rust Runtime, Spid3rWeb Framework Core, and User Application layer. |
-| **2. Request Lifecycle** | [request-lifecycle.svg](request-lifecycle.svg) | [request-lifecycle.mmd](request-lifecycle.mmd) | Complete 9-step request execution from TCP socket to HTTP response. |
-| **3. True Onion Middleware** | [onion-middleware.svg](onion-middleware.svg) | [onion-middleware.mmd](onion-middleware.mmd) | Inbound and outbound dual-pass middleware wrapping with `(req, next) => next(req)`. |
-| **4. O(1) & Prefix Router** | [router-architecture.svg](router-architecture.svg) | [router-architecture.mmd](router-architecture.mmd) | 153,846 ops/sec (VM) / 200,000 (AOT) routing pipeline: static hash map, 2-level prefix buckets, and wildcards. |
-| **5. MVC & Zero-Boilerplate ORM** | [mvc-orm-flow.svg](mvc-orm-flow.svg) | [mvc-orm-flow.mmd](mvc-orm-flow.mmd) | Models, auto-casts, QueryBuilder, mutex-serialized transactions, and native DB drivers. |
-| **6. Dual Authentication** | [auth-flow.svg](auth-flow.svg) | [auth-flow.mmd](auth-flow.mmd) | Stateless HS256 JWT (0 DB queries) vs Stateful Session Cookies and 2-layer CSRF protection. |
-| **7. Fluent TestClient** | [testclient-flow.svg](testclient-flow.svg) | [testclient-flow.mmd](testclient-flow.mmd) | In-memory integration testing, stateless `acting_as()` JWT auth, and chainable JSON dot-path assertions. |
+| | |
+|---|---|
+| ![Architecture](architecture-overview.svg) | ![Lifecycle](request-lifecycle.svg) |
+| ![Middleware](onion-middleware.svg) | ![Router](router-architecture.svg) |
+| ![ORM](mvc-orm-flow.svg) | ![Auth](auth-flow.svg) |
+| ![TestClient](testclient-flow.svg) | |
 
----
+## Editing a diagram
 
-## 1. Architecture Overview
-Shows how user application code (`app/`) interacts with the Spid3rWeb framework core (`framework/`) and the underlying Spid3r native Rust runtime binary.
+1. Change the `.mmd` source (paste it into the [Mermaid Live Editor](https://mermaid.live) for a quick preview).
+2. Re-export the SVG so it stays in sync with the source:
 
-![Architecture Overview](architecture-overview.svg)
+   ```bash
+   npx @mermaid-js/mermaid-cli -i <name>.mmd -o <name>.svg -b white
+   ```
 
----
+3. Keep labels short — long strings wrap poorly and break layout at small sizes.
 
-## 2. Request Lifecycle
-Details every step of `Application.handle_request(raw_req)`:
-
-![Request Lifecycle](request-lifecycle.svg)
-
----
-
-## 3. True Onion Middleware
-Visualizes how the `Pipeline` wraps each middleware layer around downstream handlers so logic can execute before and after the route handler:
-
-![Onion Middleware Pipeline](onion-middleware.svg)
-
----
-
-## 4. O(1) & Prefix-Indexed Router
-Shows the multi-stage router lookup algorithm that achieves **153,846 ops/sec** on the bytecode VM (200,000 on LLVM AOT; see `benchmarks/RESULTS.md`):
-
-![Router Architecture](router-architecture.svg)
-
----
-
-## 5. MVC & Zero-Boilerplate ORM Flow
-Illustrates model definitions, automatic type casting, dirty tracking, QueryBuilder compilation, and native database driver integration:
-
-![MVC & ORM Flow](mvc-orm-flow.svg)
-
----
-
-## 6. Dual Authentication Flow
-Contrasts zero-database-hit stateless JWT Bearer token authentication with stateful session cookies and CSRF protection:
-
-![Dual Authentication Flow](auth-flow.svg)
-
----
-
-## 7. Fluent TestClient Architecture
-Details the in-process HTTP execution flow bypassing TCP sockets, fluent request construction with `acting_as(user)`, full kernel traversal, and chained JSON assertions:
-
-![Fluent TestClient Flow](testclient-flow.svg)
-
-
+> **Note:** SVGs must contain only SVG elements inside `<text>` (use `<tspan>`, never HTML tags like `<code>`/`<strong>` — browsers silently drop them when the SVG is embedded via `<img>`).

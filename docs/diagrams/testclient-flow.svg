@@ -40,12 +40,12 @@
 
     <!-- Features list -->
     <text x="45" y="325" fill="#0f172a" font-size="12" font-weight="700">Capabilities:</text>
-    <text x="45" y="348" fill="#475569" font-size="11.5">• <strong>acting_as(user):</strong> mints JWT HS256</text>
-    <text x="45" y="370" fill="#475569" font-size="11.5">• <strong>with_token(jwt):</strong> Bearer token</text>
-    <text x="45" y="392" fill="#475569" font-size="11.5">• <strong>with_cookie(k, v):</strong> test sessions</text>
-    <text x="45" y="414" fill="#475569" font-size="11.5">• <strong>post_json() / get():</strong> clean verbs</text>
-    <text x="45" y="436" fill="#475569" font-size="11.5">• <strong>put_json() / patch_json()</strong></text>
-    <text x="45" y="458" fill="#475569" font-size="11.5">• <strong>delete():</strong> restful testing</text>
+    <text x="45" y="348" fill="#475569" font-size="11.5">• <tspan font-weight="700">acting_as(user):</tspan> mints JWT HS256</text>
+    <text x="45" y="370" fill="#475569" font-size="11.5">• <tspan font-weight="700">with_token(jwt):</tspan> Bearer token</text>
+    <text x="45" y="392" fill="#475569" font-size="11.5">• <tspan font-weight="700">with_cookie(k, v):</tspan> test sessions</text>
+    <text x="45" y="414" fill="#475569" font-size="11.5">• <tspan font-weight="700">post_json() / get():</tspan> clean verbs</text>
+    <text x="45" y="436" fill="#475569" font-size="11.5">• <tspan font-weight="700">put_json() / patch_json()</tspan></text>
+    <text x="45" y="458" fill="#475569" font-size="11.5">• <tspan font-weight="700">delete():</tspan> restful testing</text>
     <text x="45" y="490" fill="#7c3aed" font-size="11.5" font-weight="700">✓ No socket binding / No ports</text>
   </g>
 
@@ -110,13 +110,13 @@
 
     <!-- Assertion Helpers -->
     <text x="685" y="325" fill="#0f172a" font-size="12" font-weight="700">Available Assertions:</text>
-    <text x="685" y="348" fill="#475569" font-size="11.5">• <strong>assert_ok():</strong> 200 OK</text>
-    <text x="685" y="370" fill="#475569" font-size="11.5">• <strong>assert_created():</strong> 201 Created</text>
-    <text x="685" y="392" fill="#475569" font-size="11.5">• <strong>assert_unauthorized():</strong> 401</text>
-    <text x="685" y="414" fill="#475569" font-size="11.5">• <strong>assert_unprocessable():</strong> 422</text>
-    <text x="685" y="436" fill="#475569" font-size="11.5">• <strong>assert_json_path(path, val)</strong></text>
-    <text x="685" y="458" fill="#475569" font-size="11.5">• <strong>assert_see(str) / dont_see(str)</strong></text>
-    <text x="685" y="480" fill="#475569" font-size="11.5">• <strong>assert_header(key, val)</strong></text>
+    <text x="685" y="348" fill="#475569" font-size="11.5">• <tspan font-weight="700">assert_ok():</tspan> 200 OK</text>
+    <text x="685" y="370" fill="#475569" font-size="11.5">• <tspan font-weight="700">assert_created():</tspan> 201 Created</text>
+    <text x="685" y="392" fill="#475569" font-size="11.5">• <tspan font-weight="700">assert_unauthorized():</tspan> 401</text>
+    <text x="685" y="414" fill="#475569" font-size="11.5">• <tspan font-weight="700">assert_unprocessable():</tspan> 422</text>
+    <text x="685" y="436" fill="#475569" font-size="11.5">• <tspan font-weight="700">assert_json_path(path, val)</tspan></text>
+    <text x="685" y="458" fill="#475569" font-size="11.5">• <tspan font-weight="700">assert_see(str) / dont_see(str)</tspan></text>
+    <text x="685" y="480" fill="#475569" font-size="11.5">• <tspan font-weight="700">assert_header(key, val)</tspan></text>
     <text x="685" y="502" fill="#15803d" font-size="11.5" font-weight="700">✓ Chainable fluent syntax</text>
   </g>
 </svg>

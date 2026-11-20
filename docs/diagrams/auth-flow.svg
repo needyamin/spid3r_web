@@ -24,8 +24,8 @@
   <g filter="url(#aShadow)">
     <rect x="50" y="98" width="880" height="74" rx="8" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.5"/>
     <text x="70" y="128" fill="#0f172a" font-size="14" font-weight="700">Request Inspection:</text>
-    <text x="220" y="128" fill="#475569" font-size="13">Check <code>Authorization: Bearer &lt;token&gt;</code> header vs <code>Cookie: spid3r_session=&lt;id&gt;</code></text>
-    <text x="70" y="154" fill="#64748b" font-size="12">Request-scoped <code>req.auth = new AuthManager()</code> guarantees thread isolation across worker threads.</text>
+    <text x="220" y="128" fill="#475569" font-size="13">Check <tspan font-family="Cascadia Code, Consolas, monospace" font-size="10.5" font-weight="600">Authorization: Bearer &lt;token&gt;</tspan> header vs <tspan font-family="Cascadia Code, Consolas, monospace" font-size="10.5" font-weight="600">Cookie: spid3r_session=&lt;id&gt;</tspan></text>
+    <text x="70" y="154" fill="#64748b" font-size="12">Request-scoped <tspan font-family="Cascadia Code, Consolas, monospace" font-size="10.5" font-weight="600">req.auth = new AuthManager()</tspan> guarantees thread isolation across worker threads.</text>
   </g>
 
   <!-- Flow Branches -->
@@ -54,11 +54,11 @@
     <text x="70" y="378" fill="#64748b" font-size="11">• Constant-time comparison prevents timing attacks.</text>
 
     <text x="70" y="408" fill="#0f172a" font-size="12.5" font-weight="700">3. Expiration &amp; Claims Validation:</text>
-    <text x="70" y="428" fill="#475569" font-size="12">• Verifies <code>exp &gt; current_time()</code></text>
-    <text x="70" y="446" fill="#475569" font-size="12">• Extracts payload: <code>sub</code>, <code>role</code>, custom claims</text>
+    <text x="70" y="428" fill="#475569" font-size="12">• Verifies <tspan font-family="Cascadia Code, Consolas, monospace" font-size="10.5" font-weight="600">exp &gt; current_time()</tspan></text>
+    <text x="70" y="446" fill="#475569" font-size="12">• Extracts payload: <tspan font-family="Cascadia Code, Consolas, monospace" font-size="10.5" font-weight="600">sub</tspan>, <tspan font-family="Cascadia Code, Consolas, monospace" font-size="10.5" font-weight="600">role</tspan>, custom claims</text>
 
     <rect x="70" y="470" width="375" height="60" rx="8" fill="#ffffff" stroke="#bbf7d0" stroke-width="1.5"/>
-    <text x="85" y="494" fill="#15803d" font-size="12" font-weight="700">Result: <code>req.auth.user()</code> populated instantly</text>
+    <text x="85" y="494" fill="#15803d" font-size="12" font-weight="700">Result: <tspan font-family="Cascadia Code, Consolas, monospace" font-size="10.5" font-weight="600">req.auth.user()</tspan> populated instantly</text>
     <text x="85" y="514" fill="#64748b" font-size="11">Zero latency overhead, perfect for microservices &amp; mobile.</text>
   </g>
 
@@ -66,7 +66,7 @@
   <g filter="url(#aShadow)">
     <rect x="515" y="210" width="415" height="340" rx="10" fill="#eff6ff" stroke="#bfdbfe" stroke-width="2"/>
     <rect x="515" y="210" width="415" height="36" rx="10" fill="#dbeafe"/>
-    <text x="535" y="234" fill="#1e40af" font-size="13.5" font-weight="800">PATH B: STATEFUL SESSIONS (WEB / HTML)</text>
+    <text x="535" y="234" fill="#1e40af" font-size="13.5" font-weight="800">PATH B: STATEFUL SESSIONS (WEB)</text>
     <rect x="800" y="216" width="120" height="24" rx="12" fill="#2563eb"/>
     <text x="860" y="232" fill="#ffffff" font-size="11" font-weight="700" text-anchor="middle">SESSION + CSRF</text>
 
@@ -74,17 +74,17 @@
     <text x="535" y="288" fill="#475569" font-size="12">Find session ID in Database or Memory cache</text>
 
     <text x="535" y="318" fill="#0f172a" font-size="12.5" font-weight="700">2. Dual-Layer CSRF Guard:</text>
-    <text x="535" y="338" fill="#475569" font-size="11.5">• <strong>Layer 1:</strong> Validates <code>Origin</code> header vs <code>Host</code></text>
-    <text x="535" y="358" fill="#475569" font-size="11.5">• <strong>Layer 2:</strong> Verifies per-session <code>_csrf</code> token</text>
+    <text x="535" y="338" fill="#475569" font-size="11.5">• <tspan font-weight="700">Layer 1:</tspan> Validates <tspan font-family="Cascadia Code, Consolas, monospace" font-size="10.5" font-weight="600">Origin</tspan> header vs <tspan font-family="Cascadia Code, Consolas, monospace" font-size="10.5" font-weight="600">Host</tspan></text>
+    <text x="535" y="358" fill="#475569" font-size="11.5">• <tspan font-weight="700">Layer 2:</tspan> Verifies per-session <tspan font-family="Cascadia Code, Consolas, monospace" font-size="10.5" font-weight="600">_csrf</tspan> token</text>
     <text x="535" y="378" fill="#dc2626" font-size="11">• Aborts with 403 Forbidden if mismatched</text>
 
     <text x="535" y="408" fill="#0f172a" font-size="12.5" font-weight="700">3. Session Storage &amp; Flash Messages:</text>
-    <text x="535" y="428" fill="#475569" font-size="12">• <code>req.session().put(k, v)</code> / <code>get(k)</code></text>
-    <text x="535" y="446" fill="#475569" font-size="12">• <code>req.session().flash("msg", "Saved!")</code> (cleared next req)</text>
+    <text x="535" y="428" fill="#475569" font-size="12">• <tspan font-family="Cascadia Code, Consolas, monospace" font-size="10.5" font-weight="600">req.session().put(k, v)</tspan> / <tspan font-family="Cascadia Code, Consolas, monospace" font-size="10.5" font-weight="600">get(k)</tspan></text>
+    <text x="535" y="446" fill="#475569" font-size="12">• <tspan font-family="Cascadia Code, Consolas, monospace" font-size="10.5" font-weight="600">req.session().flash("msg", "Saved!")</tspan> (cleared next req)</text>
 
     <rect x="535" y="470" width="375" height="60" rx="8" fill="#ffffff" stroke="#93c5fd" stroke-width="1.5"/>
     <text x="550" y="494" fill="#1e40af" font-size="12" font-weight="700">Result: Auto-committed upon response</text>
-    <text x="550" y="514" fill="#64748b" font-size="11">Emits signed <code>Set-Cookie: spid3r_session=...; HttpOnly; SameSite</code></text>
+    <text x="550" y="514" fill="#64748b" font-size="11">Emits signed <tspan font-family="Cascadia Code, Consolas, monospace" font-size="10.5" font-weight="600">Set-Cookie: spid3r_session=...; HttpOnly; SameSite</tspan></text>
   </g>
 </svg>
 

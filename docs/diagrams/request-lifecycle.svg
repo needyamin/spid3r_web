@@ -18,7 +18,7 @@
   <!-- Title Banner -->
   <rect x="20" y="18" width="960" height="60" rx="10" fill="url(#reqHeaderGrad)"/>
   <text x="45" y="54" fill="#a5b4fc" font-size="22" font-weight="800">⚡ Spid3rWeb Request Lifecycle</text>
-  <text x="375" y="54" fill="#e0e7ff" font-size="14" font-weight="500">From TCP Socket to HTTP Response (Application.handle_request)</text>
+  <text x="411" y="54" fill="#e0e7ff" font-size="14" font-weight="500">From TCP Socket to HTTP Response (Application.handle_request)</text>
   <rect x="850" y="34" width="110" height="26" rx="13" fill="#4f46e5"/>
   <text x="905" y="51" fill="#ffffff" font-size="11" font-weight="700" text-anchor="middle">9 Steps Core</text>
 
@@ -30,9 +30,9 @@
     <circle cx="58" cy="126" r="14" fill="#e0e7ff"/>
     <text x="58" y="131" fill="#4338ca" font-size="12" font-weight="800" text-anchor="middle">1</text>
     <text x="82" y="130" fill="#0f172a" font-size="14" font-weight="700">Idempotent Provider Boot</text>
-    <text x="50" y="156" fill="#475569" font-size="11.5">• <code>app.boot()</code> runs register() &amp; boot()</text>
+    <text x="50" y="156" fill="#475569" font-size="11.5">• <tspan font-family="Cascadia Code, Consolas, monospace" font-size="10.5" font-weight="600">app.boot()</tspan> runs register() &amp; boot()</text>
     <text x="50" y="174" fill="#475569" font-size="11.5">• Runs once before 1st request</text>
-    <text x="50" y="192" fill="#64748b" font-size="10.5">• Dispatches <code>app.booted</code> event</text>
+    <text x="50" y="192" fill="#64748b" font-size="10.5">• Dispatches <tspan font-family="Cascadia Code, Consolas, monospace" font-size="10.5" font-weight="600">app.booted</tspan> event</text>
   </g>
 
   <!-- Flow 1 -> 2 -->
@@ -45,9 +45,9 @@
     <circle cx="58" cy="251" r="14" fill="#dbeafe"/>
     <text x="58" y="256" fill="#1d4ed8" font-size="12" font-weight="800" text-anchor="middle">2</text>
     <text x="82" y="255" fill="#0f172a" font-size="14" font-weight="700">Request &amp; Spoofing</text>
-    <text x="50" y="280" fill="#475569" font-size="11.5">• <code>new Request(raw_req)</code></text>
+    <text x="50" y="280" fill="#475569" font-size="11.5">• <tspan font-family="Cascadia Code, Consolas, monospace" font-size="10.5" font-weight="600">new Request(raw_req)</tspan></text>
     <text x="50" y="297" fill="#475569" font-size="11.5">• Headers, cookies, query, JSON/form/files</text>
-    <text x="50" y="315" fill="#475569" font-size="11.5">• <code>_method</code> &amp; <code>X-HTTP-Method-Override</code></text>
+    <text x="50" y="315" fill="#475569" font-size="11.5">• <tspan font-family="Cascadia Code, Consolas, monospace" font-size="10.5" font-weight="600">_method</tspan> &amp; <tspan font-family="Cascadia Code, Consolas, monospace" font-size="10.5" font-weight="600">X-HTTP-Method-Override</tspan></text>
   </g>
 
   <!-- Flow 2 -> 3 -->
@@ -60,10 +60,10 @@
     <circle cx="58" cy="381" r="14" fill="#e0f2fe"/>
     <text x="58" y="386" fill="#0369a1" font-size="12" font-weight="800" text-anchor="middle">3</text>
     <text x="82" y="385" fill="#0f172a" font-size="14" font-weight="700">Request-Scoped Auth</text>
-    <text x="50" y="410" fill="#475569" font-size="11.5">• Isolated <code>req.auth = new AuthManager()</code></text>
+    <text x="50" y="410" fill="#475569" font-size="11.5">• Isolated <tspan font-family="Cascadia Code, Consolas, monospace" font-size="10.5" font-weight="600">req.auth = new AuthManager()</tspan></text>
     <text x="50" y="428" fill="#0369a1" font-size="11.5" font-weight="600">• Stateless Bearer JWT (0 DB queries!)</text>
     <text x="50" y="446" fill="#475569" font-size="11.5">• Stateful session fallback via DB</text>
-    <text x="50" y="464" fill="#64748b" font-size="10.5">• Attaches <code>req.user_data</code></text>
+    <text x="50" y="464" fill="#64748b" font-size="10.5">• Attaches <tspan font-family="Cascadia Code, Consolas, monospace" font-size="10.5" font-weight="600">req.user_data</tspan></text>
   </g>
 
   <!-- Flow 3 -> 4 -->
@@ -78,7 +78,7 @@
     <text x="82" y="525" fill="#0f172a" font-size="14" font-weight="700">CSRF Defense-in-Depth</text>
     <text x="50" y="550" fill="#475569" font-size="11.5">• Triggers on POST/PUT/PATCH/DELETE</text>
     <text x="50" y="568" fill="#475569" font-size="11.5">• Layer 1: Origin vs Host validation</text>
-    <text x="50" y="586" fill="#475569" font-size="11.5">• Layer 2: Per-session <code>_csrf</code> token</text>
+    <text x="50" y="586" fill="#475569" font-size="11.5">• Layer 2: Per-session <tspan font-family="Cascadia Code, Consolas, monospace" font-size="10.5" font-weight="600">_csrf</tspan> token</text>
   </g>
 
   <!-- Flow 4 to Column 2 (Step 5) -->
@@ -107,10 +107,10 @@
     <circle cx="388" cy="261" r="14" fill="#ede9fe"/>
     <text x="388" y="266" fill="#6d28d9" font-size="12" font-weight="800" text-anchor="middle">6</text>
     <text x="412" y="265" fill="#0f172a" font-size="14" font-weight="700">Global Onion Pipeline</text>
-    <text x="380" y="291" fill="#475569" font-size="11.5">• Executes <code>app.global_middleware</code></text>
+    <text x="380" y="291" fill="#475569" font-size="11.5">• Executes <tspan font-family="Cascadia Code, Consolas, monospace" font-size="10.5" font-weight="600">app.global_middleware</tspan></text>
     <text x="380" y="309" fill="#475569" font-size="11.5">• Short-circuits OPTIONS (CORS preflight)</text>
     <text x="380" y="327" fill="#475569" font-size="11.5">• Wraps downstream execution</text>
-    <text x="380" y="345" fill="#6d28d9" font-size="10.5"><code>let res = next(req); return res;</code></text>
+    <text x="380" y="345" fill="#6d28d9" font-size="10.5"><tspan font-family="Cascadia Code, Consolas, monospace" font-size="10.5" font-weight="600">let res = next(req); return res;</tspan></text>
   </g>
 
   <!-- Flow 6 -> 7 -->
@@ -142,10 +142,10 @@
     <text x="718" y="141" fill="#0e7490" font-size="12" font-weight="800" text-anchor="middle">8</text>
     <text x="742" y="140" fill="#0f172a" font-size="14" font-weight="700">Route Pipeline &amp; Handler</text>
     <text x="710" y="165" fill="#475569" font-size="11.5">• Route middleware pipeline:</text>
-    <text x="725" y="183" fill="#0e7490" font-size="11"><code>auth, guest, throttle:60,60, etag</code></text>
+    <text x="725" y="183" fill="#0e7490" font-size="11"><tspan font-family="Cascadia Code, Consolas, monospace" font-size="10.5" font-weight="600">auth, guest, throttle:60,60, etag</tspan></text>
     <text x="710" y="201" fill="#475569" font-size="11.5">• Controller or Closure Dispatch:</text>
-    <text x="725" y="219" fill="#15803d" font-size="11"><code>req =&gt; ...</code> or <code>(req, res) =&gt; ...</code></text>
-    <text x="710" y="237" fill="#64748b" font-size="10.5">• Validation: <code>req.validate_or_fail()</code></text>
+    <text x="725" y="219" fill="#15803d" font-size="11"><tspan font-family="Cascadia Code, Consolas, monospace" font-size="10.5" font-weight="600">req =&gt; ...</tspan> or <tspan font-family="Cascadia Code, Consolas, monospace" font-size="10.5" font-weight="600">(req, res) =&gt; ...</tspan></text>
+    <text x="710" y="237" fill="#64748b" font-size="10.5">• Validation: <tspan font-family="Cascadia Code, Consolas, monospace" font-size="10.5" font-weight="600">req.validate_or_fail()</tspan></text>
   </g>
 
   <!-- Flow 8 -> 9 -->
@@ -159,10 +159,10 @@
     <text x="718" y="311" fill="#15803d" font-size="12" font-weight="800" text-anchor="middle">9</text>
     <text x="742" y="310" fill="#0f172a" font-size="14" font-weight="700">Coercion &amp; Session</text>
     <text x="710" y="335" fill="#15803d" font-size="11.5" font-weight="600">• Return auto-coercion:</text>
-    <text x="725" y="353" fill="#475569" font-size="11">Map / List → <code>200 application/json</code></text>
-    <text x="725" y="371" fill="#475569" font-size="11">String → <code>200 text/html</code></text>
-    <text x="710" y="389" fill="#475569" font-size="11.5">• Dirty <code>req.session()</code> committed to Cache</text>
-    <text x="710" y="407" fill="#475569" font-size="11.5">• <code>Set-Cookie: spid3r_sid=...</code> emitted</text>
+    <text x="725" y="353" fill="#475569" font-size="11">Map / List → <tspan font-family="Cascadia Code, Consolas, monospace" font-size="10.5" font-weight="600">200 application/json</tspan></text>
+    <text x="725" y="371" fill="#475569" font-size="11">String → <tspan font-family="Cascadia Code, Consolas, monospace" font-size="10.5" font-weight="600">200 text/html</tspan></text>
+    <text x="710" y="389" fill="#475569" font-size="11.5">• Dirty <tspan font-family="Cascadia Code, Consolas, monospace" font-size="10.5" font-weight="600">req.session()</tspan> committed to the session store</text>
+    <text x="710" y="407" fill="#475569" font-size="11.5">• <tspan font-family="Cascadia Code, Consolas, monospace" font-size="10.5" font-weight="600">Set-Cookie: spid3r_sid=...</tspan> emitted</text>
   </g>
 
   <!-- Flow 9 -> Outbound Response -->
