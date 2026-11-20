@@ -15,6 +15,14 @@ ARG SPID3R_SHA256=""
 RUN apt-get update -qq && apt-get install -y -qq --no-install-recommends curl ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
+# The prebuilt spid3r binary links against libLLVM.so.23.1 (LLVM 23 runtime).
+RUN apt-get update -qq && apt-get install -y -qq --no-install-recommends gnupg \
+    && curl -fsSL https://apt.llvm.org/llvm-snapshot.gpg.key | gpg --dearmor -o /usr/share/keyrings/llvm.gpg \
+    && echo "deb [signed-by=/usr/share/keyrings/llvm.gpg] https://apt.llvm.org/bookworm/ llvm-toolchain-bookworm-23 main" > /etc/apt/sources.list.d/llvm23.list \
+    && apt-get update -qq && apt-get install -y -qq --no-install-recommends libllvm23 \
+    && echo /usr/lib/llvm-23/lib > /etc/ld.so.conf.d/llvm-23.conf && ldconfig \
+    && apt-get purge -y -qq gnupg && apt-get autoremove -y -qq && rm -rf /var/lib/apt/lists/*
+
 # Install pinned Spid3r release binaries with SHA-256 verification
 RUN set -eu; \
     arch="$(uname -m)"; \

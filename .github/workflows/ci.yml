@@ -106,6 +106,16 @@ jobs:
           key: cargo-spid3r-${{ runner.os }}-${{ github.run_id }}
           restore-keys: cargo-spid3r-${{ runner.os }}-
 
+      - name: Install LLVM 23 runtime library (required by the prebuilt spid3r binary)
+        run: |
+          set -eu
+          wget -q https://apt.llvm.org/llvm.sh
+          chmod +x llvm.sh
+          sudo ./llvm.sh 23
+          sudo apt-get install -y --no-install-recommends libllvm23
+          echo "/usr/lib/llvm-23/lib" | sudo tee /etc/ld.so.conf.d/llvm-23.conf > /dev/null
+          sudo ldconfig
+
       - name: Install pinned Spid3r v${{ env.SPID3R_VERSION }} (SHA-256 verified)
         run: |
           set -eu
@@ -190,7 +200,16 @@ jobs:
           spid3r magic serve --dry-run
 
       - name: Full test suite (${{ matrix.engine }})
-        run: spid3r magic test
+        env:
+          ENGINE: ${{ matrix.engine }}
+        run: |
+          rc=0
+          spid3r magic test > test.log 2>&1 || rc=$?
+          cat test.log
+          if [ "$rc" -ne 0 ]; then
+            echo "::error title=magic test failed (${ENGINE})::$(grep -E 'FAIL|rror|panic' test.log | head -n 12 | tr '\n' '|' | cut -c1-1500)"
+          fi
+          exit "$rc"
 
       - name: Config, formatting, lint & API doc checks (sqlite leg)
         if: matrix.engine == 'sqlite'
@@ -255,6 +274,8 @@ jobs:
           sudo ./llvm.sh 23
           sudo apt-get install -y --no-install-recommends libllvm23 clang lld
           echo "SPID3R_LLVM_LIB_DIR=/usr/lib/llvm-23/lib" >> "$GITHUB_ENV"
+          echo "/usr/lib/llvm-23/lib" | sudo tee /etc/ld.so.conf.d/llvm-23.conf > /dev/null
+          sudo ldconfig
 
       - name: Install pinned Spid3r v${{ env.SPID3R_VERSION }} (SHA-256 verified)
         run: |
@@ -274,12 +295,17 @@ jobs:
 
       - name: Build & boot server AOT release binary
         run: |
-          set -eu
-          LD_LIBRARY_PATH="/usr/lib/llvm-23/lib:${LD_LIBRARY_PATH:-}" spid3r magic build --release --bundle -o dist/spid3rweb server.matrix
-          test -x dist/spid3rweb
-          dist/spid3rweb --help
-          spid3r magic build --bytecode-only -o dist/server.matrixc server.matrix
-          test -s dist/server.matrixc
+          set -u
+          {
+            LD_LIBRARY_PATH="/usr/lib/llvm-23/lib:${LD_LIBRARY_PATH:-}" spid3r magic build --release --bundle -o dist/spid3rweb server.matrix &&
+            test -x dist/spid3rweb &&
+            dist/spid3rweb --help &&
+            spid3r magic build --bytecode-only -o dist/server.matrixc server.matrix &&
+            test -s dist/server.matrixc
+          } > aot.log 2>&1 && { cat aot.log; exit 0; }
+          cat aot.log
+          echo "::error title=AOT smoke build failed::$(tail -n 20 aot.log | tr '\n' '|' | cut -c1-1500)"
+          exit 1
 
   docker-smoke:
     name: Docker Image, Doctor & /health Smoke
@@ -296,11 +322,17 @@ jobs:
       - name: Run spid3r magic doctor --strict inside container
         run: |
           test_key="hex:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+          rc=0
           docker run --rm \
             -e APP_ENV=production \
             -e APP_KEY="$test_key" \
             -e SPID3R_INI=/var/www/app/spid3r.ini \
-            spid3rweb:ci spid3r magic doctor --strict
+            spid3rweb:ci spid3r magic doctor --strict > doctor.log 2>&1 || rc=$?
+          cat doctor.log
+          if [ "$rc" -ne 0 ]; then
+            echo "::error title=doctor --strict failed in container::$(tail -n 20 doctor.log | tr '\n' '|' | cut -c1-1500)"
+          fi
+          exit "$rc"
 
       - name: Boot container & verify /health + Docker HEALTHCHECK
         run: |
