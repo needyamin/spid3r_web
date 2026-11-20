@@ -46,9 +46,9 @@ fn rm_tree(path: string) {
 }
 
 fn test_runtime_version_and_manifest() {
-    assert_eq(SPID3RWEB_VERSION, "1.1.0", "SPID3RWEB_VERSION");
+    assert_eq(SPID3RWEB_VERSION, "1.1.1", "SPID3RWEB_VERSION");
     assert_eq(MIN_SPID3R_VERSION, "1.1.1", "MIN_SPID3R_VERSION");
-    assert_eq(Config.get("app.version", ""), "1.1.0", "config app.version");
+    assert_eq(Config.get("app.version", ""), "1.1.1", "config app.version");
     assert_eq(Config.get("app.min_spid3r", ""), "1.1.1", "config app.min_spid3r");
 
     let p1 = parse_semver("Version       1.1.1\nLanguage 1.1.1");
@@ -73,7 +73,7 @@ fn test_runtime_version_and_manifest() {
     assert_true(app_check_ok, "Application.check_production_ready passes on valid runtime");
 
     let toml = string(read_file("spider.toml").unwrap());
-    assert_true(toml.contains("version = \"1.1.0\""), "spider.toml bumped to 1.1.0");
+    assert_true(toml.contains("version = \"1.1.1\""), "spider.toml bumped to 1.1.1");
     assert_true(not toml.contains("\nmin_spid3r ="), "spider.toml omits invalid bare TOML key");
 
     println("  [PASS] test_runtime_version_and_manifest");

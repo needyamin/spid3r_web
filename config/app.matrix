@@ -38,7 +38,7 @@ let _resolved_key = if _app_key_raw != "" {
 
 public let config_app = {
     "name": _app_env_str("APP_NAME", "Spid3rWeb Developer Platform"),
-    "version": "1.1.0",
+    "version": "1.1.1",
     "min_spid3r": "1.1.1",
     "env": _resolved_env,
     "debug": _resolved_debug,

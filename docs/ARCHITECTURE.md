@@ -1,6 +1,6 @@
 # Spid3rWeb — Architecture & Technical Reference
 
-**Version:** `1.1.0` · **Verified against:** Spid3r `v1.1.1+` (Bytecode VM default + Tree-Walk oracle + LLVM 23 AOT) · **Related docs:** [Security Guide](SECURITY.md) · [Driver Support Matrix](DRIVERS.md) · [Deploy Guide](DEPLOY.md) · **API Docs:** run `spid3r magic docs` → `docs/build/api.html`
+**Version:** `1.1.1` · **Verified against:** Spid3r `v1.1.1+` (Bytecode VM default + Tree-Walk oracle + LLVM 23 AOT) · **Related docs:** [Security Guide](SECURITY.md) · [Driver Support Matrix](DRIVERS.md) · [Deploy Guide](DEPLOY.md) · **API Docs:** run `spid3r magic docs` → `docs/build/api.html`
 
 ---
 

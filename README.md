@@ -8,7 +8,7 @@
 ╚══════╝╚═╝     ╚═╝╚═════╝ ╚═════╝ ╚═╝  ╚═╝   ╚══╝╚══╝ ╚══════╝╚═════╝&nbsp;
 </pre>
 
-**Spid3rWeb v1.1.0** — Zero-dependency MVC web framework for [Spid3r](https://github.com/needyamin/spid3r) (`v1.1.1+`). Runs on the bytecode VM, tree-walk interpreter, and LLVM 23 AOT compiler.
+**Spid3rWeb v1.1.1** — Zero-dependency MVC web framework for [Spid3r](https://github.com/needyamin/spid3r) (`v1.1.1+`). Runs on the bytecode VM, tree-walk interpreter, and LLVM 23 AOT compiler.
 
 </div>
 

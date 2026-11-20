@@ -232,7 +232,7 @@
 
 <header class="topbar">
   <div class="logo"><span class="spider">🕷️</span> Spid3r<span class="web">Web</span></div>
-  <span class="version-badge">v1.1.0 · needs Spid3r ≥ 1.1.1</span>
+  <span class="version-badge">v1.1.1 · needs Spid3r ≥ 1.1.1</span>
   <nav class="links">
     <a href="#diagrams">Diagrams</a>
     <a href="#getting-started">Getting Started</a>
@@ -427,7 +427,7 @@ app.listen(8000);</code></pre>
 <!-- ============ TECH STACK ============ -->
 <section id="stack">
   <h2>Tech Stack</h2>
-  <p>Spid3rWeb 1.1.0 runs on the Spid3r runtime and requires <strong>Spid3r ≥ 1.1.1</strong> (<code>framework/Foundation/RuntimeVersion.matrix</code> enforces this at boot in production and in <code>magic doctor</code>). There are no external packages.</p>
+  <p>Spid3rWeb 1.1.1 runs on the Spid3r runtime and requires <strong>Spid3r ≥ 1.1.1</strong> (<code>framework/Foundation/RuntimeVersion.matrix</code> enforces this at boot in production and in <code>magic doctor</code>). There are no external packages.</p>
   <table>
     <tr><th>Layer</th><th>Provides</th></tr>
     <tr><td>Spid3r Runtime (Rust)</td><td>Multi-threaded HTTP/1.1 <code>serve_listener</code> worker pool, TCP sockets, RFC 6455 WebSocket (<code>ws_*</code>), SQLite / MySQL / PostgreSQL native drivers, Argon2id / bcrypt, SHA-256 / HMAC-SHA256 / constant-time <code>secure_compare</code>, <code>mutex</code>, Thompson NFA regex, JSON parser/writer, bytecode VM + tree-walk oracle + LLVM 23 AOT compiler</td></tr>

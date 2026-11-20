@@ -2,7 +2,7 @@
 // Framework & minimum Spid3r runtime version policy and boot verification.
 
 /// Current Spid3rWeb framework release version.
-public const SPID3RWEB_VERSION = "1.1.0";
+public const SPID3RWEB_VERSION = "1.1.1";
 
 /// Minimum required Spid3r language runtime version.
 public const MIN_SPID3R_VERSION = "1.1.1";

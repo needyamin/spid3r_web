@@ -85,7 +85,7 @@ chmod 0600 .env
 spid3r magic key:generate
 
 # Build image (installs pinned Spid3r v1.1.1 tarball verified by SHA-256, runs as USER spid3r)
-docker build -f deploy/Dockerfile -t spid3rweb:v1.1.0 .
+docker build -f deploy/Dockerfile -t spid3rweb:v1.1.1 .
 
 # Run full Compose stack (App + MySQL 8 + PostgreSQL 16; DB ports stay internal)
 docker compose -f deploy/docker-compose.yml up --build -d
