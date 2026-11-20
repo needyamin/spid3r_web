@@ -8,9 +8,11 @@
 ╚══════╝╚═╝     ╚═╝╚═════╝ ╚═════╝ ╚═╝  ╚═╝   ╚══╝╚══╝ ╚══════╝╚═════╝&nbsp;
 </pre>
 
-**Spid3rWeb v1.1.1** — Zero-dependency MVC web framework for [Spid3r](https://github.com/needyamin/spid3r) (`v1.1.1+`). Runs on the bytecode VM, tree-walk interpreter, and LLVM 23 AOT compiler.
-
 </div>
+
+**Spid3rWeb v1.1.1** — A modern, lightweight, high-performance MVC framework for Spid3r with zero external dependencies. Features an O(1) router, onion middleware, built-in ORM, templating, migrations, JWT & session auth, caching, queues, DI, events, REST resources, testing, and CLI. Runs natively on Spid3r's interpreter and bytecode VM.
+
+
 
 ## Quick Start
 
