@@ -1,47 +1,82 @@
 # ============================================================================
 # Spid3rWeb production-style container image.
 #
-# Installs the prebuilt Spid3r v1.1.1+ Linux release tarball (x86_64 / aarch64,
-# shipping both `spid3r` VM/interpreter and `spid3r-self` AOT compiler) directly
-# into debian:bookworm-slim — no Rust build stage required.
+# Installs a pinned Spid3r release tarball directly from GitHub Releases and
+# verifies its SHA-256 checksum, then runs the app as an unprivileged user.
 #
 # The server binds 0.0.0.0 when SPID3R_HOST=0.0.0.0 (framework default stays
 # loopback for local dev — see framework/Application.matrix listen()).
 # ============================================================================
 FROM debian:bookworm-slim AS runtime
 
-RUN apt-get update -qq && apt-get install -y -qq curl ca-certificates >/dev/null \
+ARG SPID3R_VERSION=1.1.1
+ARG SPID3R_SHA256=""
+
+RUN apt-get update -qq && apt-get install -y -qq --no-install-recommends curl ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
-# Install prebuilt Spid3r toolchain (spid3r + spid3r-self) into /usr/local/bin
-ENV SPID3R_INSTALL_DIR=/usr/local/bin
-RUN curl -fsSL https://raw.githubusercontent.com/needyamin/spid3r/main/install.sh \
-      | sh -s -- --no-modify-path
+# Install pinned Spid3r release binaries with SHA-256 verification
+RUN set -eu; \
+    arch="$(uname -m)"; \
+    case "$arch" in \
+        x86_64|amd64) target="x86_64-unknown-linux-gnu" ;; \
+        aarch64|arm64) target="aarch64-unknown-linux-gnu" ;; \
+        *) echo "Unsupported architecture: $arch" >&2; exit 1 ;; \
+    esac; \
+    asset="spid3r-${target}.tar.gz"; \
+    base_url="https://github.com/needyamin/spid3r/releases/download/v${SPID3R_VERSION}"; \
+    tmpdir="$(mktemp -d)"; \
+    trap 'rm -rf "$tmpdir"' EXIT; \
+    curl -fsSL "${base_url}/${asset}" -o "${tmpdir}/${asset}"; \
+    if [ -n "${SPID3R_SHA256}" ]; then \
+        echo "${SPID3R_SHA256}  ${tmpdir}/${asset}" | sha256sum -c -; \
+    else \
+        curl -fsSL "${base_url}/${asset}.sha256" -o "${tmpdir}/${asset}.sha256"; \
+        (cd "$tmpdir" && expected="$(awk '{print $1}' "${asset}.sha256")" && echo "${expected}  ${asset}" | sha256sum -c -); \
+    fi; \
+    tar -xzf "${tmpdir}/${asset}" -C "$tmpdir"; \
+    bin_src="$(find "$tmpdir" -type f -name spid3r | head -n 1)"; \
+    test -n "$bin_src"; \
+    install -m 0755 "$bin_src" /usr/local/bin/spid3r; \
+    self_src="$(find "$tmpdir" -type f -name spid3r-self | head -n 1 || true)"; \
+    if [ -n "$self_src" ] && [ -f "$self_src" ]; then \
+        install -m 0755 "$self_src" /usr/local/bin/spid3r-self; \
+    fi
+
+# Unprivileged application user & group
+RUN groupadd --system spid3r \
+    && useradd --system --gid spid3r --home-dir /var/www/app --shell /usr/sbin/nologin spid3r
 
 WORKDIR /var/www/app
 
-# Application code (fresh-install skeleton + full framework core)
+# Copy only runtime application files (no tests, docs, or .env secrets)
 COPY magic server.matrix spider.toml ./
+COPY spid3r.ini.example ./spid3r.ini
 COPY app/ app/
+COPY bootstrap/ bootstrap/
 COPY config/ config/
 COPY database/ database/
 COPY framework/ framework/
 COPY public/ public/
 COPY resources/ resources/
 COPY routes/ routes/
-COPY tests/ tests/
-COPY .env.example .env.example
 
-# Runtime config: env-first. .env is the fallback template; real values come
-# from compose `environment:` which override it.
-RUN cp .env.example .env \
-    && mkdir -p storage/logs storage/framework/cache database \
-    && chmod -R u+rw storage
+# Runtime writable directories belong exclusively to the unprivileged user;
+# source files remain root-owned and read-only to the app process.
+RUN mkdir -p storage/logs storage/framework/cache storage/app storage/backups storage/database database \
+    && chown -R spid3r:spid3r storage database \
+    && chmod 0700 storage storage/logs storage/framework storage/framework/cache storage/app storage/backups storage/database database
 
-ENV SPID3R_HOST=0.0.0.0 \
+ENV APP_ENV=production \
+    SPID3R_HOST=0.0.0.0 \
     SPID3R_PORT=8000
 
+USER spid3r
+
 EXPOSE 8000
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+    CMD curl -fsS "http://127.0.0.1:${SPID3R_PORT}/health" >/dev/null || exit 1
 
 # Migrate on boot (idempotent), then serve. `exec` hands PID 1 to the server
 # so Ctrl+C / docker stop reach it directly.

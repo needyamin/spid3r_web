@@ -26,3 +26,22 @@ Reproduce:
 SPID3R_PATH=. SPID3R_DB_DRIVER=sqlite spid3r run benchmarks/bench.matrix
 SPID3R_PATH=. SPID3R_DB_DRIVER=sqlite spid3r build --release benchmarks/bench.matrix -o bench_aot && ./bench_aot
 ```
+
+## Performance Gate (`--gate`)
+
+CI enforces both the toolchain floor check and Spid3rWeb's framework micro-benchmark floors (~1/4 of the v1.1.1 VM baseline to catch catastrophic regressions without failing on shared-runner noise):
+
+| Gate | Minimum Floor | v1.1.1 VM Reference |
+|---|---:|---:|
+| `route_matching` | `20,000 ops/sec` | `153,846 ops/sec` |
+| `query_compilation` | `4,000 ops/sec` | `21,428 ops/sec` |
+| `json_roundtrip` | `60,000 ops/sec` | `666,666 ops/sec` |
+| `view_render` | `1,500 ops/sec` | `9,661 ops/sec` |
+| `sqlite_select` | `800 ops/sec` | `5,263 ops/sec` |
+
+Single-row SQLite `INSERT` and `UPDATE` remain informational (filesystem `fsync`/I/O bound). Run the full gate locally:
+
+```bash
+spid3r bench --runs 1 --gate benchmarks/bench.matrix
+spid3r magic bench --gate
+```

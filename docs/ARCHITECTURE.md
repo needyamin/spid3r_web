@@ -1,6 +1,6 @@
 # Spid3rWeb — Architecture & Technical Reference
 
-**Status:** Authoritative engineering document (verified 2026-11-20 against Spid3r `v1.1.1` / Language `1.1.1`, Bytecode VM default + LLVM 23.1.0 AOT, and the 17-suite test harness).
+**Version:** `1.1.0` · **Verified against:** Spid3r `v1.1.1+` (Bytecode VM default + Tree-Walk oracle + LLVM 23 AOT) · **Related docs:** [Security Guide](SECURITY.md) · [Driver Support Matrix](DRIVERS.md) · [Deploy Guide](DEPLOY.md) · **API Docs:** run `spid3r magic docs` → `docs/build/api.html`
 
 ---
 
@@ -10,8 +10,9 @@ Spid3rWeb builds a clean, zero-dependency MVC architecture on top of Spid3r's na
 
 | Layer | Owner | Responsibilities |
 |---|---|---|
-| **Runtime Natives (Rust)** | `spid3r` / `spid3r-self` | Multi-threaded HTTP/1.1 `serve_listener` worker pool (keep-alive, native TLS `tls_listen`, chunked `http_stream`), TCP sockets (`tcp_connect`/`tcp_listen`), RFC 6455 WebSocket (`ws_*`), streaming file I/O & OS locking (`file_open`/`file_lock`), SQLite / PostgreSQL / MySQL native drivers, `bcrypt_hash` / `bcrypt_verify`, `sha256` / `hmac_sha256` / `secure_compare`, `mutex`, Thompson NFA `regex_match`, `json_parse` / `json_write`, `spid3r.ini` runtime guardrails |
-| **Spid3rWeb Framework** | `framework/` | Single-import barrel (`framework/Web`), HTTP kernel (`Application`), O(1) + prefix-indexed `Router`, true Onion `Middleware` pipeline, zero-boilerplate ORM (`DB`, `QueryBuilder`, `Schema`, `Model`, `ModelRepository`), `Validator` with type coercion, `Auth` + stateless `Jwt`, `SessionStore` + flash messages, thread-safe `Cache`, `Config` / `Env`, thread-safe `Log`, `Storage`, `Mail`, `Queue`, SpiderBD v2 (`BD`), `ServiceContainer`, `Event` bus, `TestClient`, Magic CLI, and auto-discovering `TestRunner` |
+| **Runtime Natives (Rust)** | `spid3r` / `spid3r-self` | Multi-threaded HTTP/1.1 `serve_listener` worker pool (keep-alive, native TLS `tls_listen`, chunked `http_stream`), TCP sockets (`tcp_connect`/`tcp_listen`), RFC 6455 WebSocket (`ws_*`), streaming file I/O, `file_seek`, `gzip_compress`/`gunzip` & `write_file_atomic`, `file_lock`, SQLite / PostgreSQL / MySQL native drivers, `argon2_hash` / `argon2_verify`, `bcrypt_hash` / `bcrypt_verify`, `sha256` / `hmac_sha256` / `secure_compare`, `mutex`, `spid3r.ini` security guardrails (`basedir`, `modules.disable`, `disable_natives`, `--budget`, `--sandbox`) |
+| **Application Bootstrap** | `app/`, `bootstrap/`, `routes/` | `bootstrap/app.matrix` wires providers & route modules (`AppServiceProvider`, `HomeController`, `routes/web.matrix`, `routes/api.matrix`, `routes/queue.matrix`); `server.matrix` and `magic` delegate here cleanly |
+| **Spid3rWeb Framework** | `framework/` | Single-import barrel (`framework/Web`), `Foundation/` (`Application`, `Config`, `ConfigValidator`, `Container`, `Env`, `Server`, `ServiceProvider`, `RuntimeVersion`), `Http/` (`Router`, `RouteMatcher`, `Request`, `RequestParser`, `Response`, `CookieJar`, `StaticFiles`, `Csrf`, `Middleware`, `Controller`, `Resource`, `Validator`, `ValidatorRules`, `HttpException`, `ErrorRenderer`), `Database/` (`DB`, `Driver`, `Connection`, `ServerConnections`, `ConnectionPool`, `DatabaseManager`, `QueryBuilder`, `QueryCompiler`, `Schema`, `Migration`, `Model`, `ModelRepository`), `Auth/` (`Auth`, `Hash`, `Jwt`), `Session/`, `Cache/`, `Log/`, `Mail/`, `Queue/`, `Filesystem/`, `Events/`, `View/` (`BD`, `TemplateCompiler`, `TemplateEvaluator`), `WebSocket/`, `Console/`, and `Testing/` |
 
 ---
 
@@ -19,50 +20,47 @@ Spid3rWeb builds a clean, zero-dependency MVC architecture on top of Spid3r's na
 
 Every incoming HTTP request passes through `Application.handle_request(raw_req)`:
 
-1. **Idempotent Provider Boot**: `app.boot()` runs `register()` / `boot()` on all registered `ServiceProvider` instances once before the first request and dispatches `app.booted`.
-2. **Request Construction & Method Spoofing**: `new Request(raw_req)` parses headers, cookies (`self.cookies`), query string, JSON/form/multipart bodies (`self.data`, `self.files`), and applies `_method` / `X-HTTP-Method-Override` spoofing (`PUT`, `PATCH`, `DELETE`) on `POST` requests. Attaches `req.app = self` and `req.res = new Response()`.
-3. **Request-Scoped Authentication**: Creates an isolated `AuthManager` on `req.auth` (never mutating global state across concurrent worker threads). If a `Bearer` token is a 3-part JWT, verifies it statelessly via `Jwt.verify()` with zero DB queries; otherwise validates the session token against the `sessions` table. Sets `req.user_data` when authenticated.
-4. **CSRF Defense-in-Depth**: On state-changing methods (`POST`, `PUT`, `PATCH`, `DELETE`), verifies `Origin` vs `Host` (Layer 1) and per-session `_csrf` tokens for cookie-authenticated browser requests (Layer 2).
-5. **Static Asset Delivery & Conditional GET**: Serves `/css/`, `/js/`, `/assets/`, `/images/`, `/fonts/`, `/vendor/`, `/uploads/` with strict path-traversal guards, weak `ETag` (`W/"<size>-<mtime>"`), and `If-None-Match` → `304 Not Modified` short-circuiting.
-6. **Global Onion Pipeline**: Executes `self.global_middleware` around downstream route dispatch. Middleware can short-circuit early (e.g. `CorsMiddleware` on `OPTIONS`) or wrap downstream execution via `let res = next(req)`.
-7. **O(1) / Prefix-Indexed Route Matching**:
-   - Exact static routes resolve in **O(1)** via `static_routes[method][path]`.
-   - Dynamic routes (`:id`, `{id}`) resolve via `dynamic_by_len[method][seg_count]` with 2-level (`s1/s2`) and 1-level (`s1`) literal prefix buckets and pre-split segment arrays.
-   - Catch-all routes (`*filepath`) resolve via `wildcard_routes[method]`.
-   - Unmatched paths check root static files (`/robots.txt`, `/sitemap.xml`, `/favicon.ico`, `/manifest.json`), `405 Method Not Allowed` (`allowed_methods`), or `router.fallback_handler`.
-8. **Route-Specific Onion Pipeline & Handler Dispatch**: Resolves middleware aliases (`auth`, `guest`, `throttle:60,60`, `etag`, `request_id`, custom closures/classes) and invokes the handler (`req => ...` or `(req, res) => ...`).
-9. **Response Coercion & Session Commit**: Plain `map` and `list` return values auto-coerce to `200 application/json`; `string` returns auto-coerce to `200 text/html`. Dirty `req.session()` stores commit to `Cache` and emit `Set-Cookie: spid3r_sid=...`. Typed `HttpException` maps render via `ErrorRenderer.http_error` (JSON for `/api/*` or `Accept: application/json`, HTML cards otherwise).
+1. **Production Policy & Provider Boot**: `check_production_ready()` validates `APP_KEY` and `RuntimeVersion.assert_min_runtime_version()`. `app.boot()` runs `register()` / `boot()` on all registered `ServiceProvider` instances once before the first request and dispatches `app.booted`.
+2. **Request Construction & Method Spoofing**: `Request.init_from_raw(raw_req)` parses headers, cookies, query string, JSON/form/multipart bodies (`RequestParser.matrix` enforcing `config/upload.matrix` limits and trusted-proxy `SPID3R_TRUSTED_PROXIES` rules), and applies `_method` / `X-HTTP-Method-Override` spoofing.
+3. **Request-Scoped Authentication**: Creates an isolated `AuthManager` on `req.auth`. Three-part `Bearer` JWTs verify statelessly via `Jwt.verify()` (0 DB hits); cookie/opaque tokens check the `sessions` table.
+4. **2-Layer CSRF Defense (`Csrf.matrix`)**: On state-changing methods (`POST`, `PUT`, `PATCH`, `DELETE`), enforces `is_same_origin(req, origin)` (Layer 1) and per-session `_csrf` token verification for cookie sessions (Layer 2).
+5. **Static Asset Delivery (`StaticFiles.matrix`)**: Serves `/css/`, `/js/`, `/assets/`, `/images/`, `/fonts/`, `/vendor/`, `/uploads/` with segment-based traversal guards, weak `ETag` (`304 Not Modified`), `Accept-Ranges: bytes` + HTTP `Range` (`206`/`416`), `gzip_compress` (`Vary: Accept-Encoding`), chunked `file_stream` responses, and `Content-Disposition: attachment` + sandbox CSP on `/uploads/`.
+6. **Global Onion Pipeline**: Executes `self.global_middleware` around downstream dispatch (`CorsMiddleware` handles `OPTIONS`).
+7. **O(1) / Prefix-Indexed Route Matching & Model Binding**: Exact static routes resolve in O(1) via `static_routes[method][path]`; parameterized routes use length + 2-level prefix buckets in `RouteMatcher`; registered parameter resolvers (`app.bind()` / `Route.bind()`) hydrate `req.bound(key)`; unmatched requests check root static files, `405`, `fallback`, or `404`.
+8. **Route Middleware & Handler Dispatch**: Resolves aliases (`auth`, `guest`, `throttle:N,S`, `etag`, `request_id`) and runs controller/closure handlers.
+9. **Response Finalization (`finalize_http_response`)**: Coerces maps/lists/strings, commits dirty `req.session()` stores (`Cache` + `Set-Cookie`), applies RFC 6265 cookies via `CookieJar`, and attaches auto-HSTS on production HTTPS requests.
 
 ---
 
-## 3. Component Status
+## 3. Spid3rWeb vs. Stdlib `web` Security Scope
 
-| # | Component | Module | Highlights |
-|---|---|---|---|
-| 1 | Single-Import Barrel | `framework/Web.matrix` | Exports `web()`, `router()`, `model()`, `route()`, `abort()`, `db()`, `schema()`, `cache()`, `auth()`, `jwt()`, `hash()`, `log()`, `queue()`, `mail()`, `storage()`, `events()`, `config()`, `views()`, `test_client()` |
-| 2 | HTTP Kernel | `framework/Application.matrix` | Direct routing (`app.get/post/put/patch/delete/group/mount`), return auto-coercion, static ETag (`304`), CSRF defense |
-| 3 | O(1) & Bucketed Router | `framework/Router.matrix` | **133,333 ops/sec** on VM; `:param` & `{param}`, `*wildcard`, `mount()`, `url()` reverse routing |
-| 4 | True Onion Middleware | `framework/Middleware.matrix` | `(req, next) => ...` closures & class middleware; built-in `auth`, `guest`, `cors`, `logger`, `etag`, `request_id`, `throttle` (`X-RateLimit-*`) |
-| 5 | Request & Uploads | `framework/Request.matrix` | `_method` spoofing, cookies & HMAC `signed_cookie`, multipart file uploads (`req.file`, `req.store_file`), `only`/`except`/`bool`/`float`/`page`/`per_page`, `validate_or_fail()` |
-| 6 | Fluent Response | `framework/Response.matrix` | Cached HSTS init, `.status()`, `.json()`, `.html()`, `.text()`, `.send()`, `.redirect()`, `.cookie()`, `.signed_cookie()`, `.clear_cookie()` |
-| 7 | Validation & Coercion | `framework/Validator.matrix` | `.validated()` type coercion (`int`, `float`, `bool`) + `required`, `nullable`, `min`, `max`, `between`, `min_value`, `max_value`, `email`, `url`, `uuid`, `regex`, `in`, `confirmed`, `same`, `alpha`, `alpha_num`, `array`/`list`, `map`, `unique:table,col`, `exists:table,col` |
-| 8 | Stateless JWT & Auth | `framework/Auth/Jwt.matrix`, `Auth.matrix` | HS256 `Jwt.sign` / `Jwt.verify` (`hmac_sha256` + `secure_compare`), zero-DB Bearer JWT auth, CSPRNG DB sessions, `Hash` (bcrypt) |
-| 9 | Sessions & Flash | `framework/Session/Session.matrix` | `req.session()` key-value store (`get`, `put`, `has`, `forget`, `flush`) + one-time `flash()` / `get_flash()` |
-| 10 | Zero-Boilerplate ORM | `framework/Database/Model.matrix` | `model("table", opts)` repository, `casts` (`int`, `float`, `bool`, `string`, `json`), `hidden` stripping, dirty tracking (`is_dirty`), `find_or_fail`, `first_or_fail`, `update_or_create`, batched eager loading (`load_has_many`, `load_belongs_to`), lifecycle events |
-| 11 | QueryBuilder & Schema | `QueryBuilder.matrix`, `Schema.matrix` | Parameterized SQL across SQLite/PostgreSQL/MySQL/MariaDB, joins, `whereIn`, `whereNull`, `whereGroup`, `latest`, `oldest`, `paginate` (capped at 100), mutex-serialized `DB.transaction()` |
-| 12 | SpiderBD v2 Views | `framework/View/BD.matrix` | Pre-compiled line cache with `file_mtime` invalidation (**9,569 ops/sec** on VM), `@if` comparisons (`==`, `!=`, `>=`, `<=`, `>`, `<`, `and`, `or`, `not`), `@elif`, inline `@if`, `loop` metadata in `@foreach`, `@csrf`, `@method`, `views().share()` |
-| 13 | Thread-Safe Cache & Log | `CacheStore.matrix`, `Log.matrix` | Mutex-guarded `MemoryCacheStore` (bounded 10,000 keys + atomic `add`/`increment`), file & DB stores; mutex-guarded appending `Log.write()` |
-| 14 | DI, Providers & Events | `Container.matrix`, `ServiceProvider.matrix`, `Event.matrix` | `bind`/`singleton`/`instance`/`extend`/`alias`; `register`/`boot` lifecycle; exact + `prefix.*` wildcard listeners, `once`, subscribers |
-| 15 | WebSocket Server | `framework/WebSocket/WsServer.matrix` | RFC 6455 server alongside HTTP app, per-connection handlers + cross-connection `broadcast()` |
-| 16 | TestClient & Magic CLI | `TestClient.matrix`, `ConsoleKernel.matrix`, `TestRunner.matrix` | Fluent `app.test_client()` (`acting_as`, `post_json`, `assert_json_path`), auto-discovered `tests/test_*.matrix` suites, `make:controller/model/middleware/provider/test/migration`, `key:generate`, `cache:clear` |
+`../docs/SECURITY.md` notes under *Known gaps* that Spid3r's bare stdlib `web` module has no built-in CSRF middleware and uses signed client-side session cookies. **Spid3rWeb fills both gaps in framework code**:
+
+- Server-side sessions (`sessions` DB table in `Auth.matrix` + `Cache`-backed `SessionStore` in `Session.matrix`).
+- Two-layer CSRF protection (`Origin` validation + synchronizer `_csrf` token in `Csrf.matrix`).
+- Full details live in [`docs/SECURITY.md`](SECURITY.md).
 
 ---
 
-## 4. Spid3r Language Invariants for Contributors
+## 4. Upstream Runtime Nuances & Invariants
 
-- **Explicit Imports (Non-Transitive)**: Spid3r `import "X"` only exports `public` symbols declared directly in `X.matrix`. Use `import "framework/Web";` for single-import factory access (`web()`, `model()`, `route()`, `db()`, etc.), or import specific class modules directly when using `new ClassName()`.
-- **`for x in list` Iterates Over Copies**: Mutating `x` inside `for x in list` mutates a copy. Always use indexed loops (`while i < list.len() { list[i].mutate(); i += 1; }`) when mutating list elements in place.
-- **Closures & Outer Variables**: Closures read outer variables by value and cannot reassign outer scalars; mutate a captured `map` or `list` (`let state = {"count": 0}; state["count"] += 1;`) instead.
-- **Top-Level Classes**: Classes must be declared at module top level, never inside a function. Default member visibility is `private`; mark public API methods and fields `public`.
-- **String Interpolation**: Double-quoted strings interpolate `{ident}` when there are no spaces inside braces. Escape literal braces as `\{` and `\}` or use raw strings `r"..."`.
-- **Reserved Keywords**: Never use `match`, `in`, `as`, `from`, `new` (except constructor `fn new`), `async`, `await`, `spawn`, `yield`, `interface`, or `abstract` as variable, parameter, or method names.
+- **`spider.toml` strict manifest schema**: Spid3r v1.1.1's `pkg::Manifest` allows only `[package]` (`name`, `version`, `entry`), `[dependencies]`, and `[workspace]`. Framework minimum-runtime enforcement (`MIN_SPID3R_VERSION = "1.1.1"`) therefore lives in `framework/Foundation/RuntimeVersion.matrix` and `config/app.matrix`.
+- **Dynamic Migration Registry**: Migrations under `database/migrations/` support both `Migration` subclasses and Laravel-9-style `public fn up()`/`down()` modules without any committed `registry.matrix`. `MigrationRegistry.matrix` generates the git-ignored `storage/framework/migrations.matrix` (with SHA-256 content digests) automatically on `migrate*` and `build`, while `MigrationRunner` tracks migration checksums, supports `--pretend`, `--step`, `migrate:fresh`, `migrate:reset`, `db:wipe`, and wraps DDL in transactions where supported (SQLite/PostgreSQL).
+- **3-Engine Differential & Coverage Testing**: Because `examples/` exists at repo root, bare `spid3r test` inspects `examples/*.matrix`. Use `spid3r magic test --differential` (verifies `tree`, `vm`, and compiled `.matrixc` `exec` parity), `--coverage`, and `--db=all`.
+- **Explicit Imports & Mutability Rules**:
+  - `import "X"` exports only direct `public` symbols of `X.matrix`; use `import "framework/Web";` for factories or import classes directly.
+  - `for x in list` iterates over copies — use indexed `while` loops for in-place list mutations.
+  - Guard shared mutable state with `mutex()`, avoid `super()` for LLVM AOT compatibility, and always guard `m[k]` reads with `m.has(k)`.
+
+---
+
+## 5. Stdlib Overlap & Design Decisions
+
+Spid3r `v1.1.1` ships stdlib modules (`session`, `middleware`, `multipart`, `uuid`, `semver`, `toml`, `yaml`, `http`) alongside Spid3rWeb's framework subsystems. The table below documents where Spid3rWeb extends vs. relies on the stdlib:
+
+| Framework Component | Stdlib Module | Design Choice & Rationale |
+|---|---|---|
+| `framework/Session/Session.matrix` & `Auth.matrix` | `session.matrix` | Keeps DB `sessions` table + `Cache`-backed server-side flash/session storage, CSPRNG IDs via `random_bytes`, and RFC 6265 `CookieJar` validation (`Set-Cookie` emission separated cleanly from client-side session serialization). |
+| `framework/Http/Middleware.matrix` | `middleware.matrix` | Keeps the framework's true Onion `(req, next) => next(req)` pipeline contract, `ThrottleMiddleware` (`X-RateLimit-*` via pluggable `Cache`), `CorsMiddleware`, `EtagMiddleware`, and `RequestIdMiddleware` so custom app middleware composes uniformly. |
+| `framework/Http/RequestParser.matrix` | `multipart.matrix` | Retains framework-level `config/upload.matrix` limits (`max_bytes`, `max_files`, extension/MIME allow/deny filtering, safe filenames), `_method` spoofing, and trusted-proxy IP/proto gating in one parser pass. |
+| Runtime helpers | `uuid`, `semver`, `toml`, `yaml` | Use stdlib natives/modules directly when adding optional TOML/YAML integrations (real exports: `uuid.uuid_v4`, `toml.toml_parse`, `semver.semver_parse`). Framework runtime version checks live in `RuntimeVersion.matrix` for zero-import boot checks. |

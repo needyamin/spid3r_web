@@ -14,11 +14,11 @@ graph TD
 
     subgraph FrameworkLayer ["Layer 2: Spid3rWeb Framework (framework/) — Single import: framework/Web"]
         Kernel["Application Kernel<br/>(Lifecycle, ETag, CSRF, Spoofing)"]:::framework
-        Router["O(1) & Prefix Router<br/>(133k ops/sec on VM)"]:::framework
+        Router["O(1) & Prefix Router<br/>(153,846 ops/sec on VM)"]:::framework
         Pipeline["True Onion Pipeline<br/>(Global & Route Middleware)"]:::framework
         ORM["Zero-Boilerplate ORM<br/>(Model, QueryBuilder, Schema)"]:::framework
         AuthSys["Auth, JWT & Sessions<br/>(Stateless HS256, Zero-DB JWT)"]:::framework
-        ViewEngine["SpiderBD v2 Engine<br/>(Compiled Line Cache, 9.5k ops/sec)"]:::framework
+        ViewEngine["SpiderBD v2 Engine<br/>(Compiled Line Cache, 9.7k ops/sec)"]:::framework
         Services["Core Systems<br/>(Cache, Log, Queue, Mail, Events, DI)"]:::framework
         Testing["TestClient & Magic CLI<br/>(In-Memory Tests & Scaffolding)"]:::framework
     end
@@ -26,7 +26,7 @@ graph TD
     subgraph RuntimeLayer ["Layer 1: Spid3r Native Runtime (Rust Binary) — Zero Dependencies"]
         HttpServer["Multi-Threaded HTTP/1.1<br/><code>serve_listener</code> Worker Pool"]:::runtime
         DbDrivers["Native DB Drivers<br/>(SQLite · PostgreSQL · MySQL)"]:::runtime
-        CryptoMutex["Crypto & Concurrency<br/>(bcrypt · HMAC · Mutex)"]:::runtime
+        CryptoMutex["Crypto & Concurrency<br/>(Argon2id · bcrypt · HMAC · Mutex)"]:::runtime
         VM["Bytecode VM & Stdlib<br/>(Regex NFA · JSON · Memory)"]:::runtime
     end
 

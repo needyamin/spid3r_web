@@ -95,7 +95,7 @@
 
     <rect x="685" y="245" width="250" height="80" rx="6" fill="#ffffff" stroke="#fdba74" stroke-width="1.2"/>
     <text x="698" y="269" fill="#ea580c" font-size="13" font-weight="700">PostgreSQL (Production)</text>
-    <text x="698" y="291" fill="#475569" font-size="11">Driver: pgsql · Connection pool</text>
+    <text x="698" y="291" fill="#475569" font-size="11">Driver: postgres · Connection pool</text>
     <text x="698" y="309" fill="#64748b" font-size="10.5">Parameterized bindings: $1, $2</text>
 
     <rect x="685" y="340" width="250" height="80" rx="6" fill="#ffffff" stroke="#fdba74" stroke-width="1.2"/>
@@ -107,7 +107,7 @@
     <rect x="685" y="435" width="250" height="90" rx="6" fill="#fff1f2" stroke="#fecdd3" stroke-width="1.2"/>
     <text x="698" y="459" fill="#be123c" font-size="12" font-weight="700">Native Spid3r Runtime</text>
     <text x="698" y="479" fill="#475569" font-size="11">• Multi-threaded safe bindings</text>
-    <text x="698" y="497" fill="#475569" font-size="11">• 20,547 query ops/sec on VM</text>
+    <text x="698" y="497" fill="#475569" font-size="11">• 21,428 query ops/sec on VM</text>
     <text x="698" y="515" fill="#be123c" font-size="10.5" font-weight="600">✓ Zero external C libraries required</text>
   </g>
 </svg>

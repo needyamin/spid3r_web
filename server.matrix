@@ -2,28 +2,15 @@
 // Spid3rWeb Production & Development HTTP/HTTPS Application Server
 // Works both via `spid3r run` and as a compiled native AOT executable (`dist/server.exe`).
 
-import "framework/Application";
-import "routes/web";
-import "routes/api";
-import "routes/queue";
+import "bootstrap/app";
 
 fn server_dirname(path: string) -> string {
-    let norm = string(path).replace("\\", "/");
-    let parts = norm.split("/");
+    let parts = string(path).replace("\\", "/").split("/");
     if parts.len() <= 1 {
         return "";
     }
-    let out = parts[0];
-    let i = 1;
-    while i < parts.len() - 1 {
-        if out != "" {
-            out = out + "/" + parts[i];
-        } else {
-            out = "/" + parts[i];
-        }
-        i = i + 1;
-    }
-    return out;
+    parts.pop();
+    return parts.join("/");
 }
 
 fn has_project_markers(dir: string) -> bool {
@@ -38,7 +25,8 @@ fn resolve_and_enter_project_root(explicit_root: string) {
     if explicit_root != "" {
         let cr = chdir(explicit_root);
         if cr.is_err() {
-            throw "server: cannot chdir to --root '" + explicit_root + "': " + string(cr.unwrap_err());
+            let err = string(cr.unwrap_err());
+            throw "server: cannot chdir to --root '{explicit_root}': {err}";
         }
         return;
     }
@@ -161,14 +149,8 @@ fn main() {
     println("==================================================================");
     println("[Spid3rWeb] Project root: " + root_dir);
 
-    // 2. Initialize Application Kernel
-    let app = new Application();
-
-    // 3. Register Web and API Routes (plus queue job handlers so
-    //    Queue.push with the sync driver resolves handlers in-process)
-    register_web_routes();
-    register_api_routes();
-    register_queue_jobs();
+    // 2. Create application, register service providers, routes, and jobs
+    let app = create_application();
 
     // 4. Start HTTP or HTTPS Server
     if use_tls {

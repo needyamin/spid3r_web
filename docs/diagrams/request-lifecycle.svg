@@ -179,8 +179,8 @@
   <!-- Bottom Legend / Badges -->
   <rect x="30" y="625" width="940" height="38" rx="8" fill="#f8fafc" stroke="#e2e8f0"/>
   <text x="50" y="649" fill="#64748b" font-size="12" font-weight="600">Performance Characteristics:</text>
-  <text x="230" y="649" fill="#2563eb" font-size="12" font-weight="700">⚡ Router: 133,333 ops/sec</text>
-  <text x="420" y="649" fill="#16a34a" font-size="12" font-weight="700">⚡ JSON roundtrip: 333,333 ops/sec</text>
-  <text x="660" y="649" fill="#7c3aed" font-size="12" font-weight="700">⚡ SpiderBD v2: 9,569 ops/sec</text>
+  <text x="230" y="649" fill="#2563eb" font-size="12" font-weight="700">⚡ Router: 153,846 ops/sec</text>
+  <text x="420" y="649" fill="#16a34a" font-size="12" font-weight="700">⚡ JSON roundtrip: 666,666 ops/sec</text>
+  <text x="660" y="649" fill="#7c3aed" font-size="12" font-weight="700">⚡ SpiderBD v2: 9,661 ops/sec</text>
 </svg>
 

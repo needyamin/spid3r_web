@@ -83,7 +83,7 @@
 
     <rect x="253" y="308" width="215" height="64" rx="8" fill="#ffffff" stroke="#bfdbfe" stroke-width="1.2"/>
     <text x="265" y="328" fill="#1d4ed8" font-size="12" font-weight="700">O(1) &amp; Prefix Router</text>
-    <text x="265" y="346" fill="#475569" font-size="11">133,333 ops/sec on VM</text>
+    <text x="265" y="346" fill="#475569" font-size="11">153,846 ops/sec on VM</text>
     <text x="265" y="360" fill="#64748b" font-size="10">Static O(1) · 2-level buckets</text>
 
     <rect x="480" y="308" width="215" height="64" rx="8" fill="#ffffff" stroke="#bfdbfe" stroke-width="1.2"/>
@@ -105,7 +105,7 @@
     <rect x="253" y="380" width="215" height="64" rx="8" fill="#ffffff" stroke="#bfdbfe" stroke-width="1.2"/>
     <text x="265" y="400" fill="#1d4ed8" font-size="12" font-weight="700">SpiderBD v2 Views</text>
     <text x="265" y="418" fill="#475569" font-size="11">Pre-compiled line cache</text>
-    <text x="265" y="432" fill="#64748b" font-size="10">9,569 ops/sec · @if, @foreach</text>
+    <text x="265" y="432" fill="#64748b" font-size="10">9,661 ops/sec · @if, @foreach</text>
 
     <rect x="480" y="380" width="215" height="64" rx="8" fill="#ffffff" stroke="#bfdbfe" stroke-width="1.2"/>
     <text x="492" y="400" fill="#1d4ed8" font-size="12" font-weight="700">Systems &amp; Services</text>
@@ -114,7 +114,7 @@
 
     <rect x="707" y="380" width="215" height="64" rx="8" fill="#ffffff" stroke="#bfdbfe" stroke-width="1.2"/>
     <text x="719" y="400" fill="#1d4ed8" font-size="12" font-weight="700">Testing &amp; CLI</text>
-    <text x="719" y="418" fill="#475569" font-size="11">TestClient · 17 Test Suites</text>
+    <text x="719" y="418" fill="#475569" font-size="11">TestClient · 25 Test Suites</text>
     <text x="719" y="432" fill="#64748b" font-size="10">Magic CLI scaffolding &amp; ops</text>
   </g>
 
@@ -140,7 +140,7 @@
 
     <rect x="480" y="522" width="215" height="66" rx="8" fill="#ffffff" stroke="#fed7aa" stroke-width="1.2"/>
     <text x="492" y="542" fill="#c2410c" font-size="12" font-weight="700">Crypto &amp; Concurrency</text>
-    <text x="492" y="560" fill="#475569" font-size="11">bcrypt_hash · hmac_sha256</text>
+    <text x="492" y="560" fill="#475569" font-size="11">Argon2id/bcrypt · hmac_sha256</text>
     <text x="492" y="574" fill="#64748b" font-size="10">secure_compare · Mutex locks</text>
 
     <rect x="707" y="522" width="215" height="66" rx="8" fill="#ffffff" stroke="#fed7aa" stroke-width="1.2"/>

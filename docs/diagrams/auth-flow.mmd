@@ -36,7 +36,7 @@ flowchart TD
     Comp -- Fail --> AuthFail
     Exp -- Expired --> AuthFail
 
-    Check -- Cookie spid3r_sid --> FindSess
+    Check -- Cookie spid3r_session --> FindSess
     FindSess --> SessFound
     SessFound -- Yes --> Mutating
     SessFound -- No --> AuthFail

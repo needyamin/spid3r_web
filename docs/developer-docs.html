@@ -232,12 +232,13 @@
 
 <header class="topbar">
   <div class="logo"><span class="spider">🕷️</span> Spid3r<span class="web">Web</span></div>
-  <span class="version-badge">v2.0 — Modern MVC</span>
+  <span class="version-badge">v1.1.0 · needs Spid3r ≥ 1.1.1</span>
   <nav class="links">
     <a href="#diagrams">Diagrams</a>
     <a href="#getting-started">Getting Started</a>
     <a href="#barrel">Single-Import DX</a>
     <a href="#api-reference">API Reference</a>
+    <a href="#docs-map">More Docs</a>
     <a href="#testing">Testing</a>
     <a href="https://github.com/needyamin/spid3r">Spid3r Language</a>
   </nav>
@@ -254,6 +255,7 @@
     <a href="#barrel">Single-Import Barrel (<code>Web</code>)</a>
     <a href="#stack">Tech Stack</a>
     <a href="#structure">Project Structure</a>
+    <a href="#environment">Environment &amp; Safe Defaults</a>
   </div>
   <div class="group">
     <div class="group-title">Getting Started</div>
@@ -298,9 +300,12 @@
   <div class="group">
     <div class="group-title">Quality &amp; Ops</div>
     <a href="#testing">Testing &amp; <code>TestClient</code></a>
+    <a href="#tooling">Developer Tooling</a>
     <a href="#deployment">Deployment</a>
     <a href="#recipes">Common Recipes</a>
     <a href="#api-reference">API Cheat Sheet</a>
+    <a href="#limitations">Known Limitations</a>
+    <a href="#docs-map">More Documentation</a>
   </div>
 </aside>
 
@@ -309,15 +314,15 @@
 <!-- ============ OVERVIEW ============ -->
 <section id="overview">
   <h1>🕷️ Spid3rWeb Developer Documentation</h1>
-  <p class="lead">Spid3rWeb is a modern, lightweight, high-performance full-stack MVC framework for the <strong>Spid3r programming language</strong> — combining Express/Fastify-style routing ergonomics with zero-boilerplate Active Record models, an O(1) + prefix-indexed router, a true Onion middleware pipeline, stateless JWT &amp; session auth, SpiderBD v2 templates, and a fluent integration <code>TestClient</code>, all with <strong>zero external dependencies</strong>.</p>
+  <p class="lead">Spid3rWeb is a modern, lightweight, high-performance full-stack MVC framework for the <strong>Spid3r programming language</strong> — combining Express/Fastify-style routing ergonomics with zero-boilerplate Active Record models, an O(1) + prefix-indexed router, a true Onion middleware pipeline, stateless JWT &amp; session auth, SpiderBD v2 templates, and a fluent integration <code>TestClient</code>, all with <strong>zero external dependencies</strong>. This page is the main developer guide; the numbers in it (suite counts, benchmark rates, command lists) were checked against the repository and <code>benchmarks/RESULTS.md</code> at the time of writing.</p>
 
   <div class="grid">
-    <div class="card"><div class="c-icon">⚡</div><h4>Single-Import DX</h4><p>Import <code>"framework/Web"</code> once to access <code>web()</code>, <code>model()</code>, <code>router()</code>, <code>route()</code>, <code>abort()</code>, <code>db()</code>, <code>schema()</code>, <code>auth()</code>, <code>jwt()</code>, <code>cache()</code>, and <code>test_client()</code>.</p></div>
+    <div class="card"><div class="c-icon">⚡</div><h4>Single-Import DX</h4><p>Import <code>"framework/Web"</code> once to access <code>web()</code>, <code>model()</code>, <code>router()</code>, <code>route()</code>, <code>abort()</code>, <code>db()</code>, <code>schema()</code>, <code>auth()</code>, <code>jwt()</code>, <code>hash()</code>, <code>cache()</code>, <code>log()</code>, <code>queue()</code>, <code>mail()</code>, <code>storage()</code>, <code>events()</code>, <code>config()</code>, <code>views()</code>, and <code>test_client()</code>.</p></div>
     <div class="card"><div class="c-icon">🛣️</div><h4>153k VM / 200k AOT Router</h4><p>O(1) hash lookup for static routes, 2-level segment &amp; prefix indexing for <code>:param</code> / <code>{param}</code> routes, <code>*wildcard</code> catch-alls, sub-router <code>mount()</code>, and named <code>route()</code> URL generation.</p></div>
-    <div class="card"><div class="c-icon">🧅</div><h4>True Onion Middleware</h4><p>Write <code>(req, next) =&gt; { let res = next(req); ... return res; }</code> closures or classes. Includes <code>auth</code>, <code>guest</code>, <code>cors</code>, <code>logger</code>, <code>etag</code>, <code>request_id</code>, and <code>throttle</code>.</p></div>
+    <div class="card"><div class="c-icon">🧅</div><h4>True Onion Middleware</h4><p>Write <code>(req, next) =&gt; { let res = next(req); ... return res; }</code> closures or classes. Built-in aliases: <code>auth</code>, <code>guest</code>, <code>cors</code>, <code>logger</code>, <code>etag</code>, <code>request_id</code>, and <code>throttle</code>.</p></div>
     <div class="card"><div class="c-icon">🗂️</div><h4>1-Line Models &amp; Casts</h4><p>Define models in 1 line with <code>model("posts", opts)</code>: automatic <code>bool</code>/<code>int</code>/<code>float</code>/<code>json</code> casts, <code>hidden</code> field stripping, dirty tracking, <code>find_or_fail()</code>, and batched eager loading.</p></div>
     <div class="card"><div class="c-icon">✅</div><h4>1-Line Validation</h4><p><code>req.validate_or_fail(rules)</code> validates and coerces inputs to native <code>int</code>/<code>float</code>/<code>bool</code> types, or automatically aborts with a <code>422 Unprocessable Entity</code> response.</p></div>
-    <div class="card"><div class="c-icon">🔐</div><h4>Stateless JWT + Sessions</h4><p>Zero-DB-query HS256 <code>Jwt.sign</code> / <code>Jwt.verify</code> Bearer authentication alongside CSPRNG DB sessions, HMAC-signed cookies, and <code>req.session()</code> flash messages.</p></div>
+    <div class="card"><div class="c-icon">🔐</div><h4>Stateless JWT + Sessions</h4><p>Zero-DB-query HS256 <code>jwt().sign</code> / <code>jwt().verify</code> Bearer authentication alongside CSPRNG DB sessions, Argon2id password hashing (bcrypt supported, transparent rehash on login), HMAC-signed cookies, and <code>req.session()</code> flash messages.</p></div>
     <div class="card"><div class="c-icon">🧩</div><h4>SpiderBD v2 Views</h4><p>Pre-compiled template line cache with <code>file_mtime</code> invalidation, rich <code>@if(a == b and c &gt;= 10)</code> / <code>@elif</code> expressions, <code>loop</code> metadata in <code>@foreach</code>, <code>@csrf</code>, and <code>@method('PUT')</code>.</p></div>
     <div class="card"><div class="c-icon">🧪</div><h4>Fluent TestClient</h4><p>Test your entire HTTP stack in-memory without opening sockets: <code>app.test_client()</code>, <code>acting_as(user)</code>, <code>post_json(...)</code>, and <code>assert_json_path(...)</code>.</p></div>
   </div>
@@ -357,7 +362,7 @@
     <div class="card">
       <div class="c-icon">🛣️</div>
       <h4><a href="#routing" class="inline">O(1) &amp; Prefix Router</a></h4>
-      <p>153,846 ops/sec (VM) / 200,000 ops/sec (AOT) routing pipeline with static hash lookup and 2-level prefix buckets.</p>
+      <p>153,846 ops/sec (VM) / 200,000 ops/sec (AOT) in <code>benchmarks/bench.matrix</code> (200 routes, <code>:param</code> capture): static hash lookup plus 2-level prefix buckets.</p>
     </div>
     <div class="card">
       <div class="c-icon">🗄️</div>
@@ -422,57 +427,101 @@ app.listen(8000);</code></pre>
 <!-- ============ TECH STACK ============ -->
 <section id="stack">
   <h2>Tech Stack</h2>
-  <p>Spid3rWeb runs entirely on the Spid3r v1.1.1 (Language 1.1.1) runtime — <strong>zero external dependencies</strong>.</p>
+  <p>Spid3rWeb 1.1.0 runs on the Spid3r runtime and requires <strong>Spid3r ≥ 1.1.1</strong> (<code>framework/Foundation/RuntimeVersion.matrix</code> enforces this at boot in production and in <code>magic doctor</code>). There are no external packages.</p>
   <table>
     <tr><th>Layer</th><th>Provides</th></tr>
-    <tr><td>Spid3r Runtime (Rust)</td><td>Multi-threaded HTTP/1.1 <code>serve_listener</code> worker pool, TCP sockets, RFC 6455 WebSocket (<code>ws_*</code>), SQLite / MySQL / PostgreSQL native drivers, bcrypt, SHA-256 / HMAC-SHA256 / constant-time <code>secure_compare</code>, <code>mutex</code>, Thompson NFA regex, JSON parser/writer</td></tr>
-    <tr><td>Spid3rWeb Framework (<code>framework/</code>)</td><td>Single-import barrel (<code>Web</code>), MVC lifecycle (<code>Application</code>), O(1) + prefix-indexed <code>Router</code>, true Onion <code>Middleware</code> pipeline, zero-boilerplate ORM (<code>DB</code> / <code>QueryBuilder</code> / <code>Schema</code> / <code>Model</code> / <code>ModelRepository</code>), <code>Validator</code> with type coercion, <code>Auth</code> + stateless <code>Jwt</code>, <code>SessionStore</code> + flash, thread-safe <code>Cache</code> &amp; <code>Log</code>, <code>Storage</code>, <code>Mail</code>, <code>Queue</code>, SpiderBD v2 (<code>BD</code>), <code>ServiceContainer</code>, <code>Event</code> bus, <code>TestClient</code>, Magic CLI, and auto-discovering <code>TestRunner</code></td></tr>
+    <tr><td>Spid3r Runtime (Rust)</td><td>Multi-threaded HTTP/1.1 <code>serve_listener</code> worker pool, TCP sockets, RFC 6455 WebSocket (<code>ws_*</code>), SQLite / MySQL / PostgreSQL native drivers, Argon2id / bcrypt, SHA-256 / HMAC-SHA256 / constant-time <code>secure_compare</code>, <code>mutex</code>, Thompson NFA regex, JSON parser/writer, bytecode VM + tree-walk oracle + LLVM 23 AOT compiler</td></tr>
+    <tr><td>Spid3rWeb Framework (<code>framework/</code>)</td><td>Single-import barrel (<code>Web</code>), <code>Application</code> kernel, O(1) + prefix-indexed <code>Router</code>, Onion <code>Middleware</code> pipeline, ORM (<code>DB</code> / <code>QueryBuilder</code> / <code>Schema</code> / <code>Model</code> / <code>ModelRepository</code> / <code>ConnectionPool</code>), <code>Validator</code> with type coercion, <code>Auth</code> + stateless <code>Jwt</code> + <code>Hash</code>, <code>SessionStore</code> + flash, <code>Cache</code>, <code>Log</code>, <code>Storage</code>, <code>Mail</code>, <code>Queue</code>, SpiderBD v2 views (<code>BD</code>), <code>ServiceContainer</code>, <code>Event</code> bus, <code>WsServer</code>, <code>TestClient</code>, and the Magic CLI</td></tr>
   </table>
 </section>
 
 <!-- ============ STRUCTURE ============ -->
 <section id="structure">
   <h2>Project Structure</h2>
-  <pre><code>app/            Your application code — Controllers, Models, Middleware, Providers
-benchmarks/     Micro-benchmarks (bench.matrix) + recorded results (RESULTS.md)
-config/         app, auth, session, cache, database, filesystems, logging, mail, queue, services
-database/       migrations/ (auto-discovered) + seeders/
-deploy/         Dockerfile + docker-compose.yml
-docs/           ARCHITECTURE.md (technical reference) + developer-docs.html
-examples/       task-api/main.matrix — runnable full-stack MVC example
-framework/      Framework core (Web.matrix barrel, Application, Router, Middleware, ORM, Views, Auth, Jwt, Session, Testing, CLI)
-public/         Static assets — /css/, /js/, /images/, /fonts/, /uploads/
-resources/      SpiderBD v2 templates (.bd.html)
-routes/         web.matrix (pages) · api.matrix (APIs) · queue.matrix (job handlers)
-storage/        Runtime artifacts: logs, cache, uploads
-tests/          17 automated test suites — auto-discovered by `spid3r magic test`
-tools/          Maintenance scripts (resync.matrix rebuilds the migration registry)
+<pre><code>app/            Application code. Shipped: Controllers/HomeController, Providers/AppServiceProvider.
+                make:* generators also create app/Models, app/Middleware, app/Requests,
+                app/Resources and app/Console on demand.
+benchmarks/     bench.matrix (micro-benchmarks + --gate floors) and RESULTS.md
+bootstrap/      paths.matrix (project paths) and app.matrix (create_application(): providers + routes)
+config/         app, auth, cache, database, filesystems, http, logging, mail, queue,
+                security, services, session, upload  (13 namespaces)
+database/       migrations/ (class- or function-based) and seeders/
+deploy/         Dockerfile, docker-compose.yml, nginx.conf, Caddyfile
+docs/           This file, ARCHITECTURE/SECURITY/DEPLOY/DRIVERS/UPSTREAM_REQUESTS .md,
+                diagrams/, history/ (archived plan.txt, changes.txt),
+                build/ (generated API docs, git-ignored)
+examples/       task-api/main.matrix - runnable full-stack MVC example
+framework/      Web.matrix barrel plus Auth, Cache, Console (+ Commands/), Database, Events,
+                Filesystem, Foundation, Http, Log, Mail, Queue, Session, Testing, View, WebSocket
+public/         Static assets (css/, js/, images/, fonts/, uploads/ ...)
+resources/      views/*.bd.html (SpiderBD v2 templates)
+routes/         web.matrix, api.matrix, queue.matrix (job handlers)
+storage/        Runtime state (git-ignored except .gitkeep): app/, framework/cache/, logs/, database/, backups/
+tests/          25 test suites, auto-discovered by `spid3r magic test`
+tools/          resync.matrix (maintenance helper)
+.github/        workflows/ci.yml and release.yml
 
-install.sh      One-line project + toolchain setup
-magic           CLI entrypoint — `spid3r magic serve | test | migrate | ...`
-server.matrix   Production server entrypoint
-spider.toml     Package manifest</code></pre>
+install.sh      Project + toolchain setup
+magic           CLI entrypoint - `spid3r magic &lt;command&gt;`
+server.matrix   Production server entrypoint (AOT-friendly)
+spider.toml     Package manifest (name, version, entry)
+spid3r.ini.example   Runtime guardrails; copy to spid3r.ini
+.env.example    Environment template (never commit .env)</code></pre>
+  <p>Framework files are kept at or below 500 lines each (a project convention; <code>spid3r magic fmt</code> keeps them canonical). <code>storage/framework/migrations.matrix</code> is generated by the migration commands and is git-ignored.</p>
+</section>
+
+
+<!-- ============ ENVIRONMENT ============ -->
+<section id="environment">
+  <h2>Environment &amp; Safe Defaults</h2>
+  <p>Spid3rWeb is <strong>secure by default</strong>: with no configuration it behaves as a production app. Values come from the process environment first, then <code>.env</code>.</p>
+  <table>
+    <tr><th>Variable</th><th>Effect</th></tr>
+    <tr><td><code>APP_ENV</code></td><td>Defaults to <code>production</code> with debug off. <code>APP_ENV=development</code> or <code>APP_DEBUG=true</code> turns debug on. The test runner uses <code>testing</code>.</td></tr>
+    <tr><td><code>APP_KEY</code> / <code>SPID3R_APP_KEY</code></td><td>Signing secret for cookies and JWTs. There are no hard-coded fallback secrets: in production, <code>Application.check_production_ready()</code> fails closed if the key is missing or insecure. Generate one with <code>spid3r magic key:generate</code>.</td></tr>
+    <tr><td><code>SPID3R_DB_DRIVER</code></td><td><code>sqlite</code> (default), <code>postgres</code>, <code>mysql</code>, <code>mariadb</code>. See <code>docs/DRIVERS.md</code>.</td></tr>
+    <tr><td><code>SPID3R_STATE_DIR</code></td><td>Runtime state root (default <code>storage</code>), exposed as <code>app.paths.state_dir</code>.</td></tr>
+    <tr><td><code>SPID3R_DB_PATH</code></td><td>Explicit SQLite file. Default: <code>storage/database/database.sqlite</code> (a legacy <code>database/database.sqlite</code> is still used if it already exists). The parent directory is created automatically.</td></tr>
+    <tr><td><code>SPID3R_CACHE_DRIVER</code></td><td><code>memory</code> | <code>file</code> | <code>database</code>. Default: <code>file</code> in production, <code>memory</code> otherwise.</td></tr>
+    <tr><td><code>SPID3R_HASH_DRIVER</code></td><td><code>argon2id</code> (default) or <code>bcrypt</code>.</td></tr>
+    <tr><td><code>SPID3R_LOG_LEVEL</code>, <code>SPID3R_LOG_RETENTION_DAYS</code></td><td>Minimum log level; days kept by <code>storage:prune</code> (default 14).</td></tr>
+    <tr><td><code>SPID3R_UPLOAD_MAX_BYTES</code>, <code>SPID3R_UPLOAD_MAX_FILES</code></td><td>Multipart limits (defaults 5,242,880 bytes and 10 files).</td></tr>
+    <tr><td><code>SPID3R_SESSION_COOKIE</code></td><td>Name of the auth-session cookie (default <code>spid3r_session</code>).</td></tr>
+    <tr><td><code>SPID3R_MAIL_MAILER</code>, <code>SPID3R_MAIL_HOST</code>, <code>SPID3R_MAIL_PORT</code></td><td><code>log</code> (default) or <code>smtp</code> (plain TCP relay).</td></tr>
+    <tr><td><code>SPID3R_HOST</code></td><td>Bind address for <code>serve</code> / the AOT binary.</td></tr>
+  </table>
+  <div class="callout warn">
+    <div class="co-title">⚠️ OneDrive / synced folders</div>
+    <p>SQLite files and WAL/SHM sidecars inside OneDrive-synced folders can be locked or corrupted by the sync client. <code>spid3r magic doctor</code> warns about this; point <code>SPID3R_STATE_DIR</code> or <code>SPID3R_DB_PATH</code> at a non-synced location for development.</p>
+  </div>
 </section>
 
 <!-- ============ GETTING STARTED ============ -->
 <section id="getting-started">
   <h2>Installation &amp; Setup</h2>
-  <p>One command (Linux / macOS / Windows Git Bash) installs the Spid3r language if missing, then prepares the project:</p>
-  <pre><code>sh install.sh            // set up the project
-sh install.sh --serve    // ...and start the dev server immediately</code></pre>
-  <p>If Spid3r is already installed:</p>
-  <pre><code>spid3r magic key:generate   // generate a 256-bit APP_KEY in .env
-spid3r magic migrate        // create the schema (users, sessions, jobs)
-spid3r magic db:seed        // optional — run database seeders
-spid3r magic serve          // http://127.0.0.1:8000</code></pre>
-  <p>Scaffold controllers, models, middleware, providers, migrations, and tests with the Magic CLI:</p>
-  <pre><code>spid3r magic make:model Post -m             // zero-boilerplate model + migration
-spid3r magic make:controller PostController // modern MVC controller
+  <p>On Linux / macOS / Windows Git Bash, <code>install.sh</code> checks for a pinned, SHA-256-verified Spid3r toolchain and prepares the project (it never installs OS packages with <code>sudo</code>; it prints manual instructions instead). It creates <code>.env</code> with <code>0600</code> permissions, runs <code>key:generate</code>, and restricts <code>storage/</code> and <code>database/</code> to <code>0700</code>.</p>
+<pre><code>sh install.sh            # set up the project
+sh install.sh --serve    # ...and start the dev server immediately</code></pre>
+  <p>If Spid3r is already installed (on Windows PowerShell set <code>$env:SPID3R_PATH = "."</code> so project imports resolve; <code>spid3r.ini</code> already sets <code>[modules] path = .</code>):</p>
+<pre><code>spid3r magic key:generate    # write a 256-bit APP_KEY to .env
+spid3r magic migrate         # create the schema (users, sessions, jobs)
+spid3r magic db:seed         # optional - run database seeders
+spid3r magic serve           # http://127.0.0.1:8000
+spid3r magic doctor          # permissions, secrets, ini, DB health checks</code></pre>
+  <p>Scaffold code with the generators:</p>
+<pre><code>spid3r magic make:model Post -m              # app/Models/Post.matrix (+ migration with -m)
+spid3r magic make:controller PostController  # app/Controllers/PostController.matrix
 spid3r magic make:middleware EnsureSubscribed
-spid3r magic make:test post_api</code></pre>
+spid3r magic make:request StorePostRequest
+spid3r magic make:resource PostResource
+spid3r magic make:command Report
+spid3r magic make:seeder PostSeeder
+spid3r magic make:test post_api
+spid3r magic make:migration create_posts_table [--fn]</code></pre>
+  <p>The shipped routes are <code>GET /</code> (welcome view), <code>GET /health</code> (<code>{"status":"ok"}</code>) and <code>GET /info</code>; check with <code>spid3r magic route:list</code>.</p>
   <div class="callout tip">
     <div class="co-title">💡 Runnable Full-Stack Example</div>
-    <p>Run <code>SPID3R_PATH=. SPID3R_DB_DRIVER=sqlite spid3r run examples/task-api/main.matrix</code> (Bytecode VM is default in Spid3r v1.1.1+, or compile AOT with <code>spid3r magic build --release examples/task-api/main.matrix</code>) to see <code>framework/Web</code>, <code>model()</code>, <code>ServiceProvider</code>, model events, <code>req.validate_or_fail()</code>, <code>find_or_fail()</code>, REST resources, pagination, and <code>TestClient</code> working end to end without opening a port.</p>
+    <p>Run <code>SPID3R_PATH=. SPID3R_DB_DRIVER=sqlite spid3r run examples/task-api/main.matrix</code>. It exercises <code>framework/Web</code>, <code>model()</code>, <code>ServiceProvider</code>, model events, <code>req.validate_or_fail()</code>, <code>find_or_fail()</code>, REST resources, pagination, and <code>TestClient</code> without opening a port.</p>
   </div>
 </section>
 
@@ -498,68 +547,85 @@ spid3r magic make:test post_api</code></pre>
 
   <pre><code>1. Boot service providers      // once, idempotently before the first request
 2. Construct Request           // parses query, JSON/form/multipart, cookies, and _method spoofing
-3. Per-request Auth &amp; JWT      // req.auth verifies stateless Bearer JWT (0 DB hits) or session token
-4. CSRF defense Layers 1 &amp; 2   // Origin vs Host check + per-session _csrf token verification
-5. Static assets &amp; ETag (304)  // /css/ /js/ /images/ /uploads/ with traversal guard &amp; If-None-Match
+3. Per-request Auth &amp; JWT      // req.auth verifies stateless Bearer JWT (0 DB hits) or the DB session cookie
+4. CSRF defense layers 1 &amp; 2   // Origin vs Host check + per-session _csrf token on state-changing verbs
+5. Static assets &amp; ETag (304)  // /css/ /js/ /images/ /uploads/ ... with traversal guard, If-None-Match, Range
 6. Global Onion pipeline       // CORS + app.use() middleware wrapping downstream execution
-7. O(1) / Bucketed routing     // O(1) static map -&gt; prefix-indexed dynamic buckets -&gt; wildcards
-8. Route Onion middleware      // named aliases (auth, guest, etag, request_id, throttle:N,M)
-9. Handler &amp; return coercion   // req =&gt; ... or (req, res) =&gt; ...; maps/lists -&gt; JSON, strings -&gt; HTML
-10. Session commit &amp; errors    // commits dirty req.session() cookies; renders HttpExceptions</code></pre>
+7. O(1) / bucketed routing     // static map -&gt; prefix-indexed dynamic buckets -&gt; wildcards -&gt; 405/404
+8. Route middleware &amp; handler  // aliases (auth, guest, etag, request_id, throttle:N,M), then your handler
+9. Coercion &amp; session commit   // maps/lists -&gt; JSON, strings -&gt; HTML; dirty req.session() committed; HttpExceptions rendered</code></pre>
 </section>
 
 <!-- ============ CONFIG ============ -->
 <section id="config">
   <h2>Configuration</h2>
-  <p>All runtime configuration lives in <code>config/*.matrix</code>, accessed through a dot-notation repository (or <code>config(key, default)</code> from <code>framework/Web</code>). Values load from <code>.env</code> and OS environment variables:</p>
-  <pre><code>import "framework/Web";
+  <p>All runtime configuration lives in <code>config/*.matrix</code> (13 namespaces, registered in <code>framework/Foundation/Config.matrix</code>) and is read through a dot-notation repository (or <code>config(key, default)</code> from <code>framework/Web</code>). Environment values are applied inside each config file via small <code>env()</code> helpers.</p>
+<pre><code>import "framework/Web";
 
 let ttl  = config("session.lifetime", 86400);
 let from = config("mail.from.address");
 config().set("app.name", "My Spid3r App");</code></pre>
   <table>
     <tr><th>File</th><th>Controls</th></tr>
-    <tr><td><code>config/app.matrix</code></td><td>Application name, environment, debug flag, <code>app.key</code> secret</td></tr>
-    <tr><td><code>config/database.matrix</code></td><td>Default driver (<code>sqlite</code>, <code>postgres</code>, <code>mysql</code>, <code>mariadb</code>) and connection settings</td></tr>
-    <tr><td><code>config/auth.matrix</code></td><td>Guard table + username column</td></tr>
+    <tr><td><code>config/app.matrix</code></td><td>Name, <code>env</code>, <code>debug</code>, <code>key</code>, <code>version</code> / <code>min_spid3r</code>, and <code>paths</code> (<code>public</code>, <code>views</code>, <code>state_dir</code>)</td></tr>
+    <tr><td><code>config/database.matrix</code></td><td>Default driver and connection settings, pool size and timeouts, SQLite <code>synchronous=NORMAL</code></td></tr>
+    <tr><td><code>config/auth.matrix</code></td><td>Guards, users table/username column, hashing driver (<code>argon2id</code> default; Argon2 and bcrypt parameters)</td></tr>
     <tr><td><code>config/session.matrix</code></td><td>Cookie name, lifetime, HttpOnly / SameSite / Secure flags</td></tr>
-    <tr><td><code>config/cache.matrix</code></td><td>Default store: <code>memory</code> (bounded 10k entries, mutex-safe) | <code>file</code> | <code>database</code></td></tr>
-    <tr><td><code>config/logging.matrix</code></td><td>Channels (<code>single</code>, <code>daily</code>), level (<code>SPID3R_LOG_LEVEL</code>)</td></tr>
-    <tr><td><code>config/mail.matrix</code></td><td>From address, driver (<code>log</code>)</td></tr>
+    <tr><td><code>config/cache.matrix</code></td><td>Stores <code>memory</code> | <code>file</code> | <code>database</code>; default <code>file</code> in production</td></tr>
+    <tr><td><code>config/security.matrix</code></td><td>Default security headers, CSP, HSTS (auto-enabled on production TLS), upload CSP</td></tr>
+    <tr><td><code>config/upload.matrix</code></td><td>Multipart <code>max_bytes</code>, <code>max_files</code>, allowed/blocked extensions and MIME types, randomized filenames</td></tr>
+    <tr><td><code>config/http.matrix</code></td><td>Trusted proxies for <code>X-Forwarded-*</code>, request limits</td></tr>
+    <tr><td><code>config/logging.matrix</code></td><td>Channels (<code>single</code>, <code>daily</code>, <code>mail</code>, <code>queue</code>), level, <code>retention_days</code></td></tr>
+    <tr><td><code>config/mail.matrix</code></td><td>From address; <code>log</code> and <code>smtp</code> mailers</td></tr>
     <tr><td><code>config/queue.matrix</code></td><td>Default queue + driver (<code>database</code> | <code>sync</code>)</td></tr>
-    <tr><td><code>config/filesystems.matrix</code></td><td><code>local</code> and <code>public</code> storage disks</td></tr>
+    <tr><td><code>config/filesystems.matrix</code></td><td><code>local</code>, <code>public</code> and <code>logs</code> disks with <code>max_bytes</code> quotas; <code>public</code> blocks <code>html/htm/svg/js/mjs/xhtml</code> uploads</td></tr>
+    <tr><td><code>config/services.matrix</code></td><td>Third-party credential env-var names (e.g. Stripe, Google OAuth); no secrets stored</td></tr>
   </table>
+  <p>Validate everything with <code>spid3r magic config:check</code>, and the runtime ini with <code>spid3r config validate</code>.</p>
 </section>
 
 <!-- ============ CLI ============ -->
 <section id="cli">
   <h2>Magic CLI</h2>
-  <pre><code>spid3r magic serve                    // start HTTP/HTTPS server (--port N, --tls --cert C --key K, --dry-run)
-spid3r magic build --release          // compile LLVM-23 AOT native binary (-o dist/server.exe, --bundle)
-spid3r magic test                     // auto-discover &amp; run all 17 test suites (--filter=X, --engine=tree)
-spid3r magic route:list               // table of all registered routes and names
-spid3r magic migrate                  // auto-sync &amp; run pending migrations
-spid3r magic migrate:sync             // rebuild database/migrations/registry.matrix
-spid3r magic migrate:rollback         // roll back the last migration batch
-spid3r magic migrate:status           // show migration status table
-spid3r magic db:seed                  // run database seeders
-spid3r magic queue:work               // drain queued jobs (--once, --daemon, --sleep=500, --queue=name)
-spid3r magic cache:clear              // flush the application cache store
-spid3r magic key:generate             // generate a 256-bit random APP_KEY in .env
-spid3r magic make:controller &lt;Name&gt;   // scaffold an MVC controller in app/Controllers/
-spid3r magic make:model &lt;Name&gt; [-m]   // scaffold a 1-line model repository (+ optional migration)
-spid3r magic make:middleware &lt;Name&gt;   // scaffold an Onion middleware class in app/Middleware/
-spid3r magic make:provider &lt;Name&gt;     // scaffold a ServiceProvider in app/Providers/
-spid3r magic make:test &lt;name&gt;         // scaffold a TestClient suite in tests/
-spid3r magic make:migration &lt;name&gt;    // scaffold + auto-register a migration</code></pre>
+  <p>Run <code>spid3r magic help</code> for the authoritative list. Current commands:</p>
+<pre><code># Serve / build / test
+spid3r magic serve [--host H] [--port N] [--watch] [--tls --cert C --key K] [--dry-run]
+spid3r magic build [--release|--bytecode-only] [-o OUT] [--bundle] [--bundle-runtime] [--embed] [--product-name N] [--version V]
+spid3r magic test [--filter=X] [--engine=tree|vm] [--differential] [--coverage] [--db=all]
+spid3r magic route:list
+
+# Database
+spid3r magic migrate [--pretend] [--step]
+spid3r magic migrate:fresh [--pretend] [--step]
+spid3r magic migrate:reset | migrate:rollback | migrate:status | migrate:sync | migrate:rename-legacy
+spid3r magic db:seed | db:wipe | db:backup [dest] | db:vacuum
+
+# Runtime &amp; housekeeping
+spid3r magic queue:work [--once|--daemon] [--sleep=MS] [--queue=name]
+spid3r magic cache:clear | cache:gc [store]
+spid3r magic key:generate
+spid3r magic storage:link | storage:prune [--days=N] [--temp-age=S]
+spid3r magic doctor [--fix] [--strict]
+spid3r magic config:check
+
+# Developer tooling
+spid3r magic lint [files...] | fmt [--check] [targets...] | docs [--json] [-o PATH] [target] | bench [--gate] [--runs=N]
+
+# Generators
+spid3r magic make:controller|model|middleware|provider|request|resource|command|seeder &lt;Name&gt;
+spid3r magic make:model &lt;Name&gt; -m
+spid3r magic make:test &lt;name&gt;
+spid3r magic make:migration &lt;name&gt; [--fn]</code></pre>
+  <p>Production topologies are described in <a href="#deployment">Deployment</a>.</p>
 </section>
 
 <!-- ============ TOOLCHAIN ============ -->
 <section id="toolchain">
   <h2>Bytecode VM, LLVM-23 AOT &amp; Benchmarks</h2>
-  <p>Spid3r v1.1.1 runs on the bytecode VM by default (with <code>--engine tree</code> as the semantic oracle) and compiles directly to standalone native executables with LLVM 23.1.0 AOT (<code>spid3r magic build --release</code>). Reproduce the benchmarks with:</p>
+  <p>Spid3r v1.1.1 runs on the bytecode VM by default (with <code>--engine tree</code> as the semantic oracle) and compiles directly to standalone native executables with LLVM 23.1.0 AOT (<code>spid3r magic build --release</code>). Reproduce the benchmarks with (the third line also enforces the regression floors):</p>
   <pre><code>SPID3R_PATH=. SPID3R_DB_DRIVER=sqlite spid3r run benchmarks/bench.matrix
-SPID3R_PATH=. SPID3R_DB_DRIVER=sqlite spid3r build --release benchmarks/bench.matrix -o bench_aot &amp;&amp; ./bench_aot</code></pre>
+SPID3R_PATH=. SPID3R_DB_DRIVER=sqlite spid3r build --release benchmarks/bench.matrix -o bench_aot &amp;&amp; ./bench_aot
+spid3r bench --runs 1 --gate benchmarks/bench.matrix     # or: spid3r magic bench --gate</code></pre>
   <p>Recorded results (<code>benchmarks/RESULTS.md</code>, 2026-11-20 on Spid3r v1.1.1):</p>
   <table>
     <tr><th>Benchmark</th><th>v1.1.1 VM (default)</th><th>v1.1.1 LLVM-23 AOT</th><th>Notes</th></tr>
@@ -568,7 +634,7 @@ SPID3R_PATH=. SPID3R_DB_DRIVER=sqlite spid3r build --release benchmarks/bench.ma
     <tr><td>Query compilation (4 clauses + whereIn + orderBy)</td><td>21,428 ops/s</td><td><strong>27,027 ops/s</strong></td><td>1.95× vs v1.0.0 tree</td></tr>
     <tr><td>SpiderBD v2 template render (interpolation + loop)</td><td>9,661 ops/s</td><td><strong>12,500 ops/s</strong></td><td>Pre-compiled line cache with <code>file_mtime</code> invalidation</td></tr>
   </table>
-  <p>Run in production (VM default, native HTTPS via <code>--tls</code>, or compiled AOT binary):</p>
+  <p>The gate floors (about a quarter of the VM baseline, to catch catastrophic regressions only) are: route matching 20,000, query compilation 4,000, JSON round-trip 60,000, view render 1,500, SQLite select 800 ops/sec. Absolute numbers are host-specific (Windows 11 desktop, SQLite file driver); compare ratios. Run in production (VM default, native HTTPS via <code>--tls</code>, or compiled AOT binary):</p>
   <pre><code>SPID3R_HOST=0.0.0.0 spid3r magic serve --port 8000
 SPID3R_HOST=0.0.0.0 spid3r magic serve --port 8443 --tls --cert cert.pem --key key.pem
 spid3r magic build --release --bundle -o dist/server.exe server.matrix &amp;&amp; ./dist/server.exe --port 8000</code></pre>
@@ -627,9 +693,19 @@ let billing = router();
 billing.get("/invoices", req =&gt; {"invoices": []}).name("billing.invoices");
 app.mount("/billing", billing);
 
-// Named route URL generation (extra keys become query parameters!)
+// Named route URL generation (extra keys become query parameters)
 let url = route("users.posts.show", {"id": 42, "slug": "intro", "ref": "nav"});
-// -&gt; "/users/42/posts/intro?ref=nav"</code></pre>
+// -&gt; "/users/42/posts/intro?ref=nav"
+
+// Resource routes: GET/POST /posts, GET/PUT/PATCH/DELETE /posts/:id
+// -&gt; controller methods index, store, show, update, destroy
+app.resource("/posts", new PostController());
+
+// Route-model binding: the resolver receives the raw value of the :post parameter
+app.bind("post", fn(raw) { return Post.find_or_fail(int(raw)); });
+app.get("/bound/:post", req =&gt; req.bound("post").to_map());
+
+// In routes/*.matrix use the Route facade: import "framework/Http/Router"; Route.get(...)</code></pre>
 </section>
 
 <!-- ============ MIDDLEWARE ============ -->
@@ -656,7 +732,8 @@ let url = route("users.posts.show", {"id": 42, "slug": "intro", "ref": "nav"});
 app.use((req, next) =&gt; {
     let start = now_ms();
     let res = next(req);
-    res.header("x-response-time", string(now_ms() - start) + "ms");
+    let elapsed = now_ms() - start;
+    res.header("x-response-time", "{elapsed}ms");
     return res;
 });
 
@@ -682,37 +759,34 @@ app.get("/admin/metrics", req =&gt; {"ok": true}).middleware(["auth", "role:admi
     <tr><td><code>logger</code></td><td>Logs method, path, response status code, and elapsed duration in ms</td></tr>
     <tr><td><code>etag</code></td><td>Computes SHA-256 ETag on 200 GET/HEAD responses and returns <code>304 Not Modified</code> on <code>If-None-Match</code></td></tr>
     <tr><td><code>request_id</code></td><td>Propagates incoming <code>X-Request-Id</code> or generates a CSPRNG <code>req_&lt;hex&gt;</code> header</td></tr>
-    <tr><td><code>throttle:N,M</code></td><td>Rate-limits clients to <code>N</code> requests per <code>M</code> seconds; sets <code>X-RateLimit-Limit</code>, <code>X-RateLimit-Remaining</code>, and <code>Retry-After</code> on 429</td></tr>
+    <tr><td><code>throttle:N,M</code></td><td>Rate-limits clients to <code>N</code> requests per <code>M</code> seconds using the cache store; sets <code>X-RateLimit-Limit</code>, <code>X-RateLimit-Remaining</code>, and <code>Retry-After</code> on 429. The <code>memory</code> store is per-process, so use the <code>file</code> or <code>database</code> cache when running several workers</td></tr>
   </table>
 </section>
 
 <!-- ============ CONTROLLERS ============ -->
 <section id="controllers">
   <h2>Controllers</h2>
-  <p>Scaffold controllers with <code>spid3r magic make:controller PostController</code>. Extending <code>Controller</code> gives you concise response and view helpers:</p>
-  <pre><code>import "framework/Controller";
+  <p>Scaffold with <code>spid3r magic make:controller PostController</code>. Extending <code>Controller</code> (<code>framework/Http/Controller</code>) provides <code>json</code>, <code>ok</code>, <code>created</code>, <code>no_content</code>, <code>view</code>, <code>render</code>, <code>respond</code>, <code>redirect</code>, <code>back</code>, <code>validate</code>, <code>validate_or_fail</code>, <code>auth</code> and <code>shared</code>. Do not call <code>super()</code> in constructors: it is unsupported by the LLVM AOT backend, and the base class needs no setup.</p>
+<pre><code>import "framework/Http/Controller";
+import "framework/Http/Response";
 import "app/Models/Post";
 
 public class PostController extends Controller {
-    fn new() {
-        super();
-    }
-
-    public fn index(self, req) {
+    public fn index(self, req: any) -&gt; Response {
         let posts = Post.latest().paginate(req.page(), req.per_page(15));
         if req.wants_json() {
             return self.ok(posts);
         }
-        // render() automatically injects is_auth, user, user_name, is_admin, csrf_token
+        // render() injects is_auth, user, user_name, is_admin, csrf_token
         return self.render(req, "posts.index", {"posts": posts["data"]});
     }
 
-    public fn show(self, req) {
+    public fn show(self, req: any) -&gt; Response {
         let post = Post.find_or_fail(req.int("id"));
         return self.ok(post.to_map());
     }
 
-    public fn store(self, req) {
+    public fn store(self, req: any) -&gt; Response {
         let data = req.validate_or_fail({
             "title": "required|min:3|max:200",
             "body":  "required|min:10"
@@ -721,12 +795,13 @@ public class PostController extends Controller {
         return self.created(post.to_map());
     }
 
-    public fn destroy(self, req) {
+    public fn destroy(self, req: any) -&gt; Response {
         let post = Post.find_or_fail(req.int("id"));
         post.delete();
         return self.no_content();
     }
 }</code></pre>
+  <p>Spid3r's semantic checker warns about an unused <code>self</code> in methods that do not read it; add <code>let _ = self;</code> as the generators do. Typed signatures (<code>req: any</code>, <code>-&gt; Response</code>) are recommended on public methods.</p>
 </section>
 
 <!-- ============ REQUESTS ============ -->
@@ -750,20 +825,24 @@ let user   = req.user();                      // authenticated user map or null
 let token  = req.bearer();                    // Bearer token from Authorization header
 let theme  = req.cookie("theme", "light");
 let prefs  = req.signed_cookie("prefs", "");  // HMAC-SHA256 verified cookie
-let is_api = req.wants_json();</code></pre>
+let is_api = req.wants_json();
+let scheme = req.scheme();                     // honours trusted-proxy X-Forwarded-Proto only
+let client = req.client_ip();                  // ditto for X-Forwarded-For
+let model  = req.bound("post");                // value produced by app.bind("post", ...)</code></pre>
 
   <h3>HTML Form Method Spoofing</h3>
   <p>HTML forms only support <code>GET</code> and <code>POST</code>. Send a <code>POST</code> request with a hidden <code>_method</code> field (or use <code>@method('PUT')</code> in SpiderBD templates, or send the <code>X-HTTP-Method-Override</code> header) to route to <code>PUT</code>, <code>PATCH</code>, or <code>DELETE</code> handlers automatically.</p>
 
   <h3>Multipart File Uploads</h3>
+  <p>Uploads are bounded by <code>config/upload.matrix</code> (<code>max_files</code>, <code>max_bytes</code>, extension and MIME allow/block lists) and by the server <code>max_body</code> limit (413 above it). Stored names are randomized, and the <code>public</code> disk refuses executable/markup extensions (<code>html</code>, <code>svg</code>, <code>js</code> ...). Files served from <code>/uploads/</code> carry attachment + sandbox CSP headers.</p>
   <pre><code>app.post("/profile/avatar", req =&gt; {
     if not req.has_file("avatar") {
         abort(400, "Please upload an avatar.");
     }
     let f = req.file("avatar");
     // f = {"name": "photo.png", "type": "image/png", "size": 14200, "ext": ".png", "content": "..."}
-    let stored_path = req.store_file("avatar", "avatars", "public");
-    return {"url": "/uploads/" + stored_path};
+    let stored_path = req.store_file("avatar", "avatars", "public");   // key, directory, disk
+    return {"url": "/uploads/{stored_path}"};
 });</code></pre>
 
   <h3>One-Line Validation &amp; Type Coercion (<code>validate_or_fail</code>)</h3>
@@ -803,12 +882,13 @@ let is_api = req.wants_json();</code></pre>
 <!-- ============ RESPONSES ============ -->
 <section id="responses">
   <h2>Fluent Responses &amp; Signed Cookies</h2>
+  <p>Cookie names and values are validated against RFC 6265 rules (<code>framework/Http/CookieJar</code>), multiple <code>Set-Cookie</code> headers are emitted individually, and default security headers (from <code>config/security.matrix</code>) are added to every response.</p>
   <p>Handlers can return plain maps/lists/strings, use global helpers (<code>json()</code>, <code>html()</code>, <code>text()</code>, <code>redirect()</code>, <code>view()</code>), or chain methods on the second handler parameter <code>res</code>:</p>
   <pre><code>app.post("/login", (req, res) =&gt; {
     return res
         .status(200)
         .header("x-Custom", "Spid3r")
-        .cookie("theme", "dark", "/", 86400)
+        .cookie("theme", "dark", "/", 86400)                  // name, value, path, max_age[, secure]
         .signed_cookie("user_prefs", "compact_view", "/", 86400)
         .json({"logged_in": true});
 });
@@ -816,8 +896,11 @@ let is_api = req.wants_json();</code></pre>
 // Clear a cookie:
 res.clear_cookie("theme", "/");
 
+// Per-route security headers
+res.csp("default-src 'self'").security_headers({"x-frame-options": "DENY"});
+
 // Chunked HTTP/1.1 streaming &amp; Server-Sent Events (SSE):
-app.get("/stream", (req, res) =&gt; res.stream(list("part 1\n", "part 2\n"), "text/plain; charset=utf-8"));
+app.get("/stream", (req, res) =&gt; res.stream(["part 1\n", "part 2\n"], "text/plain; charset=utf-8"));
 app.get("/events", req =&gt; send_sse(fn() { return null; }));</code></pre>
 </section>
 
@@ -854,7 +937,7 @@ public let Article = model("articles", {
 
 // Create &amp; persist (fires model.articles.creating and model.articles.created)
 let art = Article.create({
-    "title":        "Spid3rWeb 2.0",
+    "title":        "Spid3rWeb",
     "secret_token": "internal-xyz",
     "published":    true,
     "meta":         {"views": 100, "tags": ["mvc", "spid3r"]}
@@ -865,7 +948,7 @@ art.get("meta")["views"];      // 100 (decoded map)
 art.to_map();                  // secret_token stripped automatically!
 
 // Dirty tracking — save() only updates modified columns!
-art.set("title", "Spid3rWeb 2.0 Released");
+art.set("title", "Spid3rWeb Released");
 art.is_dirty("title");         // true
 art.is_dirty("published");     // false
 art.save();
@@ -873,7 +956,7 @@ art.save();
 // Repository query helpers
 let found   = Article.find(1);                 // Model instance or null
 let ensured = Article.find_or_fail(1);         // Model instance or throws 404 HttpException
-let item    = Article.update_or_create({"title": "Spid3rWeb 2.0"}, {"published": true});
+let item    = Article.update_or_create({"title": "Spid3rWeb"}, {"published": true});
 let page    = Article.latest().paginate(1, 15);
 Article.destroy(art.get("id"));</code></pre>
 
@@ -893,6 +976,7 @@ load_belongs_to(posts, "users", "user_id", "author");</code></pre>
 <!-- ============ DATABASE ============ -->
 <section id="database">
   <h2>Query Builder (DB)</h2>
+  <p>Drivers: SQLite (default, file at <code>storage/database/database.sqlite</code>), PostgreSQL and MySQL/MariaDB. Pooling helpers are available via <code>DB.pool_stats()</code> and <code>DB.with_connection(...)</code>; transactions are mutex-serialized. Live PostgreSQL/MySQL suites (<code>test_multi_db_live</code>) need running servers; see <code>docs/DRIVERS.md</code> for the support matrix and authentication notes.</p>
   <p>Access the query builder via <code>db("table")</code> (from <code>framework/Web</code>) or <code>DB.table("table")</code>. All queries use parameterized prepared statements:</p>
   <pre><code>let rows = db("posts")
     .where("status", "=", "published")
@@ -931,10 +1015,32 @@ schema().dropIfExists("posts");</code></pre>
 <!-- ============ MIGRATIONS ============ -->
 <section id="migrations">
   <h2>Migrations &amp; Seeders</h2>
-  <pre><code>spid3r magic make:migration create_posts_table   // scaffold + auto-register
-spid3r magic migrate                             // run pending migrations
-spid3r magic migrate:rollback                    // undo the last batch
-spid3r magic migrate:status                      // inspect migration status</code></pre>
+  <p>Migrations live in <code>database/migrations/</code>. Names are either legacy <code>NNN_name</code> or timestamped <code>YYYY_MM_DD_HHMMSS_name</code>. The runner discovers files through a <strong>generated, git-ignored registry</strong> at <code>storage/framework/migrations.matrix</code> (Spid3r has no runtime module loading yet; see <a href="#limitations">Known Limitations</a>). The registry is rebuilt automatically by <code>migrate*</code> and <code>build</code>, or manually with <code>migrate:sync</code>; it records a SHA-256 checksum for each file, and the runner warns when an applied migration has changed.</p>
+<pre><code>spid3r magic make:migration create_posts_table          // class migration (extends Migration)
+spid3r magic make:migration create_tags_table --fn      // function migration: public fn up() / down()
+spid3r magic migrate [--pretend] [--step]               // run pending (--pretend prints SQL only)
+spid3r magic migrate:status                             // applied / pending + drift warnings
+spid3r magic migrate:rollback                           // undo the last batch
+spid3r magic migrate:reset                              // roll back everything
+spid3r magic migrate:fresh [--pretend] [--step]         // drop all tables and re-run
+spid3r magic db:wipe                                    // drop all tables
+spid3r magic migrate:rename-legacy                      // NNN_* -&gt; timestamped names
+spid3r magic db:seed                                    // database/seeders/DatabaseSeeder</code></pre>
+  <p>A function-based migration looks like:</p>
+<pre><code>import "framework/Database/Schema";
+
+public fn up() {
+    Schema.create("tags", table =&gt; {
+        table.id();
+        table.string("name", 100).unique();
+        table.timestamps();
+    });
+}
+
+public fn down() {
+    Schema.dropIfExists("tags");
+}</code></pre>
+  <p>Schema DDL is transactional on SQLite and PostgreSQL. The tracking table also stores the batch number used by <code>rollback</code>.</p>
 </section>
 
 <!-- ============ VIEWS ============ -->
@@ -988,13 +1094,14 @@ spid3r magic migrate:status                      // inspect migration status</co
 <!-- ============ FRONTEND ============ -->
 <section id="frontend-ui">
   <h2>Static Assets &amp; Conditional GET (ETag)</h2>
-  <p>Files under <code>public/</code> matching <code>/css/</code>, <code>/js/</code>, <code>/assets/</code>, <code>/images/</code>, <code>/fonts/</code>, <code>/vendor/</code>, <code>/uploads/</code>, and root files (<code>/robots.txt</code>, <code>/sitemap.xml</code>, <code>/favicon.ico</code>, <code>/manifest.json</code>) are served with strict path-traversal protection and weak ETags (<code>W/"&lt;size&gt;-&lt;mtime&gt;"</code>). Matching <code>If-None-Match</code> requests return <code>304 Not Modified</code> without reading the file from disk.</p>
+  <p>Files under <code>public/</code> matching <code>/css/</code>, <code>/js/</code>, <code>/assets/</code>, <code>/images/</code>, <code>/fonts/</code>, <code>/vendor/</code>, <code>/uploads/</code>, and root files (<code>/robots.txt</code>, <code>/sitemap.xml</code>, <code>/favicon.ico</code>, <code>/manifest.json</code>) are served with segment-level path-traversal checks and weak ETags (<code>W/"&lt;size&gt;-&lt;mtime&gt;"</code>). Matching <code>If-None-Match</code> requests return <code>304 Not Modified</code> without reading the file.</p>
+  <p>Files are streamed in chunks. Single-range requests (<code>Range: bytes=...</code>) get <code>206 Partial Content</code> with <code>Content-Range</code>, unsatisfiable ranges get <code>416</code>, and <code>Accept-Ranges: bytes</code> is advertised. Content types come from a built-in extension map (including <code>mp4</code>, <code>webm</code>, <code>mp3</code>, <code>wasm</code>, <code>zip</code>); responses may be gzip-compressed when the client sends <code>Accept-Encoding</code>, with <code>Vary: Accept-Encoding</code>. Run <code>spid3r magic storage:link</code> to expose <code>storage/app/public</code> at <code>public/storage</code>.</p>
 </section>
 
 <!-- ============ RESOURCES ============ -->
 <section id="resources">
   <h2>REST Resources</h2>
-  <pre><code>import "framework/Resource";
+  <pre><code>import "framework/Http/Resource";
 
 let post_transformer = fn(p) {
     return {
@@ -1053,6 +1160,7 @@ let token2 = req.auth.jwt(user_map, 3600);
 let claims = jwt().verify(token);</code></pre>
 
   <h3>2. Stateful Database Sessions &amp; Password Hashing</h3>
+  <p>The auth session cookie is <code>spid3r_session</code> (configurable); the general-purpose <code>req.session()</code> store uses the <code>spid3r_sid</code> cookie. Passwords are hashed with <strong>Argon2id</strong> by default (bcrypt supported via <code>SPID3R_HASH_DRIVER</code>); <code>auth().attempt()</code> transparently re-hashes a password on login when <code>hash().needs_rehash()</code> says the stored hash is outdated.</p>
   <pre><code>if req.auth.attempt(req.string("email"), req.string("password")) {
     return redirect_to("/dashboard");
 }
@@ -1083,19 +1191,24 @@ app.get("/cart", req =&gt; {
   <table>
     <tr><th>Threat</th><th>Built-in Defense</th></tr>
     <tr><td>SQL Injection</td><td>Parameterized prepared statements across all QueryBuilder operations + SQL identifier whitelisting</td></tr>
-    <tr><td>XSS</td><td>Automatic HTML escaping on <code>{{ var }}</code> in SpiderBD templates + strict default <code>Content-Security-Policy</code></td></tr>
-    <tr><td>CSRF</td><td>Dual-layer verification: <code>Origin</code> vs <code>Host</code> check + per-session <code>_csrf</code> token check on state-changing verbs</td></tr>
-    <tr><td>Cookie Tampering</td><td><code>HttpOnly</code>, <code>SameSite=Lax</code>, <code>Secure</code> flags + HMAC-SHA256 <code>signed_cookie</code> verification via <code>secure_compare</code></td></tr>
-    <tr><td>Path Traversal</td><td>Rejects <code>..</code>, <code>\</code>, <code>:</code>, NUL bytes, and URL-encoded traversal sequences on static assets and <code>Storage</code> disks</td></tr>
-    <tr><td>Brute Force &amp; DoS</td><td><code>throttle:N,M</code> rate limiting + hard <code>per_page &lt;= 100</code> pagination cap + bounded 10,000-key memory cache</td></tr>
+    <tr><td>XSS</td><td>Automatic HTML escaping on <code>{{ var }}</code> in SpiderBD templates + configurable default security headers and <code>Content-Security-Policy</code> (<code>config/security.matrix</code>, per-route <code>.csp()</code>)</td></tr>
+    <tr><td>CSRF</td><td>Dual-layer verification: <code>Origin</code> vs <code>Host</code> check + per-session <code>_csrf</code> token on state-changing verbs</td></tr>
+    <tr><td>Cookie tampering</td><td><code>HttpOnly</code>, <code>SameSite</code>, <code>Secure</code> flags, RFC 6265 validation, HMAC-SHA256 <code>signed_cookie</code> verification via <code>secure_compare</code></td></tr>
+    <tr><td>Path traversal</td><td>Rejects <code>..</code>, <code>\</code>, <code>:</code>, NUL bytes and encoded traversal on static assets and <code>Storage</code> disks; header values are CRLF-checked</td></tr>
+    <tr><td>Uploads</td><td>Size/count/extension/MIME limits, randomized names, blocked executable extensions on the public disk, sandbox CSP on <code>/uploads/</code></td></tr>
+    <tr><td>Spoofed proxy headers</td><td><code>X-Forwarded-For/Proto/Host</code> are honoured only from <code>config/http.matrix</code> trusted proxies</td></tr>
+    <tr><td>Transport</td><td>HSTS is auto-enabled for production TLS responses; native <code>--tls</code> or a reverse proxy (<code>deploy/nginx.conf</code>, <code>deploy/Caddyfile</code>)</td></tr>
+    <tr><td>Weak secrets</td><td>No fallback keys; production boot fails closed without a strong <code>APP_KEY</code>; <code>magic doctor</code> checks permissions and secrets</td></tr>
+    <tr><td>Brute force &amp; DoS</td><td><code>throttle:N,M</code> rate limiting, hard <code>per_page &lt;= 100</code> cap, <code>max_body</code>/<code>max_headers</code> limits, bounded 10,000-key memory cache, WebSocket <code>max_clients</code> / <code>max_message_bytes</code> / origin allow-list</td></tr>
   </table>
+  <p>See <code>docs/SECURITY.md</code> for the full model, including the runtime <code>--sandbox</code> / <code>--budget</code> / <code>security.basedir</code> options.</p>
 </section>
 
 <!-- ============ CACHE ============ -->
 <section id="cache">
   <h2>Thread-Safe Caching</h2>
-  <p>The default <code>memory</code> cache store is guarded by a re-entrant <code>mutex</code> and bounded to 10,000 entries (evicting expired entries first, then FIFO). <code>file</code> and <code>database</code> drivers are also available:</p>
-  <pre><code>cache().put("stats:daily", {"users": 120}, 300);
+  <p>Stores: <code>memory</code> (mutex-guarded, bounded to 10,000 entries, per-process), <code>file</code> (<code>storage/framework/cache/</code>, atomic writes) and <code>database</code> (shared across processes). The default is <code>file</code> in production and <code>memory</code> otherwise (<code>SPID3R_CACHE_DRIVER</code> overrides). Expired entries are removed with <code>cache().gc()</code> / <code>spid3r magic cache:gc</code>.</p>
+<pre><code>cache().put("stats:daily", {"users": 120}, 300);
 let stats = cache().remember("stats:daily", 300, fn() {
     return {"users": db("users").count()};
 });
@@ -1106,7 +1219,7 @@ cache().forget("stats:daily");</code></pre>
 <!-- ============ CONTAINER ============ -->
 <section id="container">
   <h2>DI Container &amp; Service Providers</h2>
-  <pre><code>import "framework/Providers/ServiceProvider";
+  <pre><code>import "framework/Foundation/ServiceProvider";
 
 public class AppServiceProvider extends ServiceProvider {
     public fn register(self, container) {
@@ -1127,7 +1240,7 @@ app.register(new AppServiceProvider());</code></pre>
 <section id="events">
   <h2>Event Bus</h2>
   <pre><code>events().listen("order.*", fn(payload, event_name) {
-    log().info("Order event: " + event_name, payload);
+    log().info("Order event: {event_name}", payload);
 });
 
 events().dispatch("order.paid", {"order_id": 99});</code></pre>
@@ -1136,26 +1249,29 @@ events().dispatch("order.paid", {"order_id": 99});</code></pre>
 <!-- ============ SYSTEMS ============ -->
 <section id="systems">
   <h2>Log · Storage · Mail · Queue</h2>
-  <pre><code>// O(1) locked streaming logger (file_open + file_lock -&gt; storage/logs/)
+<pre><code>// Locked, streaming logger (channels in config/logging.matrix -&gt; storage/logs/)
 log().info("User signed in", {"user_id": 7});
 
-// Traversal-guarded local &amp; public disks (O(1) streaming append)
+// Traversal-guarded disks with quotas; streaming helpers for large files
 storage("public").put("hello.txt", "Hello World");
 storage("public").append("hello.txt", "\nLine 2");
-let url = storage("public").url("hello.txt"); // "/uploads/hello.txt"
+let url = storage("public").url("hello.txt");           // "/uploads/hello.txt"
 
-// Mail (log driver + plain-TCP SMTP via tcp_connect) &amp; background queues
+// Mail: log driver by default; plain-TCP SMTP for local relays (no TLS/STARTTLS yet)
 mail().send({"to": "ada@example.com", "subject": "Hi", "body": "Welcome!"});
+
+// Queues: register handlers in routes/queue.matrix, push from anywhere
 import "framework/Queue/Queue";
 Queue.job("emails.send", fn(data) { mail().send(data); return true; });
 Queue.push("emails.send", {"to": "ada@example.com", "subject": "Async", "body": "Fast!"});
-// Run daemon worker (graceful Ctrl+C / SIGTERM via shutdown_requested()):
-// spid3r magic queue:work --daemon --sleep=500</code></pre>
+// Worker (graceful on Ctrl+C / SIGTERM): spid3r magic queue:work --daemon --sleep=500</code></pre>
+  <p>Jobs that exceed <code>max_attempts</code> are discarded, and jobs reserved by a crashed worker become eligible again after <code>retry_after</code>. <code>mail().queue(...)</code> defers delivery through the same queue. <code>spid3r magic storage:prune</code> removes expired logs and stale temp uploads.</p>
 </section>
 
 <!-- ============ WEBSOCKET ============ -->
 <section id="websocket">
   <h2>WebSocket Server (RFC 6455)</h2>
+  <p><code>WsServer.opts</code> supports <code>max_clients</code>, <code>max_message_bytes</code>, <code>timeout_ms</code>, and <code>allowed_origins</code>; check origins with <code>is_origin_allowed()</code> / <code>require_origin()</code>.</p>
   <pre><code>import "framework/WebSocket/WsServer";
 
 let ws = new WsServer();
@@ -1165,7 +1281,7 @@ ws.on_connection(fn(h) {
         if r.is_err() { break; }
         let msg = r.unwrap();
         if msg == null { break; }
-        ws_send(h, "echo: " + msg);
+        ws_send(h, "echo: {msg}");
     }
 });
 ws.broadcast("System announcement");</code></pre>
@@ -1174,10 +1290,13 @@ ws.broadcast("System announcement");</code></pre>
 <!-- ============ TESTING ============ -->
 <section id="testing">
   <h2>Testing &amp; Fluent <code>TestClient</code></h2>
-  <p>Run all auto-discovered <code>tests/test_*.matrix</code> suites on either engine:</p>
-  <pre><code>SPID3R_DB_DRIVER=sqlite spid3r magic test                 // 17/17 suites (bytecode VM default)
-SPID3R_DB_DRIVER=sqlite spid3r magic test --engine=tree   // 17/17 suites (tree-walk oracle)
-SPID3R_DB_DRIVER=sqlite spid3r magic test --filter=modern_mvc</code></pre>
+  <p>Run all auto-discovered <code>tests/test_*.matrix</code> suites (25 at the time of writing, including live suites that need external services such as <code>test_multi_db_live</code> and <code>test_systems_live</code>):</p>
+  <pre><code>SPID3R_DB_DRIVER=sqlite spid3r magic test                  // 25 suites (bytecode VM default)
+SPID3R_DB_DRIVER=sqlite spid3r magic test --engine=tree    // tree-walk semantic oracle
+SPID3R_DB_DRIVER=sqlite spid3r magic test --filter=modern_mvc
+spid3r magic test --differential   // runs the non-live suites on tree, vm and compiled exec and compares
+spid3r magic test --coverage       // coverage report (--coverage-out for a path)
+spid3r magic test --db=all         // probes PostgreSQL/MySQL reachability for the live suites (prints a Docker Compose hint)</code></pre>
 
   <div class="diagram-box">
     <div class="diagram-box-header">
@@ -1218,20 +1337,36 @@ fn main() {
 }</code></pre>
 </section>
 
+
+<!-- ============ TOOLING ============ -->
+<section id="tooling">
+  <h2>Developer Tooling &amp; Conventions</h2>
+<pre><code>spid3r magic fmt --check     # canonical formatting (runs `spid3r fmt`)
+spid3r magic lint            # ini validation + `spid3r check --deny-warnings --allow unused-import` per file
+spid3r magic config:check    # validates all 13 config namespaces
+spid3r magic docs            # API docs -&gt; docs/build/api.html  (--json for api.json; git-ignored)
+spid3r magic bench --gate    # micro-benchmarks with regression floors
+spid3r magic doctor --strict # environment, secrets, permissions, ini and DB health</code></pre>
+  <p>CI (<code>.github/workflows/ci.yml</code>) runs the format, lint, config, docs, differential, coverage and benchmark-gate checks above. Conventions the repository follows: formatted sources, zero lint warnings (unused imports aside), typed public APIs, <code>///</code> doc comments on public classes and functions, files of at most 500 lines, and the modern syntax set (<code>{...}</code>/<code>[...]</code> literals, <code>"{name}"</code> interpolation, <code>for (k, v) in map</code>, <code>match</code>, <code>??</code> / <code>?.</code>, <code>private</code> internals). <code>docs/diagrams/</code> holds the SVG + Mermaid sources used on this page.</p>
+</section>
+
 <!-- ============ DEPLOYMENT ============ -->
 <section id="deployment">
   <h2>Deployment (VM or Standalone Native AOT Binary)</h2>
-  <pre><code>APP_ENV=production
+<pre><code>APP_ENV=production
 SPID3R_HOST=0.0.0.0
 cp spid3r.ini.example spid3r.ini
 spid3r magic key:generate
+spid3r magic doctor --strict
+spid3r magic config:check
 spid3r magic migrate
 
-# Compile standalone LLVM-23 AOT binary + bundle runtime assets into dist/
+# Compile standalone LLVM 23 AOT binary + bundle runtime assets into dist/
 spid3r magic build --release --bundle -o dist/server.exe server.matrix
 ./dist/server.exe --port 8000 --host 0.0.0.0
 # (or HTTPS: ./dist/server.exe --port 8443 --tls --cert cert.pem --key key.pem)</code></pre>
-  <p><code>server.exe</code> automatically resolves the project root (walking up from its own directory for <code>spider.toml</code> / <code>resources/views</code>, or pass <code>--root &lt;dir&gt;</code>), so launching it from <code>dist/</code> works out of the box.</p>
+  <p><code>server.exe</code> resolves the project root by walking up from its own directory for <code>spider.toml</code> / <code>resources/views</code> (or pass <code>--root &lt;dir&gt;</code>), so launching it from <code>dist/</code> works. A <code>GET /health</code> endpoint is provided for load balancers and the Docker <code>HEALTHCHECK</code>.</p>
+  <p><code>deploy/Dockerfile</code> pins the Spid3r release with SHA-256 verification and runs as an unprivileged <code>spid3r</code> user; <code>deploy/docker-compose.yml</code> takes required secrets from the environment; <code>deploy/nginx.conf</code> and <code>deploy/Caddyfile</code> are reverse-proxy examples (configure trusted proxies in <code>config/http.matrix</code> when you use them). Full topologies are in <code>docs/DEPLOY.md</code>.</p>
 </section>
 
 <!-- ============ RECIPES ============ -->
@@ -1272,18 +1407,51 @@ app.delete("/api/todos/:id", (req, res) =&gt; {
     <table style="min-width: 680px;">
       <tr><th style="width: 220px;">Module / Helper</th><th>Key Methods &amp; Functions</th></tr>
       <tr><td><code>framework/Web</code></td><td><code>web()</code> <code>router()</code> <code>model(table, opts)</code> <code>route(name, params)</code> <code>abort(status, msg)</code> <code>test_client(app)</code> <code>db(table)</code> <code>schema()</code> <code>cache()</code> <code>auth()</code> <code>jwt()</code> <code>hash()</code> <code>log()</code> <code>queue()</code> <code>mail()</code> <code>storage(disk)</code> <code>events()</code> <code>config(key, def)</code> <code>views()</code></td></tr>
-      <tr><td><code>Application</code> (<code>app</code>)</td><td><code>get</code> <code>post</code> <code>put</code> <code>patch</code> <code>delete</code> <code>options</code> <code>any</code> <code>match_any</code> <code>group</code> <code>fallback</code> <code>mount</code> <code>use</code> <code>middleware</code> <code>register</code> <code>boot</code> <code>handle_request</code> <code>test_client</code> <code>listen</code></td></tr>
+      <tr><td><code>Application</code> (<code>app</code>)</td><td><code>get</code> <code>post</code> <code>put</code> <code>patch</code> <code>delete</code> <code>options</code> <code>any</code> <code>match_any</code> <code>group</code> <code>fallback</code> <code>mount</code> <code>use</code> <code>middleware</code> <code>register</code> <code>boot</code> <code>resource</code> <code>bind</code> <code>handle_request</code> <code>test_client</code> <code>listen</code> <code>listen_tls</code> <code>check_production_ready</code></td></tr>
       <tr><td><code>Router</code> / <code>Route</code></td><td><code>get</code> <code>post</code> <code>put</code> <code>patch</code> <code>delete</code> <code>options</code> <code>any</code> <code>match_any</code> <code>group</code> <code>mount</code> <code>url</code> <code>fallback</code> <code>clear</code> <code>routes</code></td></tr>
-      <tr><td><code>Request</code> (<code>req</code>)</td><td><code>input</code> <code>string</code> <code>int</code> <code>float</code> <code>bool</code> <code>only</code> <code>except</code> <code>has</code> <code>all</code> <code>param</code> <code>query</code> <code>header</code> <code>cookie</code> <code>signed_cookie</code> <code>file</code> <code>has_file</code> <code>store_file</code> <code>session</code> <code>user</code> <code>bearer</code> <code>ip</code> <code>is_json</code> <code>wants_json</code> <code>page</code> <code>per_page</code> <code>validate</code> <code>validate_or_fail</code></td></tr>
-      <tr><td><code>Response</code> (<code>res</code>)</td><td><code>status</code> <code>header</code> <code>withHeaders</code> <code>cookie</code> <code>signed_cookie</code> <code>clear_cookie</code> <code>json</code> <code>html</code> <code>text</code> <code>send</code> <code>redirect</code> <code>to_http</code></td></tr>
+      <tr><td><code>Request</code> (<code>req</code>)</td><td><code>input</code> <code>string</code> <code>int</code> <code>float</code> <code>bool</code> <code>only</code> <code>except</code> <code>has</code> <code>all</code> <code>param</code> <code>query</code> <code>header</code> <code>cookie</code> <code>signed_cookie</code> <code>file</code> <code>has_file</code> <code>store_file</code> <code>session</code> <code>user</code> <code>bearer</code> <code>ip</code> <code>is_json</code> <code>wants_json</code> <code>page</code> <code>per_page</code> <code>bound</code> <code>scheme</code> <code>host</code> <code>client_ip</code> <code>is_secure</code> <code>validate</code> <code>validate_or_fail</code></td></tr>
+      <tr><td><code>Response</code> (<code>res</code>)</td><td><code>status</code> <code>header</code> <code>withHeaders</code> <code>cookie</code> <code>signed_cookie</code> <code>clear_cookie</code> <code>json</code> <code>html</code> <code>text</code> <code>send</code> <code>redirect</code> <code>stream</code> <code>sse</code> <code>csp</code> <code>security_headers</code> <code>to_http</code></td></tr>
       <tr><td><code>ModelRepository</code></td><td><code>create</code> <code>find</code> <code>find_or_fail</code> <code>first</code> <code>first_or_fail</code> <code>all</code> <code>where</code> <code>whereIn</code> <code>orderBy</code> <code>latest</code> <code>oldest</code> <code>paginate</code> <code>update_or_create</code> <code>destroy</code> <code>count</code> <code>exists</code></td></tr>
       <tr><td><code>Model</code> instance</td><td><code>get</code> <code>set</code> <code>save</code> <code>update</code> <code>delete</code> <code>to_map</code> <code>is_dirty</code> <code>sync_original</code> <code>reload</code> <code>touch</code> <code>hasMany</code> <code>belongsTo</code></td></tr>
       <tr><td><code>QueryBuilder</code></td><td><code>select</code> <code>where</code> <code>orWhere</code> <code>whereIn</code> <code>whereNotIn</code> <code>whereNull</code> <code>whereNotNull</code> <code>whereGroup</code> <code>join</code> <code>leftJoin</code> <code>rightJoin</code> <code>crossJoin</code> <code>orderBy</code> <code>latest</code> <code>oldest</code> <code>limit</code> <code>offset</code> <code>get</code> <code>first</code> <code>first_or_fail</code> <code>find</code> <code>find_or_fail</code> <code>count</code> <code>exists</code> <code>value</code> <code>pluck</code> <code>increment</code> <code>decrement</code> <code>paginate</code> <code>insert</code> <code>update</code> <code>delete</code></td></tr>
+      <tr><td><code>Cache</code> / <code>Hash</code></td><td><code>put</code> <code>get</code> <code>add</code> <code>remember</code> <code>rememberForever</code> <code>forget</code> <code>flush</code> <code>has</code> <code>increment</code> <code>decrement</code> <code>gc</code> / <code>make</code> <code>check</code> <code>needs_rehash</code> <code>info</code></td></tr>
       <tr><td><code>SessionStore</code></td><td><code>get</code> <code>put</code> <code>has</code> <code>forget</code> <code>all</code> <code>flush</code> <code>flash</code> <code>get_flash</code> <code>has_flash</code></td></tr>
       <tr><td><code>Jwt</code> / <code>Auth</code></td><td><code>Jwt.sign(payload, ttl)</code> <code>Jwt.verify(token)</code> / <code>Auth.attempt</code> <code>login</code> <code>jwt</code> <code>logout</code> <code>check</code> <code>guest</code> <code>user</code> <code>id</code> <code>csrf</code></td></tr>
       <tr><td><code>TestClient</code></td><td><code>get</code> <code>post</code> <code>post_json</code> <code>put_json</code> <code>patch_json</code> <code>delete</code> <code>request</code> <code>with_header</code> <code>with_headers</code> <code>with_token</code> <code>with_cookie</code> <code>acting_as</code> &rarr; <code>assert_status</code> <code>assert_ok</code> <code>assert_created</code> <code>assert_no_content</code> <code>assert_not_found</code> <code>assert_unauthorized</code> <code>assert_forbidden</code> <code>assert_unprocessable</code> <code>assert_header</code> <code>assert_see</code> <code>assert_dont_see</code> <code>assert_json_path</code></td></tr>
     </table>
   </div>
+</section>
+
+
+<!-- ============ LIMITATIONS ============ -->
+<section id="limitations">
+  <h2>Known Limitations</h2>
+  <ul>
+    <li><strong>Migration registry is generated.</strong> Spid3r cannot load modules at runtime, so <code>storage/framework/migrations.matrix</code> is generated from <code>database/migrations/</code>. An upstream request is tracked in <code>docs/UPSTREAM_REQUESTS.md</code>.</li>
+    <li><strong>SMTP is plain TCP.</strong> No TLS/STARTTLS yet; use the <code>log</code> mailer or a local relay.</li>
+    <li><strong><code>super()</code> is unsupported on the LLVM AOT backend.</strong> Initialize inherited fields directly (as the shipped migrations and generators do).</li>
+    <li><strong>Per-process memory cache/throttle.</strong> Use the <code>file</code> or <code>database</code> cache store for multi-worker deployments.</li>
+    <li><strong>Live PostgreSQL/MySQL and container checks</strong> require external servers / Docker; they are exercised by CI and by the live suites when those services are reachable.</li>
+    <li><strong>Windows + OneDrive</strong> can interfere with SQLite files; see <a href="#environment">Environment</a>.</li>
+  </ul>
+</section>
+
+<!-- ============ DOCS MAP ============ -->
+<section id="docs-map">
+  <h2>More Documentation</h2>
+  <table>
+    <tr><th>Document</th><th>Contents</th></tr>
+    <tr><td><code>README.md</code></td><td>Project overview and quick start</td></tr>
+    <tr><td><code>docs/ARCHITECTURE.md</code></td><td>Technical reference, module layout, stdlib overlap decisions</td></tr>
+    <tr><td><code>docs/SECURITY.md</code></td><td>Threat model, CSRF/session design, runtime sandbox options</td></tr>
+    <tr><td><code>docs/DEPLOY.md</code></td><td>Native binary, Docker, Nginx/Caddy, HTTP/2 notes</td></tr>
+    <tr><td><code>docs/DRIVERS.md</code></td><td>SQLite / PostgreSQL / MySQL support matrix</td></tr>
+    <tr><td><code>docs/UPSTREAM_REQUESTS.md</code></td><td>Features requested from the Spid3r language/runtime</td></tr>
+    <tr><td><code>docs/diagrams/</code></td><td>SVG + Mermaid sources for the diagrams above</td></tr>
+    <tr><td><code>docs/build/api.html</code></td><td>Generated API reference (<code>spid3r magic docs</code>); not committed</td></tr>
+    <tr><td><code>benchmarks/RESULTS.md</code></td><td>Recorded benchmark results and gate floors</td></tr>
+    <tr><td><code>docs/history/</code></td><td>Archived planning notes (<code>plan.txt</code>, <code>changes.txt</code>); not authoritative</td></tr>
+  </table>
 </section>
 
 </main>
