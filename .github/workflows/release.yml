@@ -41,8 +41,8 @@ jobs:
           tmp="$(mktemp -d)"
           trap 'rm -rf "$tmp"' EXIT
           curl -fsSL "${base}/${asset}" -o "${tmp}/${asset}"
-          curl -fsSL "${base}/${asset}.sha256" -o "${tmp}/${asset}.sha256"
-          (cd "$tmp" && expected="$(awk '{print $1}' "${asset}.sha256")" && echo "${expected}  ${asset}" | sha256sum -c -)
+          curl -fsSL "${base}/sha256sums.txt" -o "${tmp}/sha256sums.txt"
+          (cd "$tmp" && expected="$(awk -v a="${asset}" '$2 == a || $2 == "*" a {print $1; exit}' sha256sums.txt)" && test -n "${expected}" && echo "${expected}  ${asset}" | sha256sum -c -)
           tar -xzf "${tmp}/${asset}" -C "$tmp"
           mkdir -p "$HOME/.spid3r/bin"
           install -m 0755 "$(find "$tmp" -type f -name spid3r | head -n 1)" "$HOME/.spid3r/bin/spid3r"
@@ -102,8 +102,8 @@ jobs:
           tmp="$(mktemp -d)"
           trap 'rm -rf "$tmp"' EXIT
           curl -fsSL "${base}/${asset}" -o "${tmp}/${asset}"
-          curl -fsSL "${base}/${asset}.sha256" -o "${tmp}/${asset}.sha256"
-          (cd "$tmp" && expected="$(awk '{print $1}' "${asset}.sha256")" && echo "${expected}  ${asset}" | sha256sum -c -)
+          curl -fsSL "${base}/sha256sums.txt" -o "${tmp}/sha256sums.txt"
+          (cd "$tmp" && expected="$(awk -v a="${asset}" '$2 == a || $2 == "*" a {print $1; exit}' sha256sums.txt)" && test -n "${expected}" && echo "${expected}  ${asset}" | sha256sum -c -)
           tar -xzf "${tmp}/${asset}" -C "$tmp"
           mkdir -p "$HOME/.spid3r/bin"
           install -m 0755 "$(find "$tmp" -type f -name spid3r | head -n 1)" "$HOME/.spid3r/bin/spid3r"
@@ -122,13 +122,15 @@ jobs:
           Invoke-WebRequest -UseBasicParsing -Uri "$base/$asset" -OutFile $exe
           $hasSha = $false
           try {
-            Invoke-WebRequest -UseBasicParsing -Uri "$base/$asset.sha256" -OutFile "$exe.sha256"
+            Invoke-WebRequest -UseBasicParsing -Uri "$base/sha256sums.txt" -OutFile "$exe.sums"
             $hasSha = $true
           } catch {
-            Write-Warning "No .sha256 sidecar available for $asset"
+            Write-Warning "No sha256sums.txt available for $asset"
           }
           if ($hasSha) {
-            $exp = (Get-Content "$exe.sha256").Split()[0].ToLower()
+            $line = Get-Content "$exe.sums" | Where-Object { $_ -match ([regex]::Escape($asset) + '$') } | Select-Object -First 1
+            if (-not $line) { throw "No checksum entry for $asset in sha256sums.txt" }
+            $exp = $line.Split()[0].ToLower()
             $act = (Get-FileHash -Algorithm SHA256 $exe).Hash.ToLower()
             if ($exp -ne $act) { throw "SHA-256 mismatch for $asset ($act != $exp)" }
           }

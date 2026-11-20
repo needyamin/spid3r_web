@@ -115,8 +115,8 @@ jobs:
           tmp="$(mktemp -d)"
           trap 'rm -rf "$tmp"' EXIT
           if curl -fsSL "${base}/${asset}" -o "${tmp}/${asset}" \
-            && curl -fsSL "${base}/${asset}.sha256" -o "${tmp}/${asset}.sha256"; then
-            (cd "$tmp" && expected="$(awk '{print $1}' "${asset}.sha256")" && echo "${expected}  ${asset}" | sha256sum -c -)
+            && curl -fsSL "${base}/sha256sums.txt" -o "${tmp}/sha256sums.txt"; then
+            (cd "$tmp" && expected="$(awk -v a="${asset}" '$2 == a || $2 == "*" a {print $1; exit}' sha256sums.txt)" && test -n "${expected}" && echo "${expected}  ${asset}" | sha256sum -c -)
             tar -xzf "${tmp}/${asset}" -C "$tmp"
             mkdir -p "$HOME/.spid3r/bin"
             install -m 0755 "$(find "$tmp" -type f -name spid3r | head -n 1)" "$HOME/.spid3r/bin/spid3r"
@@ -265,8 +265,8 @@ jobs:
           tmp="$(mktemp -d)"
           trap 'rm -rf "$tmp"' EXIT
           curl -fsSL "${base}/${asset}" -o "${tmp}/${asset}"
-          curl -fsSL "${base}/${asset}.sha256" -o "${tmp}/${asset}.sha256"
-          (cd "$tmp" && expected="$(awk '{print $1}' "${asset}.sha256")" && echo "${expected}  ${asset}" | sha256sum -c -)
+          curl -fsSL "${base}/sha256sums.txt" -o "${tmp}/sha256sums.txt"
+          (cd "$tmp" && expected="$(awk -v a="${asset}" '$2 == a || $2 == "*" a {print $1; exit}' sha256sums.txt)" && test -n "${expected}" && echo "${expected}  ${asset}" | sha256sum -c -)
           tar -xzf "${tmp}/${asset}" -C "$tmp"
           mkdir -p "$HOME/.spid3r/bin"
           install -m 0755 "$(find "$tmp" -type f -name spid3r | head -n 1)" "$HOME/.spid3r/bin/spid3r"

@@ -31,8 +31,8 @@ RUN set -eu; \
     if [ -n "${SPID3R_SHA256}" ]; then \
         echo "${SPID3R_SHA256}  ${tmpdir}/${asset}" | sha256sum -c -; \
     else \
-        curl -fsSL "${base_url}/${asset}.sha256" -o "${tmpdir}/${asset}.sha256"; \
-        (cd "$tmpdir" && expected="$(awk '{print $1}' "${asset}.sha256")" && echo "${expected}  ${asset}" | sha256sum -c -); \
+        curl -fsSL "${base_url}/sha256sums.txt" -o "${tmpdir}/sha256sums.txt"; \
+        (cd "$tmpdir" && expected="$(awk -v a="${asset}" '$2 == a || $2 == "*" a {print $1; exit}' sha256sums.txt)" && test -n "${expected}" && echo "${expected}  ${asset}" | sha256sum -c -); \
     fi; \
     tar -xzf "${tmpdir}/${asset}" -C "$tmpdir"; \
     bin_src="$(find "$tmpdir" -type f -name spid3r | head -n 1)"; \

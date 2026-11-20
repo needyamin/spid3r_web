@@ -161,8 +161,8 @@ install_language() {
     fetch "${RELEASE_BASE}/${ASSET}" "${TMP}/${ASSET}" || die "could not download ${RELEASE_BASE}/${ASSET}"
     if [ -n "$SPID3R_SHA256" ]; then
       verify_sha256 "${TMP}/${ASSET}" "$SPID3R_SHA256"
-    elif fetch "${RELEASE_BASE}/${ASSET}.sha256" "${TMP}/${ASSET}.sha256" 2>/dev/null; then
-      EXPECTED=$(awk '{print $1}' "${TMP}/${ASSET}.sha256")
+    elif fetch "${RELEASE_BASE}/sha256sums.txt" "${TMP}/sha256sums.txt" 2>/dev/null; then
+      EXPECTED=$(awk -v a="${ASSET}" '$2 == a || $2 == "*" a {print $1; exit}' "${TMP}/sha256sums.txt")
       [ -n "$EXPECTED" ] && verify_sha256 "${TMP}/${ASSET}" "$EXPECTED"
     fi
     say "Running installer (silent mode)..."
@@ -178,8 +178,8 @@ install_language() {
     if [ -n "$SPID3R_SHA256" ]; then
       EXPECTED="$SPID3R_SHA256"
     else
-      fetch "${RELEASE_BASE}/${ASSET}.sha256" "${TMP}/${ASSET}.sha256" || die "could not download checksum ${ASSET}.sha256"
-      EXPECTED=$(awk '{print $1}' "${TMP}/${ASSET}.sha256")
+      fetch "${RELEASE_BASE}/sha256sums.txt" "${TMP}/sha256sums.txt" || die "could not download ${RELEASE_BASE}/sha256sums.txt"
+      EXPECTED=$(awk -v a="${ASSET}" '$2 == a || $2 == "*" a {print $1; exit}' "${TMP}/sha256sums.txt")
     fi
     [ -n "$EXPECTED" ] || die "empty SHA-256 checksum for ${ASSET}"
     say "Verifying SHA-256 checksum..."
