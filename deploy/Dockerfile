@@ -12,7 +12,7 @@ FROM debian:bookworm-slim AS runtime
 ARG SPID3R_VERSION=1.1.1
 ARG SPID3R_SHA256=""
 
-RUN apt-get update -qq && apt-get install -y -qq --no-install-recommends curl ca-certificates \
+RUN apt-get update -qq && apt-get install -y -qq --no-install-recommends curl ca-certificates libsqlite3-0 \
     && rm -rf /var/lib/apt/lists/*
 
 # The prebuilt spid3r binary links against libLLVM.so.23.1 (LLVM 23 runtime).

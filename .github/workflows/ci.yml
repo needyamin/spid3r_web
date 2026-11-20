@@ -269,11 +269,14 @@ jobs:
 
       - name: Install LLVM 23 runtime library
         run: |
+          set -eu
           wget -q https://apt.llvm.org/llvm.sh
           chmod +x llvm.sh
           sudo ./llvm.sh 23
-          sudo apt-get install -y --no-install-recommends libllvm23 clang lld
+          sudo apt-get install -y --no-install-recommends llvm-23-dev libllvm23 clang lld
+          echo "LLVM_SYS_231_PREFIX=/usr/lib/llvm-23" >> "$GITHUB_ENV"
           echo "SPID3R_LLVM_LIB_DIR=/usr/lib/llvm-23/lib" >> "$GITHUB_ENV"
+          echo "/usr/lib/llvm-23/bin" >> "$GITHUB_PATH"
           echo "/usr/lib/llvm-23/lib" | sudo tee /etc/ld.so.conf.d/llvm-23.conf > /dev/null
           sudo ldconfig
 
@@ -282,16 +285,28 @@ jobs:
           set -eu
           target="x86_64-unknown-linux-gnu"
           asset="spid3r-${target}.tar.gz"
+          rt_asset="spid3r-runtime-${SPID3R_VERSION}-${target}.tar.gz"
           base="https://github.com/needyamin/spid3r/releases/download/v${SPID3R_VERSION}"
           tmp="$(mktemp -d)"
           trap 'rm -rf "$tmp"' EXIT
           curl -fsSL "${base}/${asset}" -o "${tmp}/${asset}"
+          curl -fsSL "${base}/${rt_asset}" -o "${tmp}/${rt_asset}"
           curl -fsSL "${base}/sha256sums.txt" -o "${tmp}/sha256sums.txt"
           (cd "$tmp" && expected="$(awk -v a="${asset}" '$2 == a || $2 == "*" a {print $1; exit}' sha256sums.txt)" && test -n "${expected}" && echo "${expected}  ${asset}" | sha256sum -c -)
+          (cd "$tmp" && expected_rt="$(awk -v a="${rt_asset}" '$2 == a || $2 == "*" a {print $1; exit}' sha256sums.txt)" && test -n "${expected_rt}" && echo "${expected_rt}  ${rt_asset}" | sha256sum -c -)
           tar -xzf "${tmp}/${asset}" -C "$tmp"
-          mkdir -p "$HOME/.spid3r/bin"
-          install -m 0755 "$(find "$tmp" -type f -name spid3r | head -n 1)" "$HOME/.spid3r/bin/spid3r"
+          mkdir -p "$HOME/.spid3r/bin" "$HOME/.spid3r/lib" "${tmp}/rt"
+          install -m 0755 "$(find "$tmp" -maxdepth 2 -type f -name spid3r | head -n 1)" "$HOME/.spid3r/bin/spid3r"
+          self_bin="$(find "$tmp" -maxdepth 2 -type f -name spid3r-self | head -n 1 || true)"
+          if [ -n "$self_bin" ] && [ -f "$self_bin" ]; then
+            install -m 0755 "$self_bin" "$HOME/.spid3r/bin/spid3r-self"
+          fi
+          tar -xzf "${tmp}/${rt_asset}" -C "${tmp}/rt"
+          rt_lib="$(find "${tmp}/rt" -type f -name libspid3r_lang.a | head -n 1)"
+          test -n "$rt_lib"
+          install -m 0644 "$rt_lib" "$HOME/.spid3r/lib/libspid3r_lang.a"
           echo "$HOME/.spid3r/bin" >> "$GITHUB_PATH"
+          echo "SPID3R_LIB_DIR=$HOME/.spid3r/lib" >> "$GITHUB_ENV"
 
       - name: Build & boot server AOT release binary
         run: |
@@ -351,4 +366,9 @@ jobs:
             fi
             sleep 1
           done
-          curl -fsS http://127.0.0.1:18080/health | grep -q '"ok"'
+          if ! curl -fsS http://127.0.0.1:18080/health | grep -q '"ok"'; then
+            docker logs spid3rweb-ci-health > container.log 2>&1 || true
+            cat container.log
+            echo "::error title=container /health check failed::$(tail -n 20 container.log | tr '\n' '|' | cut -c1-1500)"
+            exit 1
+          fi

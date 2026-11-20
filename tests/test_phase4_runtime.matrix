@@ -396,13 +396,32 @@ fn test_database_driver_pool_and_pragmas() {
     );
 
     let conn = DB.connection();
-    assert_true(conn.ping(), "SqliteConnection.ping returns true");
-    assert_eq(conn.begin_sql(), "BEGIN IMMEDIATE", "sqlite begin_sql");
+    let active_drv = DB.driver_name();
+    assert_true(conn.ping(), "active DB connection ping returns true");
+    let expected_begin = if active_drv == "sqlite" {
+        "BEGIN IMMEDIATE"
+    } else {
+        "BEGIN"
+    };
+    assert_eq(conn.begin_sql(), expected_begin, "active driver begin_sql");
     assert_eq(conn.limit_sql(5, 10), " LIMIT 5 OFFSET 10", "Driver.limit_sql matches");
 
-    let sync_rows = DB.select("PRAGMA synchronous;");
-    assert_true(sync_rows.len() > 0, "PRAGMA synchronous query returns row");
-    assert_eq(string(sync_rows[0]["synchronous"]), "1", "SQLite synchronous=NORMAL (1)");
+    if active_drv == "sqlite" {
+        let sync_rows = DB.select("PRAGMA synchronous;");
+        assert_true(sync_rows.len() > 0, "PRAGMA synchronous query returns row");
+        assert_eq(
+            string(sync_rows[0]["synchronous"]),
+            "1",
+            "SQLite synchronous=NORMAL (1)"
+        );
+    } else {
+        let sq = new SqliteConnection(":memory:");
+        assert_true(sq.ping(), "SqliteConnection(:memory:).ping returns true");
+        assert_eq(sq.begin_sql(), "BEGIN IMMEDIATE", "sqlite begin_sql");
+        let sq_sync = sq.query("PRAGMA synchronous;", []);
+        assert_true(sq_sync.len() > 0, "SQLite PRAGMA synchronous query returns row");
+        sq.close();
+    }
 
     let pooled_ok = DB.with_connection(fn(c) {
         return c.ping();
