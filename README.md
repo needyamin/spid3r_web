@@ -1,13 +1,16 @@
-```text
-  ███████╗██████╗ ██╗██████╗ ██████╗ ██████╗   ██╗    ██╗███████╗██████╗ 
-  ██╔════╝██╔══██╗██║██╔══██╗╚════██╗██╔══██╗  ██║    ██║██╔════╝██╔══██╗
-  ███████╗██████╔╝██║██║  ██║ █████╔╝██████╔╝  ██║ █╗ ██║█████╗  ██████╔╝
-  ╚════██║██╔═══╝ ██║██║  ██║ ╚═══██╗██╔══██╗  ██║███╗██║██╔══╝  ██╔══██╗
-  ███████║██║     ██║██████╔╝██████╔╝██║  ██║  ╚███╔███╔╝███████╗██████╔╝
-  ╚══════╝╚═╝     ╚═╝╚═════╝ ╚═════╝ ╚═╝  ╚═╝   ╚══╝╚══╝ ╚══════╝╚═════╝ 
-```
+<div align="center">
+<pre>
+███████╗██████╗ ██╗██████╗ ██████╗ ██████╗   ██╗    ██╗███████╗██████╗&nbsp;
+██╔════╝██╔══██╗██║██╔══██╗╚════██╗██╔══██╗  ██║    ██║██╔════╝██╔══██╗
+███████╗██████╔╝██║██║  ██║ █████╔╝██████╔╝  ██║ █╗ ██║█████╗  ██████╔╝
+╚════██║██╔═══╝ ██║██║  ██║ ╚═══██╗██╔══██╗  ██║███╗██║██╔══╝  ██╔══██╗
+███████║██║     ██║██████╔╝██████╔╝██║  ██║  ╚███╔███╔╝███████╗██████╔╝
+╚══════╝╚═╝     ╚═╝╚═════╝ ╚═════╝ ╚═╝  ╚═╝   ╚══╝╚══╝ ╚══════╝╚═════╝&nbsp;
+</pre>
 
 **Spid3rWeb v1.1.0** — Zero-dependency MVC web framework for [Spid3r](https://github.com/needyamin/spid3r) (`v1.1.1+`). Runs on the bytecode VM, tree-walk interpreter, and LLVM 23 AOT compiler.
+
+</div>
 
 ## Quick Start
 
@@ -74,20 +77,53 @@ app.listen(8000);
 
 ## Magic CLI Commands
 
-| Command | Purpose |
-|---|---|
-| `spid3r magic serve [--port N] [--watch] [--tls]` | Start HTTP/HTTPS dev or prod server |
-| `spid3r magic build --release --bundle [-o OUT]` | Compile native LLVM 23 AOT binary (`--bytecode-only` for `.matrixc`) |
-| `spid3r magic test [--filter=X] [--differential] [--coverage]` | Run 25 test suites (`--db=all` probes PG/MySQL) |
-| `spid3r magic doctor [--fix] [--strict]` | Audit runtime, secrets, permissions, ini & DB health |
-| `spid3r magic config:check` / `lint` / `fmt [--check]` | Validate 13 configs, static lint, canonical formatting |
-| `spid3r magic docs [--json]` / `bench [--gate]` | Generate API docs (`docs/build/`) / run perf gate |
-| `spid3r magic route:list` / `key:generate` | Print route table / write 256-bit `APP_KEY` |
-| `spid3r magic migrate[:fresh\|:reset\|:rollback\|:status\|:sync]` | Run, inspect, or roll back migrations (`--pretend`, `--step`) |
-| `spid3r magic db:seed` / `db:wipe` / `db:backup` / `db:vacuum` | Seed, wipe, back up, or compact DB |
-| `spid3r magic queue:work` / `cache:clear` / `cache:gc` | Drain jobs / flush or GC cache |
-| `spid3r magic storage:link` / `storage:prune` | Link `public/storage` / prune old logs & temp uploads |
-| `spid3r magic make:<kind> <Name>` | Scaffold `controller`, `model [-m]`, `middleware`, `provider`, `request`, `resource`, `command`, `seeder`, `test`, `migration [--fn]` |
+```bash
+# Serve, Build & Docs
+spid3r magic serve                      # HTTP/HTTPS server (--port/--watch/--tls)
+spid3r magic build --release --bundle   # Native LLVM-23 AOT binary + assets
+spid3r magic build --bytecode-only      # Compiled .matrixc (`spid3r exec`)
+spid3r magic docs                       # API docs (docs/build/api.html, --json)
+spid3r magic bench [--gate]             # Micro-benchmarks and perf gate
+
+# Verification, Health & Hygiene
+spid3r magic test                       # 25 suites (--filter/--differential)
+spid3r magic doctor [--fix] [--strict]  # Runtime, perms, APP_KEY, ini & DB
+spid3r magic config:check               # Validate all 13 config/*.matrix files
+spid3r magic lint                       # `spid3r config validate` + `spid3r check`
+spid3r magic fmt [--check]              # Format or verify with `spid3r fmt`
+spid3r magic route:list                 # List registered routes and names
+
+# Database, Cache, Queue & Storage
+spid3r magic migrate                    # Run pending migrations (--pretend/--step)
+spid3r magic migrate:fresh              # Wipe tables & re-run migrations
+spid3r magic migrate:reset              # Roll back all executed batches
+spid3r magic migrate:rollback           # Roll back last migration batch
+spid3r magic migrate:status             # Migration status & checksum drift
+spid3r magic migrate:sync               # Rebuild generated migration registry
+spid3r magic migrate:rename-legacy      # Convert NNN_* files to timestamps
+spid3r magic db:wipe                    # Drop all database tables
+spid3r magic db:seed                    # Run database seeders
+spid3r magic db:backup                  # Online SQLite backup -> storage/backups/
+spid3r magic db:vacuum                  # Checkpoint SQLite WAL & VACUUM
+spid3r magic storage:link               # Link public/storage -> storage/app/public
+spid3r magic storage:prune              # Prune expired logs & temp uploads
+spid3r magic cache:gc                   # Remove expired cache entries
+spid3r magic cache:clear                # Flush application cache store
+spid3r magic queue:work                 # Drain jobs (--once/--daemon/--sleep=MS)
+spid3r magic key:generate               # Write 256-bit APP_KEY in .env
+
+# Generators
+spid3r magic make:controller <Name>     # MVC controller
+spid3r magic make:model <Name> [-m]     # Model repository (+ optional migration)
+spid3r magic make:middleware <Name>     # Onion HTTP middleware
+spid3r magic make:provider <Name>       # ServiceProvider
+spid3r magic make:request <Name>        # Validation request class
+spid3r magic make:resource <Name>       # REST resource transformer
+spid3r magic make:command <Name>        # Magic CLI console command
+spid3r magic make:seeder <Name>         # Database seeder class
+spid3r magic make:test <name>           # TestClient test suite
+spid3r magic make:migration <name>      # Timestamped migration (--fn for up/down)
+```
 
 ## Documentation
 
