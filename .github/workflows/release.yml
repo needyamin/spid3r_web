@@ -229,7 +229,7 @@ jobs:
       - name: Generate combined SHA256SUMS.txt
         run: |
           cd release-dist
-          cat *.sha256 > SHA256SUMS.txt
+          cat ./*.sha256 > SHA256SUMS.txt
           ls -la
 
       - name: Attach assets to GitHub Release
